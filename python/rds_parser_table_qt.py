@@ -166,7 +166,7 @@ class rds_parser_table_qt(gr.sync_block):
 	elif (groupType == "4A"):#CT clock time
 	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)
 	  hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
-	  minutes=((array[6] &0x0F)>>6)|((array[7] >>6)&0x3)
+	  minutes=((array[6] &0x0F)<<2)|((array[7] >>6)&0x3)
 	  offsetdir=(array[7]>>5)&0x1
 	  local_time_offset=0.5*((array[7])&0x1F)
 	  if(offsetdir==1):
