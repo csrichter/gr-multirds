@@ -72,7 +72,7 @@ class rds_parser_table_qt(gr.sync_block):
 	#print("4st block:"+str(array[6])+","+str(array[7]))
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
-	  segment=chr(array[6])+chr(array[7])
+	  segment=self.decode_chars(chr(array[6])+chr(array[7]))
 	  if(not self.PSNdict.has_key(PI)):#initialize dict
 	    self.PSNdict[PI]="_"*8
 	    self.PSNvalid[PI]=[False]*8
@@ -120,7 +120,7 @@ class rds_parser_table_qt(gr.sync_block):
 	    self.RTvalid[PI]=[False]*64
 	  else:
 	   adr=array[3]&0b00001111
-	   segment=chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7])
+	   segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
 	   #print("RT:adress: %d, segment:%s"%(adr,segment))
 	   #self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'groupType':groupType,'adress':adr,'segment':segment})
 	   text_list=list(self.RTdict[PI])
@@ -194,25 +194,28 @@ class rds_parser_table_qt(gr.sync_block):
 	    pp.pprint(self.blockcounts)
 	    self.printcounter=0
 	    #print("group of type %s not decoded on station %s"% (groupType,PI))
-    def decode_chars(self,charlist):
+    def decode_chars(self,charstring):
       alphabet={
       0b1000:u"áàéèíìóòúùÑÇŞßiĲ",
       0b1001:u"âäêëîïôöûüñçş??ĳ",
       0b1100:u"ÁÀÉÈÍÌÓÒÚÙŘČŠŽĐĿ",
       0b1101:u"áàéèíìóòúùřčšžđŀ"}
-      for i,char in enumerate(charlist):
-	if char<= 0b01111111:
+      charlist=list(charstring)
+      for i,char in enumerate(charstring):
+      	#code.interact(local=locals())
+	if ord(char)<= 0b01111111:
 	  charlist[i]=char #use ascii
 	else:
 	  #split byte
 	  alnr=(ord(char)&0xF0 )>>4 #upper 4 bit
 	  index=ord(char)&0x0F #lower 4 bit
+	  #code.interact(local=locals())
 	  try:
 	    charlist[i]=alphabet[alnr][index]
 	  except KeyError:
 	    charlist[i]=char
 	    pass
-      return charlist
+      return "".join(charlist)
     def color_text(self, text, start,end,textcolor,segmentcolor):
       formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
       return formatted_text
@@ -234,6 +237,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
           #Data
         empty_text32='________________________________'
         empty_text64='________________________________________________________________'
+        #empty_text64='\xe4'*64
         self.data = {'ID':range(1,6),
 		'freq':['','','',''],
                 'name':[],
