@@ -33,7 +33,8 @@ GR_PYTHON_INSTALL(
     __init__.py
     multi_rds_printer.py
     qtguitest.py
-    rds_table_qt.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    rds_table_qt.py
+    rds_parser_table_qt.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################

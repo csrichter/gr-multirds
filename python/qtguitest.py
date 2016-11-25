@@ -126,7 +126,7 @@ if __name__ == "__main__":
     widget.show()
     widget.setWindowTitle("Test Qt gui")
     widget.setGeometry(200,200,600,300)
-    #code.interact(local=locals())
+    code.interact(local=locals())
     sys.exit(app.exec_())
 
     widget = None

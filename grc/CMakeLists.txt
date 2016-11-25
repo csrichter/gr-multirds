@@ -20,5 +20,6 @@
 install(FILES
     crfa_multi_rds_printer.xml
     crfa_qtguitest.xml
-    crfa_rds_table_qt.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_rds_table_qt.xml
+    crfa_rds_parser_table_qt.xml DESTINATION share/gnuradio/grc/blocks
 )
