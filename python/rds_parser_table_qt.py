@@ -53,6 +53,8 @@ class rds_parser_table_qt(gr.sync_block):
         self.PSNdict={}
         self.PSNvalid={}
         self.AFdata={}
+        self.blockcounts={}
+        self.printcounter=0
     def handle_msg(self, msg, port):
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
@@ -71,7 +73,7 @@ class rds_parser_table_qt(gr.sync_block):
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
 	  segment=chr(array[6])+chr(array[7])
-	  if(not self.PSNdict.has_key(PI)):#initialite dict
+	  if(not self.PSNdict.has_key(PI)):#initialize dict
 	    self.PSNdict[PI]="_"*8
 	    self.PSNvalid[PI]=[False]*8
 	    self.AFdata[PI]={}
@@ -85,6 +87,22 @@ class rds_parser_table_qt(gr.sync_block):
 	    self.signals.DataUpdateEvent.emit({'row':port,'AF':self.AFdata[PI]})
 	  if(array[6]>= 224 and array[6]<= 249):
 	    print("AF2 detected")
+	  
+	  name_list=list(self.PSNdict[PI])
+	  if (name_list[adr*2:adr*2+2]==list(segment)):#segment already there
+	    segmentcolor="green"
+	  elif(name_list[adr*2:adr*2+2]==['_']*2): #segment new
+	    segmentcolor="orange"
+	    name_list[adr*2:adr*2+2]=segment
+	  else:#name changed (böse)
+	    segmentcolor="red"
+	    name_list=['_']*8 #reset name
+	    name_list[adr*2:adr*2+2]=segment
+	    #reset stored text:
+	    self.PSNdict[PI]="_"*8
+	    self.PSNvalid[PI]=[False]*8
+	  self.PSNvalid[PI][adr*2:adr*2+2]=[True] *2
+	  self.PSNdict[PI]="".join(name_list)
 	  #determine if text is valid
 	  valid=True
 	  for i in range(0,8):
@@ -93,26 +111,11 @@ class rds_parser_table_qt(gr.sync_block):
 	  if(valid):
 	   textcolor="black"
 	  else:
-	   textcolor="gray"
-	  
-	  name_list=list(self.PSNdict[PI])
-	  if (name_list[adr*2:adr*2+2]==list(segment)):#segment already there
-	    segmentcolor="green"
-	  elif(name_list[adr*2:adr*2+2]==['__']): #segment new
-	    segmentcolor="orange"
-	    name_list[adr*2:adr*2+2]=segment
-	  else:#name changed (böse)
-	    segmentcolor="red"
-	    name_list[adr*2:adr*2+2]=segment
-	    #reset stored text:
-	    self.PSNdict[PI]="_"*8
-	    self.PSNvalid[PI]=[False]*8
-	  self.PSNvalid[PI][adr*2:adr*2+2]=[True] *2
-	  self.PSNdict[PI]="".join(name_list)
+	   textcolor="gray"	  
 	  formatted_text=self.color_text(self.PSNdict[PI],adr*2,adr*2+2,textcolor,segmentcolor)
 	  self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'PSN':formatted_text})
 	elif (groupType == "2A"):#RT radiotext
-	  if(not self.RTdict.has_key(PI)):#initialite dict
+	  if(not self.RTdict.has_key(PI)):#initialize dict
 	    self.RTdict[PI]="_"*64
 	    self.RTvalid[PI]=[False]*64
 	  else:
@@ -127,13 +130,7 @@ class rds_parser_table_qt(gr.sync_block):
 	   except ValueError:
 	     text_end=64 #assume whole string is important
 	     pass
-	   #determine if text is valid
-	   valid=True
-	   for i in range(0,text_end):
-	     if (not self.RTvalid[PI][i]):
-	      valid = False
-	   
-	   
+
 	   if (text_list[adr*4:adr*4+4]==list(segment)):#segment already there
 	     segmentcolor="green"
 	   elif (text_list[adr*4:adr*4+4]==['_']*4):#segment new
@@ -141,30 +138,81 @@ class rds_parser_table_qt(gr.sync_block):
 	     text_list[adr*4:adr*4+4]=segment
 	   else:
 	     segmentcolor="red"
+	     text_list=['_']*64 #clear text
 	     text_list[adr*4:adr*4+4]=segment
 	     #reset stored text:
 	     self.RTdict[PI]="_"*64
 	     self.RTvalid[PI]=[False]*64
+	  
+	   self.RTvalid[PI][adr*4:adr*4+4]=[True] *4
+	   self.RTdict[PI]="".join(text_list)
+	   
+	   #determine if (new) text is valid
+	   valid=True
+	   for i in range(0,text_end):
+	     if (not self.RTvalid[PI][i]):
+	      valid = False
 	   if(valid):
 	     textcolor="black"
 	   else:
 	     textcolor="gray"
-	     
 	   #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,self.RTdict[PI][:adr*4],segmentcolor,self.RTdict[PI][adr*4:adr*4+4],textcolor,self.RTdict[PI][adr*4+4:])
 	   formatted_text=self.color_text(self.RTdict[PI],adr*4,adr*4+4,textcolor,segmentcolor)
 	   #print(self.RTdict[PI]+" valid:"+str(valid)+"valarr:"+str(self.RTvalid[PI]))
-	   self.RTvalid[PI][adr*4:adr*4+4]=[True] *4
-	   self.RTdict[PI]="".join(text_list)
 
-	   
-	 
-	   
-	   
+
 	   self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'string':formatted_text})
 	   #code.interact(local=locals())
+	elif (groupType == "4A"):#CT clock time
+	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)
+	  hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
+	  minutes=((array[6]>>6)&0x0F)|((array[7] >>6)&0x3)
+	  offsetdir=(array[7]>>5)&0x1
+	  local_time_offset=0.5*((array[7])&0x1F)
+	  if(offsetdir==1):
+	    local_time_offset*=-1
+	  year=int((datecode - 15078.2) / 365.25)
+	  month=int((datecode - 14956.1 - int(year * 365.25)) / 30.6001)
+	  day=datecode - 14956 - int(year * 365.25) - int(month * 30.6001)
+	  if(month == 14 or month == 15):#no idea why -> annex g of RDS spec
+	    year += 1;
+	    month -= 13
+	  year+=1900
+	  datestring="%02i.%02i.%4i, %02i:%02i (%+.1fh)" % (day,month,year,hours,minutes,local_time_offset)
+	  self.signals.DataUpdateEvent.emit({'col':4,'row':port,'PI':PI,'string':datestring})
+	else:#other group
+	  printfreq=100
+	  self.printcounter+=1
+	  if self.blockcounts.has_key(PI):#1st group on this station
+	    if self.blockcounts[PI].has_key(groupType):#1st group of this type
+	      self.blockcounts[PI][groupType] +=1 #increment
+	    else:
+	      self.blockcounts[PI][groupType] = 1 #initialize
+	  else:
+	    self.blockcounts[PI]={}#initialize dict
+	  if self.printcounter == printfreq:
+	    pp.pprint(self.blockcounts)
+	    self.printcounter=0
+	    #print("group of type %s not decoded on station %s"% (groupType,PI))
+    def decode_chars(self,charlist):
+      alphabet={
+      0b1000:u"áàéèíìóòúùÑÇŞßiĲ",
+      0b1001:u"âäêëîïôöûüñçş??ĳ",
+      0b1100:u"ÁÀÉÈÍÌÓÒÚÙŘČŠŽĐĿ",
+      0b1101:u"áàéèíìóòúùřčšžđŀ"}
+      for i,char in enumerate(charlist):
+	if char<= 0b01111111:
+	  charlist[i]=char #use ascii
 	else:
-	  print("group of type %s not decoded on station %s"% (groupType,PI))
-
+	  #split byte
+	  alnr=(ord(char)&0xF0 )>>4 #upper 4 bit
+	  index=ord(char)&0x0F #lower 4 bit
+	  try:
+	    charlist[i]=alphabet[alnr][index]
+	  except KeyError:
+	    charlist[i]=char
+	    pass
+      return charlist
     def color_text(self, text, start,end,textcolor,segmentcolor):
       formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
       return formatted_text
@@ -190,7 +238,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 		'freq':['','','',''],
                 'name':[],
                 'AF':['','','',''],
-                'time':['','','',''],
+                'time':[],
                 'text':[],
                 'buttons':[]}
         #Enter data onto Table
@@ -215,7 +263,11 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	for i in range(0,4):#create name labels
 	  label=QtGui.QLabel("_"*8)
 	  #label.setFont(QtGui.QFont("Courier New"))
-	  self.table.setCellWidget(i,2,label)  
+	  self.table.setCellWidget(i,2,label)
+	for i in range(0,4):#create time labels
+	  label=QtGui.QLabel()
+	  #label.setFont(QtGui.QFont("Courier New"))
+	  self.table.setCellWidget(i,4,label) 	
         #Add Header
         self.table.setHorizontalHeaderLabels(horHeaders)  
         layout.addWidget(self.label)
@@ -243,22 +295,20 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item=self.table.cellWidget(event['row'],PSNcol)
 	    item.setText(event['PSN'])
 	self.table.resizeColumnsToContents()
-    def reset_color(self):
-      for i in range(0,self.table.rowCount()):
-	for j in range(0,self.table.columnCount()):
-	  item = self.table.item(i,j)
-	  #code.interact(local=locals())
-	  #print(item.type())
-	  if item != '':
-	    try:
-	      item.setTextColor(QtCore.Qt.black)
-	    except:
-	      pass
-      #for item in self.table.items():
-	#item.setTextColor(QtCore.Qt.black)
+    #def reset_color(self):
+      #for i in range(0,self.table.rowCount()):
+	#for j in range(0,self.table.columnCount()):
+	  #item = self.table.item(i,j)
+	  ##code.interact(local=locals())
+	  ##print(item.type())
+	  #if item != '':
+	    #try:
+	      #item.setTextColor(QtCore.Qt.black)
+	    #except:
+	      #pass
     def onCLick(self):
 	print("button clicked")
-	self.reset_color()
+	#self.reset_color()
 	#pp.pprint(event)
 if __name__ == "__main__":
     from PyQt4 import Qt
