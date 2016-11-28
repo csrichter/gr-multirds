@@ -18,13 +18,14 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 # 
-
+from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import code,pmt,functools
+import pmt,functools,csv,md5
 from PyQt4 import Qt, QtCore, QtGui
-import pprint
+import pprint,code#for easier testing
 pp = pprint.PrettyPrinter()
+
 
 from PyQt4.QtCore import QObject, pyqtSignal
 
@@ -32,7 +33,6 @@ class rds_parser_table_qt_Signals(QObject):
     DataUpdateEvent = QtCore.pyqtSignal(dict)
     def __init__(self, parent=None):
 	super(QtCore.QObject, self).__init__()   
-
 class rds_parser_table_qt(gr.sync_block):
     """
     docstring for block qtguitest
@@ -48,13 +48,27 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
 
 	self.signals=signals
-	self.RTdict={}
-        self.RTvalid={}
-        self.PSNdict={}
-        self.PSNvalid={}
-        self.AFdata={}
-        self.blockcounts={}
+	self.RDS_data={}
         self.printcounter=0
+        self.ODA_application_names={}
+        self.TMC_data={}
+        workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
+        reader = csv.reader(open(workdir+'RDS_ODA AIDs_names_only.csv'), delimiter=',', quotechar='"')
+        reader.next()#skip header
+        for row in reader:
+	  self.ODA_application_names[int(row[0])]=row[1]
+	#read location code list:
+	reader = csv.reader(open(workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
+	reader.next()#skip header
+	self.lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
+	#read RT+ class name list:
+	reader = csv.reader(open(workdir+'RTplus_classnames.csv'), delimiter=',', quotechar='"')
+	reader.next()#skip header
+	self.rtp_classnames=dict((int(rows[0]),rows[1]) for rows in reader)
+	#read TMC-event list
+	reader = csv.reader(open(workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
+	#no header
+	self.ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
     def handle_msg(self, msg, port):
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
@@ -64,31 +78,33 @@ class rds_parser_table_qt(gr.sync_block):
 		groupType=str(groupNR >> 4)+"A"
 	else:
 		groupType=str(groupNR >> 4)+"B"
-	#print("raw:"+str(pmt.to_python(msg))+"\n")
 	PI="%02X%02X" %(array[0],array[1])
-	#print("1st block:"+str(array[0])+","+str(array[1])+"= ID: %s" %PI)
-	#print("2st block:"+str(array[2])+","+str(array[3])+"= type:"+groupType)
-	#print("3st block:"+str(array[4])+","+str(array[5]))
-	#print("4st block:"+str(array[6])+","+str(array[7]))
+	#initialize dict 1st packet from station:
+	if not self.RDS_data.has_key(PI):
+	  self.RDS_data[PI]={}
+	  self.RDS_data[PI]["blockcounts"]={}
+	  self.RDS_data[PI]["AID_list"]={}
+	  self.RDS_data[PI]["PSN"]="_"*8
+	  self.RDS_data[PI]["PSN_valid"]=[False]*8
+	  self.RDS_data[PI]["AF"]={}
+	  print("found station %s"%PI)
+	
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
 	  segment=self.decode_chars(chr(array[6])+chr(array[7]))
-	  if(not self.PSNdict.has_key(PI)):#initialize dict
-	    self.PSNdict[PI]="_"*8
-	    self.PSNvalid[PI]=[False]*8
-	    self.AFdata[PI]={}
+	  
 	  #1110 0000 = no AF
 	  #1110 0001 = 1AF
 	  #1111 1001 = 25AF
 	  
 	  if(array[5]>= 224 and array[5]<= 249):
 	    print("AF1 detected")
-	    self.AFdata[PI]['number']=array[5]-224
-	    self.signals.DataUpdateEvent.emit({'row':port,'AF':self.AFdata[PI]})
+	    self.RDS_data[PI]["AF"]['number']=array[5]-224
+	    self.signals.DataUpdateEvent.emit({'row':port,'AF':self.RDS_data[PI]["AF"]})
 	  if(array[6]>= 224 and array[6]<= 249):
 	    print("AF2 detected")
 	  
-	  name_list=list(self.PSNdict[PI])
+	  name_list=list(self.RDS_data[PI]["PSN"])
 	  if (name_list[adr*2:adr*2+2]==list(segment)):#segment already there
 	    segmentcolor="green"
 	  elif(name_list[adr*2:adr*2+2]==['_']*2): #segment new
@@ -99,31 +115,33 @@ class rds_parser_table_qt(gr.sync_block):
 	    name_list=['_']*8 #reset name
 	    name_list[adr*2:adr*2+2]=segment
 	    #reset stored text:
-	    self.PSNdict[PI]="_"*8
-	    self.PSNvalid[PI]=[False]*8
-	  self.PSNvalid[PI][adr*2:adr*2+2]=[True] *2
-	  self.PSNdict[PI]="".join(name_list)
+	    self.RDS_data[PI]["PSN"]="_"*8
+	    self.RDS_data[PI]["PSN_valid"]=[False]*8
+	  self.RDS_data[PI]["PSN_valid"][adr*2:adr*2+2]=[True] *2
+	  self.RDS_data[PI]["PSN"]="".join(name_list)
 	  #determine if text is valid
 	  valid=True
 	  for i in range(0,8):
-	   if (not self.PSNvalid[PI][i]):
+	   if (not self.RDS_data[PI]["PSN_valid"][i]):
 	    valid = False
 	  if(valid):
 	   textcolor="black"
 	  else:
 	   textcolor="gray"	  
-	  formatted_text=self.color_text(self.PSNdict[PI],adr*2,adr*2+2,textcolor,segmentcolor)
+	  formatted_text=self.color_text(self.RDS_data[PI]["PSN"],adr*2,adr*2+2,textcolor,segmentcolor)
 	  self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'PSN':formatted_text})
+	  
 	elif (groupType == "2A"):#RT radiotext
-	  if(not self.RTdict.has_key(PI)):#initialize dict
-	    self.RTdict[PI]="_"*64
-	    self.RTvalid[PI]=[False]*64
+	  
+	  if(not self.RDS_data[PI].has_key("RT")):#initialize variables
+	    self.RDS_data[PI]["RT"]="_"*64
+	    self.RDS_data[PI]["RT_valid"]=[False]*64
 	  else:
 	   adr=array[3]&0b00001111
 	   segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
 	   #print("RT:adress: %d, segment:%s"%(adr,segment))
 	   #self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'groupType':groupType,'adress':adr,'segment':segment})
-	   text_list=list(self.RTdict[PI])
+	   text_list=list(self.RDS_data[PI]["RT"])
 	   #determine text length:
 	   try:
 	     text_end=text_list.index('\r')
@@ -141,28 +159,44 @@ class rds_parser_table_qt(gr.sync_block):
 	     text_list=['_']*64 #clear text
 	     text_list[adr*4:adr*4+4]=segment
 	     #reset stored text:
-	     self.RTdict[PI]="_"*64
-	     self.RTvalid[PI]=[False]*64
+	     self.RDS_data[PI]["RT"]="_"*64
+	     self.RDS_data[PI]["RT_valid"]=[False]*64
 	  
-	   self.RTvalid[PI][adr*4:adr*4+4]=[True] *4
-	   self.RTdict[PI]="".join(text_list)
+	   self.RDS_data[PI]["RT_valid"][adr*4:adr*4+4]=[True] *4
+	   self.RDS_data[PI]["RT"]="".join(text_list)
 	   
 	   #determine if (new) text is valid
-	   valid=True
+	   self.RDS_data[PI]["RT_all_valid"]=True
 	   for i in range(0,text_end):
-	     if (not self.RTvalid[PI][i]):
-	      valid = False
-	   if(valid):
+	     if (not self.RDS_data[PI]["RT_valid"][i]):
+	      self.RDS_data[PI]["RT_all_valid"] = False
+	   if(self.RDS_data[PI]["RT_all_valid"]):
 	     textcolor="black"
 	   else:
 	     textcolor="gray"
-	   #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,self.RTdict[PI][:adr*4],segmentcolor,self.RTdict[PI][adr*4:adr*4+4],textcolor,self.RTdict[PI][adr*4+4:])
-	   formatted_text=self.color_text(self.RTdict[PI],adr*4,adr*4+4,textcolor,segmentcolor)
-	   #print(self.RTdict[PI]+" valid:"+str(valid)+"valarr:"+str(self.RTvalid[PI]))
+	   #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,self.RDS_data[PI]["RT"][:adr*4],segmentcolor,self.RDS_data[PI]["RT"][adr*4:adr*4+4],textcolor,self.RDS_data[PI]["RT"][adr*4+4:])
+	   formatted_text=self.color_text(self.RDS_data[PI]["RT"],adr*4,adr*4+4,textcolor,segmentcolor)
+	   #print(self.RDS_data[PI]["RT"]+" valid:"+str(valid)+"valarr:"+str(self.RDS_data[PI]["RT_valid"]))
 
 
 	   self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'string':formatted_text})
 	   #code.interact(local=locals())
+	elif (groupType == "3A"):#ODA announcements (contain application ID "AID")
+	  AID=(array[6]<<8)|(array[7])#combine 2 bytes into 1 block
+	  app_data=(array[4]<<8)|(array[5])#content defined by ODA-app
+	  app_group_raw=array[3]&0x1f #group type in which this app is sent
+	  if (app_group_raw&0x1 == 0):
+		app_group=str(app_group_raw >> 1)+"A"
+	  else:
+		app_group=str(app_group_raw >> 1)+"B"
+	  
+	  if not self.RDS_data[PI]["AID_list"].has_key(AID):#new ODA found
+	    app_name=self.ODA_application_names[AID]
+	    self.RDS_data[PI]["AID_list"][AID]={}
+	    self.RDS_data[PI]["AID_list"][AID]["groupType"]=app_group
+	    self.RDS_data[PI]["AID_list"][AID]["app_name"]=app_name
+	    self.RDS_data[PI]["AID_list"][AID]["app_data"]=app_data
+	    print("new ODA: AID:%i, name:%s, app_group:%s, station:%s" %(AID,app_name,app_group,PI))
 	elif (groupType == "4A"):#CT clock time
 	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)
 	  hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
@@ -180,20 +214,127 @@ class rds_parser_table_qt(gr.sync_block):
 	  year+=1900
 	  datestring="%02i.%02i.%4i, %02i:%02i (%+.1fh)" % (day,month,year,hours,minutes,local_time_offset)
 	  self.signals.DataUpdateEvent.emit({'col':4,'row':port,'PI':PI,'string':datestring})
-	else:#other group
-	  printfreq=100
-	  self.printcounter+=1
-	  if self.blockcounts.has_key(PI):#1st group on this station
-	    if self.blockcounts[PI].has_key(groupType):#1st group of this type
-	      self.blockcounts[PI][groupType] +=1 #increment
+	#TMC-alert-c (grouptype mostly 8A):
+	elif self.RDS_data[PI]["AID_list"].has_key(52550) and self.RDS_data[PI]["AID_list"][52550]["groupType"]==groupType:
+	  tmc_x=array[3]&0x1f #lower 5 bit of block2
+	  tmc_y=(array[4]<<8)|(array[5]) #block3
+	  tmc_z=(array[6]<<8)|(array[7])#block4
+	  tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
+	  tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
+	  if tmc_T == 0: #message
+	    #print("TMC-message")
+	    tmc_F=(tmc_x>>3)&0x1 #single/multiple group
+	    tmc_event=int(tmc_y&0x7ff) #Y10-Y0
+	    tmc_location=tmc_z
+	    tmc_DP=tmc_x&0x7 #duration and persistence 3 bits
+	    tmc_extent=(tmc_y>>11)&0x7 #3 bits (Y13-Y11)
+	    tmc_D=tmc_y>>15 #diversion bit(Y15)
+	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)
+ #LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
+	    try:
+	      location=self.lcl_dict[tmc_location]
+	      loc_type=location[0]
+	      loc_subtype=location[1]
+	      loc_roadnumber=location[2]
+	      loc_roadname=location[3]
+	      loc_first_name=location[4]
+	      loc_second_name=location[5]
+	      loc_area_ref=int(location[6])
+	      event_name=self.ecl_dict[tmc_event]
+	      refloc_name=""
+	      try:
+		refloc=self.lcl_dict[loc_area_ref]
+		refloc_name=refloc[4]
+	      except KeyError:
+		#print("location '%i' not found"%tmc_location)
+		pass
+	      if not self.TMC_data.has_key(tmc_hash):#if message new
+	        message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
+	        self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
+	        print(message_string)
+	    except KeyError:
+	      #print("location '%i' not found"%tmc_location)
+	      pass
+	    #code.interact(local=locals())
+	  else:#alert plus or provider info
+	    adr=tmc_x&0xf
+	    if  4 <= adr and adr <= 9:
+	      #print("TMC-info")
+	      a=0
 	    else:
-	      self.blockcounts[PI][groupType] = 1 #initialize
+	      a=0
+	      #print("alert plus")
+	    
+	 
+	#RadioText+ (grouptype mostly 12A):
+	elif self.RDS_data[PI]["AID_list"].has_key(19415) and self.RDS_data[PI]["AID_list"][19415]["groupType"]==groupType:
+	  A3_data=self.RDS_data[PI]["AID_list"][19415]["app_data"]
+	  template_number=A3_data&0xff
+	  SCB=(A3_data >> 8)&0x0f#server control bit
+	  CB_flag=(A3_data>>12)&0x1 #is set if template available
+	  rtp_message= ((array[3]&0x1f)<<32)|(array[4]<<24)|(array[5]<<16)|(array[6]<<8)|(array[7])
+	  item_toggle_bit=(rtp_message>>36)&0x1
+	  item_running_bit=(rtp_message>>35)&0x1
+	  tag1=(rtp_message>>17)&(2**18-1)#6+6+6
+	  tag2=(rtp_message)&(2**17-1)#6+6+5
+	  tag1_type=self.rtp_classnames[int(tag1>>12)]
+	  tag2_type=self.rtp_classnames[int(tag2>>11)]
+	  tag1_start=int((tag1>>6)&(2**6-1))
+	  tag1_len=int(tag1&(2**6-1))
+	  tag2_start=int((tag2>>5)&(2**6-1))
+	  tag2_len=int(tag2&(2**5-1))
+	  if not self.RDS_data[PI].has_key("RT+"):
+	    self.RDS_data[PI]["RT+"]={}
+	  if(self.RDS_data[PI].has_key("RT") and self.RDS_data[PI]["RT_all_valid"]):
+	    rt=self.RDS_data[PI]["RT"]
+	    if not tag1_type=="DUMMY_CLASS":
+	      self.RDS_data[PI]["RT+"][tag1_type]=rt[tag1_start:tag1_start+tag1_len+1]
+	    if not tag2_type=="DUMMY_CLASS":
+	      self.RDS_data[PI]["RT+"][tag2_type]=rt[tag2_start:tag2_start+tag2_len+1]
+
+	  if(tag1_type=="ITEM.ARTIST"and tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT") and self.RDS_data[PI]["RT_all_valid"]):
+	    rt=self.RDS_data[PI]["RT"]
+	    artist=rt[tag1_start:tag1_start+tag1_len+1]
+	    song=rt[tag2_start:tag2_start+tag2_len+1]
+	    formatted_text="%s by %s"%(song,artist)
+	    self.signals.DataUpdateEvent.emit({'col':6,'row':port,'PI':PI,'string':formatted_text})  
+	  elif(not tag1_type=="ITEM.ARTIST" and not tag1_type=="DUMMY_CLASS"):
+	    print("%s:RT+: tag1_type:%s, tag2_type:%s"%(PI,tag1_type,tag2_type))  
+	else:#other group
+	  printdelay=50
+	  self.printcounter+=1
+	  if self.RDS_data[PI]["blockcounts"].has_key(groupType):
+	      self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
 	  else:
-	    self.blockcounts[PI]={}#initialize dict
-	  if self.printcounter == printfreq:
-	    pp.pprint(self.blockcounts)
+	      self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
+
+	  if self.printcounter == printdelay:
+	    #code.interact(local=locals())
+	    for key in self.RDS_data:
+	      if self.RDS_data[key].has_key("PSN"):
+		psn=self.RDS_data[key]["PSN"]
+	      else:
+		psn="?"
+	      print("%s(%s):"%(psn,key),end="")
+	      pp.pprint(self.RDS_data[key]["blockcounts"])
+	      if self.RDS_data[key].has_key("RT+"):
+	        print("RT+:",end="")
+	        pp.pprint(self.RDS_data[key]["RT+"])
 	    self.printcounter=0
-	    #print("group of type %s not decoded on station %s"% (groupType,PI))
+	    #print("group of type %s not decoded on station %s"% (groupType,PI))	
+    def ref_locs(self,loc,name_string):
+      if(loc==34196):#europe
+	return(name_string)
+      else:
+	try:
+	  locarray=self.lcl_dict[loc]
+	  aref=int(locarray[6])
+	  loc_name=locarray[4]
+	  return(self.ref_locs(aref,name_string+","+loc_name))
+	  #return(loc_name)
+	except KeyError:
+	  return(name_string)
+	
     def decode_chars(self,charstring):
       alphabet={
       0b1000:u"áàéèíìóòúùÑÇŞßiĲ",
@@ -232,7 +373,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.setLayout(layout)
         self.table=QtGui.QTableWidget(self)
         self.table.setRowCount(5)
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
         self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #disallow editing
           #Data
         empty_text32='________________________________'
@@ -240,38 +381,30 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         #empty_text64='\xe4'*64
         self.data = {'ID':range(1,6),
 		'freq':['','','',''],
-                'name':[],
+                'name':[ QtGui.QLabel() for i in range(4)],
                 'AF':['','','',''],
-                'time':[],
-                'text':[],
+                'time':[ QtGui.QLabel() for i in range(4)],
+                'text':[ QtGui.QLabel("_"*64) for i in range(4)],
+                'RT+':[ QtGui.QLabel() for i in range(4)],
                 'buttons':[]}
         #Enter data onto Table
         horHeaders = []
-        for n, key in enumerate(['ID','freq','name','AF','time','text','buttons']):
+        for n, key in enumerate(['ID','freq','name','AF','time','text','RT+','buttons']):
         #for n, key in enumerate(sorted(self.data.keys())):
             horHeaders.append(key)
             for m, item in enumerate(self.data[key]):
 	      if type(item)==int:#convert ints to strings
 		newitem = QtGui.QTableWidgetItem(str(item))
+		self.table.setItem(m, n, newitem)
+	      elif isinstance(item,QtGui.QLabel):
+		self.table.setCellWidget(m,n,item)
 	      else:
                 newitem = QtGui.QTableWidgetItem(item)
-              self.table.setItem(m, n, newitem)
+		self.table.setItem(m, n, newitem)
         for i in range(0,4):#create buttons
 	  button=QtGui.QPushButton("play")
 	  self.table.setCellWidget(i,self.table.columnCount()-1,button)
 	  button.clicked.connect(self.onCLick)
-        for i in range(0,4):#create text labels
-	  label=QtGui.QLabel(empty_text64)
-	  #label.setFont(QtGui.QFont("Courier New"))
-	  self.table.setCellWidget(i,self.table.columnCount()-2,label)
-	for i in range(0,4):#create name labels
-	  label=QtGui.QLabel("_"*8)
-	  #label.setFont(QtGui.QFont("Courier New"))
-	  self.table.setCellWidget(i,2,label)
-	for i in range(0,4):#create time labels
-	  label=QtGui.QLabel()
-	  #label.setFont(QtGui.QFont("Courier New"))
-	  self.table.setCellWidget(i,4,label) 	
         #Add Header
         self.table.setHorizontalHeaderLabels(horHeaders)  
         layout.addWidget(self.label)
@@ -288,6 +421,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  if event.has_key('PI'):
 	    #setPI
 	    PIcol=0
+	    rtpcol=6
+	    if not self.table.item(event['row'],PIcol).text() == event['PI']:
+	      self.table.cellWidget(event['row'],rtpcol).setText("")#clear RT+ on changed PI
 	    self.table.item(event['row'],PIcol).setText(event['PI'])
 	  if event.has_key('AF'):
 	    #setAF
@@ -299,17 +435,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item=self.table.cellWidget(event['row'],PSNcol)
 	    item.setText(event['PSN'])
 	self.table.resizeColumnsToContents()
-    #def reset_color(self):
-      #for i in range(0,self.table.rowCount()):
-	#for j in range(0,self.table.columnCount()):
-	  #item = self.table.item(i,j)
-	  ##code.interact(local=locals())
-	  ##print(item.type())
-	  #if item != '':
-	    #try:
-	      #item.setTextColor(QtCore.Qt.black)
-	    #except:
-	      #pass
     def onCLick(self):
 	print("button clicked")
 	#self.reset_color()
