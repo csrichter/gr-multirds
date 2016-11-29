@@ -16,10 +16,10 @@
 # along with GNU Radio; see the file COPYING.  If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
-
 install(FILES
     crfa_multi_rds_printer.xml
     crfa_qtguitest.xml
     crfa_rds_table_qt.xml
-    crfa_rds_parser_table_qt.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_rds_parser_table_qt.xml
+    crfa_rds_decoder.xml DESTINATION share/gnuradio/grc/blocks
 )

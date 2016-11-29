@@ -8,6 +8,8 @@
 %include "crfa_swig_doc.i"
 
 %{
+#include "crfa/rds_decoder.h"
 %}
 
-
+%include "crfa/rds_decoder.h"
+GR_SWIG_BLOCK_MAGIC2(crfa, rds_decoder);
