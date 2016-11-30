@@ -99,7 +99,28 @@ class CRWidget(QtGui.QWidget):
         layout.addWidget(self.table)
         
         self.table.setHorizontalHeaderLabels(horHeaders)  
+        self.table.setMaximumHeight(250)#TODO use dynamic value
+        test="""
+        adkasldjkasd
+        #ad
+        asd
+        as
+        d
+        asd
+        asdas
+        d
+        as
+        f
+        as
+        fa
+        
+        sfasfasfasfasofsa
+        afasfasf
+        """
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
+        #self.tmc_message_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByKeyboard|QtCore.Qt.TextSelectableByMouse)
+        #self.tmc_message_label.setMaximumHeight(100)
+        
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit()
 
@@ -113,10 +134,20 @@ class CRWidget(QtGui.QWidget):
         filter_layout.addWidget(QtGui.QLabel("location filter:"))
         filter_layout.addWidget(self.location_filter)
         #self.filter_label.setLayout(filter_layout)
-        
+        self.tmc_message_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        #self.tmc_message_label.setTextInteractionFlags(QtCore.Qt.NoTextInteraction)
         layout.addLayout(filter_layout)
         layout.addWidget(self.tmc_message_label)
-
+        
+        self.logOutput = Qt.QTextEdit(test)
+        self.logOutput.setReadOnly(True)
+        self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
+        self.logOutput.setMaximumHeight(100)
+        font = self.logOutput.font()
+        font.setFamily("Courier")
+        font.setPointSize(10)
+        layout.addWidget(self.logOutput)
+        
 
         
     def display_data(self, event):

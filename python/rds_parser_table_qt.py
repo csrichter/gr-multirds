@@ -102,6 +102,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["PSN_valid"]=[False]*8
 	  self.RDS_data[PI]["AF"]={}
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
+	  self.RDS_data[PI]["last_item_toggle_bit"]=2
 	  print("found station %s"%PI)
 	self.RDS_data[PI]["blockcounts"]["any"]+=1
 	if self.RDS_data[PI]["blockcounts"]["any"]==5:
@@ -285,7 +286,8 @@ class rds_parser_table_qt(gr.sync_block):
 	      if not self.TMC_data.has_key(tmc_hash):#if message new
 	        message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
 	        self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
-	        print(message_string)
+	        self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
+	        #print(message_string)
 	    except KeyError:
 	      #print("location '%i' not found"%tmc_location)
 	      pass
@@ -330,12 +332,16 @@ class rds_parser_table_qt(gr.sync_block):
 	    rt=self.RDS_data[PI]["RT"]
 	    artist=rt[tag1_start:tag1_start+tag1_len+1]
 	    song=rt[tag2_start:tag2_start+tag2_len+1]
-	    formatted_text="%s by %s"%(song,artist)
+	    formatted_text="%s by %s %i"%(song,artist,item_running_bit)
 	    rtcol=self.colorder.index('text')
 	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':formatted_text})
 	    #self.signals.DataUpdateEvent.emit({'col':8,'row':port,'PI':PI,'string':formatted_text})  
 	  elif(not tag1_type=="ITEM.ARTIST" and not tag1_type=="DUMMY_CLASS"):
-	    print("%s:RT+: tag1_type:%s, tag2_type:%s"%(PI,tag1_type,tag2_type))  
+	    print("%s:RT+: tag1_type:%s, tag2_type:%s"%(PI,tag1_type,tag2_type)) 
+	  if not self.RDS_data[PI]["last_item_toggle_bit"] == item_toggle_bit: #new item
+	    self.RDS_data[PI]["last_item_toggle_bit"] = item_toggle_bit
+	    rtcol=self.colorder.index('text')
+	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':""})
 	else:#other group
 	  printdelay=50
 	  self.printcounter+=1
@@ -450,7 +456,11 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         layout.addWidget(self.table)
         
         self.table.setHorizontalHeaderLabels(horHeaders)  
+        self.table.setMaximumHeight(250)#TODO use dynamic value
+
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
+
+        
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit()
 
@@ -465,11 +475,20 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         
         layout.addLayout(filter_layout)
         layout.addWidget(self.tmc_message_label)
-        
+        self.logOutput = Qt.QTextEdit()
+        self.logOutput.setReadOnly(True)
+        self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
+        #self.logOutput.setMaximumHeight(100)
+        font = self.logOutput.font()
+        font.setFamily("Courier")
+        font.setPointSize(10)
+        layout.addWidget(self.logOutput)
         
         
     def display_data(self, event):
 	#pp.pprint(event)
+	if type(event)==dict and event.has_key('TMC_log'): 
+	  self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log']))
 	if type(event)==dict and event.has_key('row'): 
 	  if event.has_key('wrong_blocks'):
 	    item=self.table.cellWidget(event['row'],self.colorder.index('quality'))
@@ -508,6 +527,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	self.table.resizeColumnsToContents()
     def onCLick(self):
 	print("button clicked")
+	code.interact(local=locals())
 	#self.reset_color()
 	#pp.pprint(event)
 if __name__ == "__main__":

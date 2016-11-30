@@ -21,5 +21,6 @@ install(FILES
     crfa_qtguitest.xml
     crfa_rds_table_qt.xml
     crfa_rds_parser_table_qt.xml
-    crfa_rds_decoder.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_rds_decoder.xml
+    crfa_max_freq.xml DESTINATION share/gnuradio/grc/blocks
 )

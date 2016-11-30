@@ -35,4 +35,5 @@ from multi_rds_printer import multi_rds_printer
 from qtguitest import qtguitest
 from rds_table_qt import rds_table_qt
 from rds_parser_table_qt import rds_parser_table_qt
+from max_freq import max_freq
 #
