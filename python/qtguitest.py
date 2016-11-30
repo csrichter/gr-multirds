@@ -97,8 +97,27 @@ class CRWidget(QtGui.QWidget):
         self.table.setHorizontalHeaderLabels(horHeaders)  
         layout.addWidget(self.label)
         layout.addWidget(self.table)
+        
+        self.table.setHorizontalHeaderLabels(horHeaders)  
+        self.tmc_message_label=QtGui.QLabel("TMC messages:")
+        self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
+        self.location_filter=QtGui.QLineEdit()
+
         self.button = QtGui.QPushButton("i am a button")
         layout.addWidget(self.button)
+        
+        #self.filter_label=QtGui.QLabel()
+        filter_layout = Qt.QHBoxLayout()
+        filter_layout.addWidget(QtGui.QLabel("event filter:"))
+        filter_layout.addWidget(self.event_filter)
+        filter_layout.addWidget(QtGui.QLabel("location filter:"))
+        filter_layout.addWidget(self.location_filter)
+        #self.filter_label.setLayout(filter_layout)
+        
+        layout.addLayout(filter_layout)
+        layout.addWidget(self.tmc_message_label)
+
+
         
     def display_data(self, event):
 	#msg_type = event.data[0]
@@ -126,7 +145,7 @@ if __name__ == "__main__":
     widget.show()
     widget.setWindowTitle("Test Qt gui")
     widget.setGeometry(200,200,600,300)
-    code.interact(local=locals())
-    sys.exit(app.exec_())
-
+    #code.interact(local=locals())
+    #sys.exit(app.exec_())
+    app.exec_(code.interact(local=locals()))
     widget = None

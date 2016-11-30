@@ -446,17 +446,27 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  self.table.setCellWidget(i,self.table.columnCount()-1,button)
 	  button.clicked.connect(self.onCLick)
         #Add Header
+        layout.addWidget(self.label)
+        layout.addWidget(self.table)
+        
         self.table.setHorizontalHeaderLabels(horHeaders)  
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit()
-        layout.addWidget(self.label)
-        layout.addWidget(self.table)
+
         self.button = QtGui.QPushButton("i am a button")
         layout.addWidget(self.button)
+        
+        filter_layout = Qt.QHBoxLayout()
+        filter_layout.addWidget(QtGui.QLabel("event filter:"))
+        filter_layout.addWidget(self.event_filter)
+        filter_layout.addWidget(QtGui.QLabel("location filter:"))
+        filter_layout.addWidget(self.location_filter)
+        
+        layout.addLayout(filter_layout)
         layout.addWidget(self.tmc_message_label)
-        layout.addWidget(self.event_filter)
-        layout.addWidget(self.location_filter)
+        
+        
         
     def display_data(self, event):
 	#pp.pprint(event)
