@@ -13,7 +13,7 @@
 #end if
 $(signals) = rds_parser_table_qt_Signals()
 self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts)
-$(win) = rds_parser_table_qt_Widget($signals, $label)
+$(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id))
 $(gui_hint()($win))</make>
   <param>
     <name>Label</name>
@@ -41,6 +41,11 @@ $(gui_hint()($win))</make>
     <type>message</type>
     <nports>$nPorts</nports>
     <!--<optional>1</optional>-->
+  </sink>
+    <sink>
+    <name>freq</name>
+    <type>message</type>
+    <optional>1</optional>
   </sink>
 
 </block>

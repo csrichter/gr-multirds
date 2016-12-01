@@ -1,37 +1,33 @@
 <?xml version="1.0"?>
 <block>
-  <name>max_freq</name>
-  <key>crfa_max_freq</key>
+  <name>smooth_vectors</name>
+  <key>crfa_smooth_vectors</key>
   <category>[crfa]</category>
   <import>import crfa</import>
-  <make>crfa.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate)</make>
+  <make>crfa.smooth_vectors($vec_len, $decim, $moving_avg_len)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
-  <callback>set_center_freq($center_freq);</callback>
   <param>
-    <name>fft_len</name>
-    <key>fft_len</key>
+    <name>vec_len</name>
+    <key>vec_len</key>
+    <value>1024</value>
     <type>int</type>
   </param>
   <param>
-    <name>num_decoders</name>
-    <key>num_decoders</key>
+    <name>decim</name>
+    <key>decim</key>
+    <value>1</value>
     <type>int</type>
   </param>
   <param>
-    <name>center_freq</name>
-    <key>center_freq</key>
-    <type>float</type>
-  </param>
-  <param>
-    <name>samp_rate</name>
-    <key>samp_rate</key>
+    <name>moving_avg_len</name>
+    <key>moving_avg_len</key>
+    <value>2</value>
     <type>int</type>
   </param>
-
 
   <!-- Make one 'sink' node per input. Sub-nodes:
        * name (an identifier for the GUI)
@@ -41,12 +37,16 @@
   <sink>
     <name>in</name>
     <type>float</type>
-    <vlen>$fft_len</vlen>
+    <vlen>$vec_len</vlen>
   </sink>
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
   <source>
     <name>out</name>
-    <type>message</type>
-    <optional>1</optional>
+    <type>float</type>
+    <vlen>$vec_len</vlen>
   </source>
-
 </block>

@@ -21,7 +21,7 @@
 
 import numpy as np
 from gnuradio import gr
-import code
+import code,math,pmt
 
 class max_freq(gr.sync_block):
     """
@@ -36,27 +36,22 @@ class max_freq(gr.sync_block):
         self.num_decoders=num_decoders
         self.center_freq=center_freq
         self.samp_rate=samp_rate
-        self.num_averages=5
-        self.avg_counter=-1
-        self.numbers_avg=[]
-
-
+        self.snapto=1e5 #100k
+	self.message_port_register_out(pmt.intern('out'))
+    def set_center_freq(self, freq=None):
+		if freq is not None:
+			if isinstance(freq, float) or isinstance(freq, int):
+				self.center_freq=freq
+			else:
+				self.center_freq = int(freq)
     def work(self, input_items, output_items):
       #in0 = input_items[0]
       #ii=input_items
-      numbers=abs(input_items[0][0])
-      threshold=6
-      if self.avg_counter == -1: #init
-        self.numbers_avg=numbers
-        self.avg_counter=0
-      elif self.avg_counter <= self.num_averages:
-        #np.mean( np.array([ old_set, new_set ]), axis=0 )
-        self.numbers_avg=np.mean( np.array([ self.numbers_avg, numbers ]), axis=0 )
-        self.avg_counter+=1
-      elif len(np.where(self.numbers_avg>threshold)[0]) >0:
-        self.avg_counter=0
-        numbers=self.numbers_avg
-        min_consec_max_threshold=4#minimum number of consecutive maximums (in fft domain) to consider signal as station
+        carrier_width=2
+        carrier=self.fft_len/2
+        numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#reads input and disregards center
+        threshold=100
+        min_consec_max_threshold=1#minimum number of consecutive maximums (in fft domain) to consider signal as station
         #TODO: what if no numbers over threshold?
         #TODO auto threshold
         #max_indices=[[421, 428, 429, 430, 431, 432, 433, 434, 436, 437, 438, 831, 832, 837, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851,852, 853, 854, 855, 856, 857]]
@@ -67,9 +62,14 @@ class max_freq(gr.sync_block):
         #last_index=0
         count=1#counts number of consecutive maximums
         threshold_reached=False
-        fuzzyness=10
+        fuzzyness=2
 #        max_indices[0].append(0)#to detect last station
         max_indices=np.append(max_indices,0)#to detect last station
+        #try:
+	 
+         #max_indices.remove(self.fft_len/2)#suppress local oscillator of hackrf
+        #except ValueError:
+	  #pass
         for i in max_indices:
           if abs(i-last_index) <= fuzzyness:
             count+=i-last_index
@@ -89,31 +89,14 @@ class max_freq(gr.sync_block):
         for index in station_indices:
           startfreq=self.center_freq-self.samp_rate/2
           freq=self.samp_rate*index/self.fft_len+startfreq
-          station_freqs.append(freq)
-        
-        """
-[422 423 426 427 428 430 431 432 433 434 435 436 437 836 837 838 842 843
- 844 845 846 847 848 849 850 851 852 853 854 855 856 857 858 859 861 862
-   0]
-[]
-[]
-[423 424 425 426 427 428 429 430 431 432 433 434 842 843 844 845 848 849
- 850 851 852 853 854 855 858 859 860   0]
-[428, 851]
-[101303125.0, 102294531.0]
-[415 416 419 420 421 422 423 424 425 426 427 428 429 430 431 432 433 434
- 844 845 846 847 848 849 850 851 852 853 854 855 856 861 862 863   0]
-[853]
-[102299218.0]
-"""
-        #f=open("/tmp/obj","r")
-        #import pickle
-        #pickle.load(ii,f)
-        #(array([431, 433, 437, 439, 849, 854, 856, 858, 861, 862]),)
-        #code.interact(local=locals())
-        # <+signal processing here+>
+          num_decimals=int(round(math.log(self.snapto,10)))
+          station_freqs.append(round(freq,-num_decimals))
+        for i in range(0,min(self.num_decoders,len(station_freqs))):
+	  msg_string=str(i+1)+" "+str(station_freqs[i])
+	  send_pmt = pmt.string_to_symbol(msg_string)
+	  self.message_port_pub(pmt.intern('out'), send_pmt)
         print(max_indices)
         print(station_indices)
         print(station_freqs)
-      return len(input_items[0])
+        return len(input_items[0])
 

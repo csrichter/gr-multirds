@@ -21,7 +21,8 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5
+import pmt,functools,csv,md5,collections
+import chart#local file
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code#for easier testing
 pp = pprint.PrettyPrinter()
@@ -46,15 +47,16 @@ class rds_parser_table_qt(gr.sync_block):
 	for i in range(0,nPorts):
 	  self.message_port_register_in(pmt.intern('in%d'%i))
 	  self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
-
+	self.message_port_register_in(pmt.intern('freq'))
+	self.set_msg_handler(pmt.intern('freq'), self.set_freq)
 	self.signals=signals
 	self.RDS_data={}
         self.printcounter=0
         self.ODA_application_names={}
         self.TMC_data={}
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        #workdir="/user/wire2/richter/hackrf_prototypes/"
-        workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
+        workdir="/user/wire2/richter/hackrf_prototypes/"
+        #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
         reader = csv.reader(open(workdir+'RDS_ODA AIDs_names_only.csv'), delimiter=',', quotechar='"')
         reader.next()#skip header
         for row in reader:
@@ -77,6 +79,18 @@ class rds_parser_table_qt(gr.sync_block):
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
+    def set_freq(self,msg):
+	m = pmt.symbol_to_string(msg)
+	tgtnum=int(m.split()[0])-1#msgs are 1-indexed
+	freq_str=m.split()[1]
+	try:
+	  freq=float(freq_str)
+	  freq_str="%0.1fM"% (freq/1e6)
+	except ValueError:
+	  pass#leave string as is
+	self.signals.DataUpdateEvent.emit({'row':tgtnum,'freq':freq_str})
+	#print("nr:%i freq:%s"%(tgtnum,freq_str))
+
     def handle_msg(self, msg, port):
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
@@ -103,6 +117,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["AF"]={}
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
 	  self.RDS_data[PI]["last_item_toggle_bit"]=2
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}
 	  print("found station %s"%PI)
 	self.RDS_data[PI]["blockcounts"]["any"]+=1
 	if self.RDS_data[PI]["blockcounts"]["any"]==5:
@@ -321,30 +336,44 @@ class rds_parser_table_qt(gr.sync_block):
 	  tag2_len=int(tag2&(2**5-1))
 	  if not self.RDS_data[PI].has_key("RT+"):
 	    self.RDS_data[PI]["RT+"]={}
-	  if(self.RDS_data[PI].has_key("RT") and self.RDS_data[PI]["RT_all_valid"]):#TODO better (more fine grained) detection of valid RT+ info
+	  if self.RDS_data[PI].has_key("RT"):
 	    rt=self.RDS_data[PI]["RT"]
-	    if not tag1_type=="DUMMY_CLASS":
+	    rt_valid=self.RDS_data[PI]["RT_valid"]
+	    if not tag1_type=="DUMMY_CLASS" and all(rt_valid[tag1_start:tag1_start+tag1_len+1]):
 	      self.RDS_data[PI]["RT+"][tag1_type]=rt[tag1_start:tag1_start+tag1_len+1]
-	    if not tag2_type=="DUMMY_CLASS":
+	    if not tag2_type=="DUMMY_CLASS" and all(rt_valid[tag2_start:tag2_start+tag2_len+1]):
 	      self.RDS_data[PI]["RT+"][tag2_type]=rt[tag2_start:tag2_start+tag2_len+1]
-
-	  if(tag1_type=="ITEM.ARTIST"and tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT") and self.RDS_data[PI]["RT_all_valid"]):
+	  tags="ir:%i,it:%i"%(item_running_bit,item_toggle_bit)
+	  afcol=self.colorder.index('AF')
+	  self.signals.DataUpdateEvent.emit({'col':afcol,'row':port,'PI':PI,'string':tags})
+	  #if(tag1_type=="ITEM.ARTIST"and tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT") and self.RDS_data[PI]["RT_all_valid"]):
+	  if(tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT")):#TODO remove duplicate code
 	    rt=self.RDS_data[PI]["RT"]
-	    artist=rt[tag1_start:tag1_start+tag1_len+1]
-	    song=rt[tag2_start:tag2_start+tag2_len+1]
-	    formatted_text="%s by %s %i"%(song,artist,item_running_bit)
+	    rt_valid=self.RDS_data[PI]["RT_valid"]
+	    artist="?"
+	    song="?"
+	    if all(rt_valid[tag1_start:tag1_start+tag1_len+1]):
+	      artist=rt[tag1_start:tag1_start+tag1_len+1]
+	    if all(rt_valid[tag2_start:tag2_start+tag2_len+1]):
+	      song=rt[tag2_start:tag2_start+tag2_len+1]
+	    formatted_text="%s by %s"%(song,artist)
 	    rtcol=self.colorder.index('text')
-	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':formatted_text})
-	    #self.signals.DataUpdateEvent.emit({'col':8,'row':port,'PI':PI,'string':formatted_text})  
-	  elif(not tag1_type=="ITEM.ARTIST" and not tag1_type=="DUMMY_CLASS"):
-	    print("%s:RT+: tag1_type:%s, tag2_type:%s"%(PI,tag1_type,tag2_type)) 
+	    #only update tooltip if text changed -> remove flicker, still flickers :(
+	    if not formatted_text == self.RDS_data[PI]["internals"]["last_rt_tooltip"]:
+	      self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':formatted_text}) 
+	      self.RDS_data[PI]["internals"]["last_rt_tooltip"] = formatted_text
+	  #elif(not tag1_type=="ITEM.ARTIST" and not tag1_type=="DUMMY_CLASS"):
+	  #  print("%s:RT+: tag1_type:%s, tag2_type:%s"%(PI,tag1_type,tag2_type)) 
 	  if not self.RDS_data[PI]["last_item_toggle_bit"] == item_toggle_bit: #new item
 	    self.RDS_data[PI]["last_item_toggle_bit"] = item_toggle_bit
 	    rtcol=self.colorder.index('text')
+	    print("toggle bit changed on PI:%s, cleared RT-tt"%PI)
 	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':""})
-	else:#other group
-	  printdelay=50
-	  self.printcounter+=1
+	#else:#other group
+	if 1==1:
+	  #printdelay=50
+	  printdelay=500
+	  self.printcounter+=0#printing disabled
 	  if self.RDS_data[PI]["blockcounts"].has_key(groupType):
 	      self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
 	  else:
@@ -403,9 +432,10 @@ class rds_parser_table_qt(gr.sync_block):
       formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
       return formatted_text
 class rds_parser_table_qt_Widget(QtGui.QWidget):
-    def __init__(self, signals,label):
-	print("gui initializing")
+    def __init__(self, signals,label,tableobj):
+	#print("gui initializing")self.tableobj.RDS_data["D3A2"]
 	self.signals = signals
+	self.tableobj=tableobj
 	self.signals.DataUpdateEvent.connect(self.display_data)
         """ Creates the QT Range widget """
         QtGui.QWidget.__init__(self)
@@ -422,14 +452,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         empty_text64='________________________________________________________________'
         #empty_text64='\xe4'*64
         self.data = {'ID':range(1,6),
-		'freq':['','','',''],
+		'freq':[ QtGui.QLabel() for i in range(4)],
                 'name':[ QtGui.QLabel() for i in range(4)],
                 'PTY':[ QtGui.QLabel() for i in range(4)],
-                #'flags':[ QtGui.QLabel() for i in range(4)],
-                'AF':['','','',''],
+                'AF':[ QtGui.QLabel() for i in range(4)],
                 'time':[ QtGui.QLabel() for i in range(4)],
                 'text':[ QtGui.QLabel("_"*64) for i in range(4)],
-                #'RT+':[ QtGui.QLabel() for i in range(4)],
                 'quality':[ QtGui.QLabel() for i in range(4)],
                 'buttons':[]}
         #Enter data onto Table
@@ -448,9 +476,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
                 newitem = QtGui.QTableWidgetItem(item)
 		self.table.setItem(m, n, newitem)
         for i in range(0,4):#create buttons
-	  button=QtGui.QPushButton("play")
+	  button=QtGui.QPushButton("getDetails")
 	  self.table.setCellWidget(i,self.table.columnCount()-1,button)
-	  button.clicked.connect(self.onCLick)
+	  button.clicked.connect(functools.partial(self.getDetails, row=i))
+	  #button.clicked.connect(self.getDetails)
         #Add Header
         layout.addWidget(self.label)
         layout.addWidget(self.table)
@@ -464,8 +493,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit()
 
-        self.button = QtGui.QPushButton("i am a button")
-        layout.addWidget(self.button)
+        button = QtGui.QPushButton("code.interact")
+        button.clicked.connect(self.onCLick)
+        layout.addWidget(button)
         
         filter_layout = Qt.QHBoxLayout()
         filter_layout.addWidget(QtGui.QLabel("event filter:"))
@@ -487,9 +517,14 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         
     def display_data(self, event):
 	#pp.pprint(event)
+
 	if type(event)==dict and event.has_key('TMC_log'): 
 	  self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log']))
 	if type(event)==dict and event.has_key('row'): 
+	  if event.has_key('freq'):
+	    freqcol=self.colorder.index('freq')
+	    item=self.table.cellWidget(event['row'],freqcol)
+	    item.setText(event['freq'])
 	  if event.has_key('wrong_blocks'):
 	    item=self.table.cellWidget(event['row'],self.colorder.index('quality'))
 	    quality_string="%i%% %s"% (100-2*event['wrong_blocks'],event['dots'])
@@ -511,8 +546,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    PIcol=self.colorder.index('ID')
 	    #rtpcol=self.colorder.index('RT+')
 	    rtcol=self.colorder.index('text')
-	    if not self.table.item(event['row'],PIcol).text() == event['PI']:
+	    if not str(self.table.item(event['row'],PIcol).text()) == event['PI']:
 	      #self.table.cellWidget(event['row'],rtpcol).setText("")#clear RT+ on changed PI
+	      print("PI changed on row %i, cleared RT-tt"%event['row'])
 	      self.table.cellWidget(event['row'],rtcol).setToolTip(Qt.QString("")) 
 	    self.table.item(event['row'],PIcol).setText(event['PI'])
 	  if event.has_key('AF'):
@@ -525,6 +561,36 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item=self.table.cellWidget(event['row'],PSNcol)
 	    item.setText(event['PSN'])
 	self.table.resizeColumnsToContents()
+    def getDetails(self,row):
+	PIcol=self.colorder.index('ID')
+	PI=str(self.table.item(row,PIcol).text())
+	#PI=
+	#print("row:%i,PI:%s"%(row,PI))
+	#print(self.tableobj.RDS_data[PI])
+	table=chart.DataTable()
+	table.addColumn('groupType')
+	table.addColumn('numPackets')
+	#ordered_blockcounts=self.tableobj.RDS_data["D00F"]['blockcounts']
+	blockcounts=self.tableobj.RDS_data[PI]['blockcounts'].copy()
+	del blockcounts['any']
+	#lambda function removes last character of PI string (A or B) and sorts based on integer valure of number in front
+	for key in sorted(blockcounts,key=lambda elem: int(elem[0:-1])):
+	  count=blockcounts[key]
+	  table.addRow([key+": "+str(count),count])
+	mychart=chart.PieChart(table)
+	view = chart.DialogViewer()
+	view.setGraph(mychart)
+	#view.resize(360, 240)
+	view.resize(330, 420)
+	rds_data=self.tableobj.RDS_data[PI].copy()
+	del rds_data['blockcounts']
+	del rds_data['PSN_valid']
+	del rds_data['RT_valid']
+	l=QtGui.QLabel("Data:%s"%str(rds_data))
+	l.setWordWrap(True)
+	#l=QtGui.QLabel("Data:")
+	view.layout().addWidget(l)
+	view.exec_()
     def onCLick(self):
 	print("button clicked")
 	code.interact(local=locals())
