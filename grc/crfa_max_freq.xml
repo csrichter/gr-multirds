@@ -4,7 +4,7 @@
   <key>crfa_max_freq</key>
   <category>[crfa]</category>
   <import>import crfa</import>
-  <make>crfa.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate)</make>
+  <make>crfa.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate,$round_to)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -12,22 +12,27 @@
        * type -->
   <callback>set_center_freq($center_freq);</callback>
   <param>
-    <name>fft_len</name>
+    <name>fft lenngth</name>
     <key>fft_len</key>
     <type>int</type>
   </param>
   <param>
-    <name>num_decoders</name>
+    <name>round to (in hz)</name>
+    <key>round_to</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>number of decoders</name>
     <key>num_decoders</key>
     <type>int</type>
   </param>
   <param>
-    <name>center_freq</name>
+    <name>center frequency</name>
     <key>center_freq</key>
     <type>float</type>
   </param>
   <param>
-    <name>samp_rate</name>
+    <name>sample rate</name>
     <key>samp_rate</key>
     <type>int</type>
   </param>

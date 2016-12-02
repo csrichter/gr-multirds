@@ -27,7 +27,7 @@ class max_freq(gr.sync_block):
     """
     docstring for block max_freq
     """
-    def __init__(self, fft_len=1024,num_decoders=4,center_freq=0,samp_rate=0):
+    def __init__(self, fft_len=1024,num_decoders=4,center_freq=0,samp_rate=0,round_to=100e3):
         gr.sync_block.__init__(self,
             name="max_freq",
             in_sig=[(np.float32,fft_len)],
@@ -36,7 +36,7 @@ class max_freq(gr.sync_block):
         self.num_decoders=num_decoders
         self.center_freq=center_freq
         self.samp_rate=samp_rate
-        self.snapto=1e5 #100k
+        self.snapto=round_to
 	self.message_port_register_out(pmt.intern('out'))
     def set_center_freq(self, freq=None):
 		if freq is not None:
@@ -95,8 +95,8 @@ class max_freq(gr.sync_block):
 	  msg_string=str(i+1)+" "+str(station_freqs[i])
 	  send_pmt = pmt.string_to_symbol(msg_string)
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
-        print(max_indices)
-        print(station_indices)
-        print(station_freqs)
+        #print(max_indices)
+        #print(station_indices)
+        #print(station_freqs)
         return len(input_items[0])
 

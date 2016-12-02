@@ -22,6 +22,7 @@ from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
 import pmt,functools,csv,md5,collections
+from datetime import datetime
 import chart#local file
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code#for easier testing
@@ -54,6 +55,7 @@ class rds_parser_table_qt(gr.sync_block):
         self.printcounter=0
         self.ODA_application_names={}
         self.TMC_data={}
+        self.decoder_frequencies={}
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
         workdir="/user/wire2/richter/hackrf_prototypes/"
         #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
@@ -81,14 +83,15 @@ class rds_parser_table_qt(gr.sync_block):
 	f.close()
     def set_freq(self,msg):
 	m = pmt.symbol_to_string(msg)
-	tgtnum=int(m.split()[0])-1#msgs are 1-indexed
+	decoder_num=int(m.split()[0])-1#msgs are 1-indexed, decoder_num is 0-indexed
 	freq_str=m.split()[1]
 	try:
 	  freq=float(freq_str)
-	  freq_str="%0.1fM"% (freq/1e6)
+	  self.decoder_frequencies[decoder_num]=freq
+	  freq_str="%i:%0.1fM"% (decoder_num,freq/1e6)
 	except ValueError:
 	  pass#leave string as is
-	self.signals.DataUpdateEvent.emit({'row':tgtnum,'freq':freq_str})
+	#self.signals.DataUpdateEvent.emit({'row':decoder_num,'freq':freq_str})
 	#print("nr:%i freq:%s"%(tgtnum,freq_str))
 
     def handle_msg(self, msg, port):
@@ -105,7 +108,10 @@ class rds_parser_table_qt(gr.sync_block):
 	block2=(array[2]<<8)|(array[3]) #block2
 	PTY=(block2>>5)&0x1F
 	wrong_blocks=int(array[12])
-	
+	if self.decoder_frequencies.has_key(port):
+	  freq=self.decoder_frequencies[port]
+	  freq_str="%i:%0.1fM"% (port,freq/1e6)
+	  self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	#initialize dict 1st packet from station:
 	if not self.RDS_data.has_key(PI):
 	  self.RDS_data[PI]={}
@@ -116,7 +122,6 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["PSN_valid"]=[False]*8
 	  self.RDS_data[PI]["AF"]={}
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["last_item_toggle_bit"]=2
 	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}
 	  print("found station %s"%PI)
 	self.RDS_data[PI]["blockcounts"]["any"]+=1
@@ -137,16 +142,18 @@ class rds_parser_table_qt(gr.sync_block):
 	  MS=(array[3]>>3)&0x1
 	  flag_string="TP:%i, TA:%i, MS:%i, DI:%s"%(TP,TA,MS,str(self.RDS_data[PI]["DI"]))
 	  self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'flags':flag_string})
-	  #1110 0000 = no AF
-	  #1110 0001 = 1AF
-	  #1111 1001 = 25AF
 	  
+	  #224 1110 0000 = no AF
+	  #225 1110 0001 = 1AF
+	  #249 1111 1001 = 25AF
+	  fillercode=205#1100 1101
+	  
+	  if(array[4]>= 224 and array[4]<= 249):
+	    #print("AF1 detected")
+	    self.RDS_data[PI]["AF"]['number']=array[4]-224
+	    self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'AF':self.RDS_data[PI]["AF"]})
 	  if(array[5]>= 224 and array[5]<= 249):
-	    print("AF1 detected")
-	    self.RDS_data[PI]["AF"]['number']=array[5]-224
-	    self.signals.DataUpdateEvent.emit({'row':port,'AF':self.RDS_data[PI]["AF"]})
-	  if(array[6]>= 224 and array[6]<= 249):
-	    print("AF2 detected")
+	    print("AF2 detected (shouldn't happen)")
 	  
 	  name_list=list(self.RDS_data[PI]["PSN"])
 	  if (name_list[adr*2:adr*2+2]==list(segment)):#segment already there
@@ -174,14 +181,38 @@ class rds_parser_table_qt(gr.sync_block):
 	   textcolor="gray"	  
 	  formatted_text=self.color_text(self.RDS_data[PI]["PSN"],adr*2,adr*2+2,textcolor,segmentcolor)
 	  self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PSN':formatted_text})
-	  
+	elif (groupType == "1A"):#PIN programme item number
+	  PIN=(array[6]<<8)|(array[7])
+	  SLC=(array[4]<<8)|(array[5])&0xfff#slow labeling code
+	  radio_paging=array[3]&0x1f
+	  LA=array[4]>>7#linkage actuator
+	  variant=(array[4]>>4)&0x7
+	  if variant==0:
+	    paging=array[4]&0xf
+	    extended_country_code=array[5]
+	  elif variant==1:
+	    TMC_info=SLC
+	  elif variant==2:
+	    paging_info=SLC
+	  elif variant==3:
+	    language_codes=SLC
+	  elif variant==6:
+	    #for use by broadcasters
+	    print("PI:%s PSN:%s uses variant 6 of 1A"%(PI,self.RDS_data[PI]["PSN"]))
+	  elif variant==7:
+	    ESW_channel_identification=SLC
+	  PIN_day=(PIN>>11)&0x1f
+	  PIN_hour=(PIN>>6)&0x1f
+	  PIN_minute=PIN&0x3f
+	  PIN_valid= PIN_day in range(1,32) and PIN_hour in range(0,24) and PIN_minute in range(0,60)
+	  if PIN_valid:
+	    self.RDS_data[PI]["PIN"]=[PIN_day,PIN_hour,PIN_minute]
 	elif (groupType == "2A"):#RT radiotext
-	  
-	  if(not self.RDS_data[PI].has_key("RT")):#initialize variables
+	   if(not self.RDS_data[PI].has_key("RT")):#initialize variables
 	    self.RDS_data[PI]["RT"]="_"*64
 	    self.RDS_data[PI]["RT_valid"]=[False]*64
 	    self.RDS_data[PI]["RT_all_valid"]=False
-	  else:
+	   
 	   adr=array[3]&0b00001111
 	   segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
 	   #print("RT:adress: %d, segment:%s"%(adr,segment))
@@ -242,6 +273,25 @@ class rds_parser_table_qt(gr.sync_block):
 	    self.RDS_data[PI]["AID_list"][AID]["app_name"]=app_name
 	    self.RDS_data[PI]["AID_list"][AID]["app_data"]=app_data
 	    print("new ODA: AID:%i, name:%s, app_group:%s, station:%s" %(AID,app_name,app_group,PI))
+	  #decode 3A group of TMC
+	  if AID==52550:#TMC alert-c
+	    variant=app_data>>14
+	    if variant==0:
+	      LTN=(app_data>>6)&0x3f#location table number
+	      AFI=(app_data>>5)&0x1#alternative frequency indicator
+	      M=(app_data>>4)&0x1#transmission mode indicator
+	      I=(app_data>>3)&0x1#international (EUROROAD)
+	      N=(app_data>>2)&0x1#national
+	      R=(app_data>>1)&0x1#regional
+	      U=(app_data>>0)&0x1#urban
+	    elif variant==1:
+	      SID=(app_data>>6)&0x3f#service identifier
+	      G=(app_data>>12)&0x3#gap parameter
+	      activity_time=(app_data>>4)&0x3
+	      window_time=(app_data>>2)&0x3
+	      delay_time=(app_data>>0)&0x3
+	    else:
+	      print("unknown variant %i in TMC 3A group"%variant)
 	elif (groupType == "4A"):#CT clock time
 	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)
 	  hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
@@ -265,7 +315,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  ctcol=self.colorder.index('time')
 	  self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
 	#TMC-alert-c (grouptype mostly 8A):
-	elif self.RDS_data[PI]["AID_list"].has_key(52550) and self.RDS_data[PI]["AID_list"][52550]["groupType"]==groupType:
+	elif self.RDS_data[PI]["AID_list"].has_key(52550) and self.RDS_data[PI]["AID_list"][52550]["groupType"]==groupType:#TMC alert-C
 	  tmc_x=array[3]&0x1f #lower 5 bit of block2
 	  tmc_y=(array[4]<<8)|(array[5]) #block3
 	  tmc_z=(array[6]<<8)|(array[7])#block4
@@ -310,15 +360,24 @@ class rds_parser_table_qt(gr.sync_block):
 	  else:#alert plus or provider info
 	    adr=tmc_x&0xf
 	    if  4 <= adr and adr <= 9:
-	      #print("TMC-info")
-	      a=0
+	      #seen variants 4569, 6 most often
+	      #print("TMC-info variant:%i"%adr)
+	      if adr== 7:
+		freq=tmc_y>>8
+		print("TMC-info: TN:%i"%freq)
+		self.RDS_data[PI]["TMC_TN"]=freq
 	    else:
 	      a=0
-	      #print("alert plus")
+	      print("alert plus")
 	    
 	 
 	#RadioText+ (grouptype mostly 12A):
-	elif self.RDS_data[PI]["AID_list"].has_key(19415) and self.RDS_data[PI]["AID_list"][19415]["groupType"]==groupType:
+	elif self.RDS_data[PI]["AID_list"].has_key(19415) and self.RDS_data[PI]["AID_list"][19415]["groupType"]==groupType:#RT+
+	  if not self.RDS_data[PI].has_key("RT+"):
+	    #self.RDS_data[PI]["RT+"]={"history":{},"last_item_toggle_bit":2}
+	    self.RDS_data[PI]["RT+"]={"last_item_toggle_bit":2}
+	    self.RDS_data[PI]["RT+_history"]={}
+	    #self.RDS_data[PI]["RT+"]["last_item_toggle_bit"]=2
 	  A3_data=self.RDS_data[PI]["AID_list"][19415]["app_data"]
 	  template_number=A3_data&0xff
 	  SCB=(A3_data >> 8)&0x0f#server control bit
@@ -334,8 +393,13 @@ class rds_parser_table_qt(gr.sync_block):
 	  tag1_len=int(tag1&(2**6-1))
 	  tag2_start=int((tag2>>5)&(2**6-1))
 	  tag2_len=int(tag2&(2**5-1))
-	  if not self.RDS_data[PI].has_key("RT+"):
-	    self.RDS_data[PI]["RT+"]={}
+	  if not self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] == item_toggle_bit: #new item
+	    #self.RDS_data[PI]["RT+"]["history"][str(datetime.now())]=self.RDS_data[PI]["internals"]["last_rt_tooltip"]
+	    self.RDS_data[PI]["RT+_history"][str(datetime.now())]=self.RDS_data[PI]["RT+"]#save old item
+	    self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] = item_toggle_bit
+	    rtcol=self.colorder.index('text')
+	    print("toggle bit changed on PI:%s, cleared RT-tt"%PI)
+	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':""})
 	  if self.RDS_data[PI].has_key("RT"):
 	    rt=self.RDS_data[PI]["RT"]
 	    rt_valid=self.RDS_data[PI]["RT_valid"]
@@ -364,11 +428,29 @@ class rds_parser_table_qt(gr.sync_block):
 	      self.RDS_data[PI]["internals"]["last_rt_tooltip"] = formatted_text
 	  #elif(not tag1_type=="ITEM.ARTIST" and not tag1_type=="DUMMY_CLASS"):
 	  #  print("%s:RT+: tag1_type:%s, tag2_type:%s"%(PI,tag1_type,tag2_type)) 
-	  if not self.RDS_data[PI]["last_item_toggle_bit"] == item_toggle_bit: #new item
-	    self.RDS_data[PI]["last_item_toggle_bit"] = item_toggle_bit
-	    rtcol=self.colorder.index('text')
-	    print("toggle bit changed on PI:%s, cleared RT-tt"%PI)
-	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':""})
+	elif (groupType == "14A"):#EON enhanced other networks
+	    #TN = tuned network, ON=other network
+	    if not self.RDS_data[PI].has_key("EON"):
+	      self.RDS_data[PI]["EON"]={}
+	    TP_ON=(array[3]>>4)&0x1
+	    PI_ON="%02X%02X" %(array[6],array[7])
+	    variant=array[3]&0xf
+	    if not self.RDS_data[PI]["EON"].has_key(PI_ON):
+	      self.RDS_data[PI]["EON"][PI_ON]={}
+	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]="_"*8
+	    if variant in range(4):#variant 0..3 -> PS_ON
+	      segment=self.decode_chars(chr(array[4])+chr(array[5]))
+	      name_list=list(self.RDS_data[PI]["EON"][PI_ON]["PSN"])
+	      name_list[variant*2:variant*2+2]=segment
+	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]="".join(name_list)
+	    if variant==13:#PTY and TA of ON
+	      PTY_ON=array[4]>>3
+	      TA_ON=array[5]&0x1
+	      self.RDS_data[PI]["EON"][PI_ON]["TA_ON"]=TA_ON
+	      self.RDS_data[PI]["EON"][PI_ON]["PTY_ON"]=PTY_ON
+	      #rest is reserved
+	    if variant==14:#programme item number of ON
+	      PIN_ON=(array[4]<<8)|(array[5])
 	#else:#other group
 	if 1==1:
 	  #printdelay=50
@@ -443,22 +525,25 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.label = Qt.QLabel(label)
         layout.addWidget(self.label)
         self.setLayout(layout)
+        #self.decoder_to_PI={}
+        self.PI_to_row={}
         self.table=QtGui.QTableWidget(self)
-        self.table.setRowCount(5)
+        rowcount=2
+        self.table.setRowCount(rowcount)
         self.table.setColumnCount(9)
         self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #disallow editing
           #Data
         empty_text32='________________________________'
         empty_text64='________________________________________________________________'
         #empty_text64='\xe4'*64
-        self.data = {'ID':range(1,6),
-		'freq':[ QtGui.QLabel() for i in range(4)],
-                'name':[ QtGui.QLabel() for i in range(4)],
-                'PTY':[ QtGui.QLabel() for i in range(4)],
-                'AF':[ QtGui.QLabel() for i in range(4)],
-                'time':[ QtGui.QLabel() for i in range(4)],
-                'text':[ QtGui.QLabel("_"*64) for i in range(4)],
-                'quality':[ QtGui.QLabel() for i in range(4)],
+        self.data = {'ID':[ QtGui.QLabel() for i in range(rowcount)],
+		'freq':[ QtGui.QLabel() for i in range(rowcount)],
+                'name':[ QtGui.QLabel() for i in range(rowcount)],
+                'PTY':[ QtGui.QLabel() for i in range(rowcount)],
+                'AF':[ QtGui.QLabel() for i in range(rowcount)],
+                'time':[ QtGui.QLabel() for i in range(rowcount)],
+                'text':[ QtGui.QLabel("_"*64) for i in range(rowcount)],
+                'quality':[ QtGui.QLabel() for i in range(rowcount)],
                 'buttons':[]}
         #Enter data onto Table
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
@@ -475,7 +560,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	      else:
                 newitem = QtGui.QTableWidgetItem(item)
 		self.table.setItem(m, n, newitem)
-        for i in range(0,4):#create buttons
+        for i in range(rowcount):#create buttons
 	  button=QtGui.QPushButton("getDetails")
 	  self.table.setCellWidget(i,self.table.columnCount()-1,button)
 	  button.clicked.connect(functools.partial(self.getDetails, row=i))
@@ -491,7 +576,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 
         
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
-        self.location_filter=QtGui.QLineEdit()
+        self.location_filter=QtGui.QLineEdit("Baden-Württemberg")
 
         button = QtGui.QPushButton("code.interact")
         button.clicked.connect(self.onCLick)
@@ -513,57 +598,77 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         font.setFamily("Courier")
         font.setPointSize(10)
         layout.addWidget(self.logOutput)
-        
-        
+    def insert_empty_row(self):
+      rowPosition = self.table.rowCount()
+      self.table.insertRow(rowPosition)
+      for col in range(self.table.columnCount()-1):#all labels except in last column -> buttons
+	self.table.setCellWidget(rowPosition,col,QtGui.QLabel())
+      button=QtGui.QPushButton("getDetails")
+      self.table.setCellWidget(rowPosition,self.table.columnCount()-1,button)
+      button.clicked.connect(functools.partial(self.getDetails, row=rowPosition))
     def display_data(self, event):
 	#pp.pprint(event)
 
 	if type(event)==dict and event.has_key('TMC_log'): 
-	  self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log']))
-	if type(event)==dict and event.has_key('row'): 
+	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
+	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
+	  text=unicode(event['TMC_log'], encoding="UTF-8").lower()
+	  if not text.find(lf)==-1 and not text.find(ef)==-1:
+	    self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log']))
+	#if type(event)==dict and event.has_key('row'): 
+	if type(event)==dict and event.has_key('PI'): 
+	  #row=event['row']
+	  PI=event['PI']
+	  if not self.PI_to_row.has_key(PI):
+	    self.PI_to_row[PI]=len(self.PI_to_row)#zero for first PI seen, then count up
+	    self.insert_empty_row()
+	  row=self.PI_to_row[PI]
+	  PIcol=self.colorder.index('ID')
+	  self.table.cellWidget(row,PIcol).setText(PI)
+	  
 	  if event.has_key('freq'):
 	    freqcol=self.colorder.index('freq')
-	    item=self.table.cellWidget(event['row'],freqcol)
+	    item=self.table.cellWidget(row,freqcol)
 	    item.setText(event['freq'])
 	  if event.has_key('wrong_blocks'):
-	    item=self.table.cellWidget(event['row'],self.colorder.index('quality'))
+	    item=self.table.cellWidget(row,self.colorder.index('quality'))
 	    quality_string="%i%% %s"% (100-2*event['wrong_blocks'],event['dots'])
 	    item.setText(quality_string)
 	  if event.has_key('PTY'):
-	    item=self.table.cellWidget(event['row'],self.colorder.index('PTY'))
+	    item=self.table.cellWidget(row,self.colorder.index('PTY'))
 	    item.setText(event['PTY'])
 	  if event.has_key('flags'):
-	    item=self.table.cellWidget(event['row'],self.colorder.index('PTY'))
+	    item=self.table.cellWidget(row,self.colorder.index('PTY'))
 	    item.setToolTip(Qt.QString(event['flags']))
 	  if event.has_key('string'):
-	    item=self.table.cellWidget(event['row'],event['col'])
+	    item=self.table.cellWidget(row,event['col'])
 	    item.setText(event['string'])
 	  if event.has_key('tooltip'):
-	    item=self.table.cellWidget(event['row'],event['col'])
+	    item=self.table.cellWidget(row,event['col'])
 	    item.setToolTip(Qt.QString(event['tooltip'])) 
-	  if event.has_key('PI'):
-	    #setPI
-	    PIcol=self.colorder.index('ID')
-	    #rtpcol=self.colorder.index('RT+')
-	    rtcol=self.colorder.index('text')
-	    if not str(self.table.item(event['row'],PIcol).text()) == event['PI']:
-	      #self.table.cellWidget(event['row'],rtpcol).setText("")#clear RT+ on changed PI
-	      print("PI changed on row %i, cleared RT-tt"%event['row'])
-	      self.table.cellWidget(event['row'],rtcol).setToolTip(Qt.QString("")) 
-	    self.table.item(event['row'],PIcol).setText(event['PI'])
+	  #if event.has_key('PI'):
+	    ##setPI
+	    #PIcol=self.colorder.index('ID')
+	    ##rtpcol=self.colorder.index('RT+')
+	    #rtcol=self.colorder.index('text')
+	    #if not str(self.table.item(row,PIcol).text()) == event['PI']:
+	      ##self.table.cellWidget(row,rtpcol).setText("")#clear RT+ on changed PI
+	      #print("PI changed on row %i, cleared RT-tt"%row)
+	      #self.table.cellWidget(row,rtcol).setToolTip(Qt.QString("")) 
+	    #self.table.item(row,PIcol).setText(event['PI'])
 	  if event.has_key('AF'):
 	    #setAF
 	    PIcol=self.colorder.index('AF')
-	    self.table.item(event['row'],PIcol).setText(event['AF']['number'])
+	    self.table.cellWidget(row,PIcol).setText(str(event['AF']['number']))
 	  if event.has_key('PSN'):
 	    #setPSN
 	    PSNcol=self.colorder.index('name')
-	    item=self.table.cellWidget(event['row'],PSNcol)
+	    item=self.table.cellWidget(row,PSNcol)
 	    item.setText(event['PSN'])
 	self.table.resizeColumnsToContents()
     def getDetails(self,row):
 	PIcol=self.colorder.index('ID')
-	PI=str(self.table.item(row,PIcol).text())
+	PI=str(self.table.cellWidget(row,PIcol).text())
 	#PI=
 	#print("row:%i,PI:%s"%(row,PI))
 	#print(self.tableobj.RDS_data[PI])
@@ -586,7 +691,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	del rds_data['blockcounts']
 	del rds_data['PSN_valid']
 	del rds_data['RT_valid']
-	l=QtGui.QLabel("Data:%s"%str(rds_data))
+	l=QtGui.QLabel("Data:%s"%pp.pformat(rds_data))
+	l.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse |QtCore.Qt.TextSelectableByKeyboard)
 	l.setWordWrap(True)
 	#l=QtGui.QLabel("Data:")
 	view.layout().addWidget(l)
