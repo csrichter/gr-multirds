@@ -50,8 +50,11 @@ class max_freq(gr.sync_block):
         carrier_width=2
         carrier=self.fft_len/2
         numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#reads input and disregards center
-        threshold=100
-        min_consec_max_threshold=1#minimum number of consecutive maximums (in fft domain) to consider signal as station
+        #threshold=100 uni
+        threshold=80#home
+        #minimum number of consecutive maximums (in fft domain) to consider signal as station:
+#        min_consec_max_threshold=1#uni
+        min_consec_max_threshold=5#home
         #TODO: what if no numbers over threshold?
         #TODO auto threshold
         #max_indices=[[421, 428, 429, 430, 431, 432, 433, 434, 436, 437, 438, 831, 832, 837, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851,852, 853, 854, 855, 856, 857]]
@@ -62,7 +65,8 @@ class max_freq(gr.sync_block):
         #last_index=0
         count=1#counts number of consecutive maximums
         threshold_reached=False
-        fuzzyness=2
+        #fuzzyness=2#uni
+        fuzzyness=10#home
 #        max_indices[0].append(0)#to detect last station
         max_indices=np.append(max_indices,0)#to detect last station
         #try:
@@ -80,7 +84,7 @@ class max_freq(gr.sync_block):
               count=1
             else:#last streak didn't reach threshold -> no station
               count=1
-          if count==min_consec_max_threshold:
+          if count>=min_consec_max_threshold:
             threshold_reached=True
           last_index=i
           
@@ -95,8 +99,8 @@ class max_freq(gr.sync_block):
 	  msg_string=str(i+1)+" "+str(station_freqs[i])
 	  send_pmt = pmt.string_to_symbol(msg_string)
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
-        #print(max_indices)
-        #print(station_indices)
-        #print(station_freqs)
+        print(max_indices)
+        print(station_indices)
+        print(station_freqs)
         return len(input_items[0])
 

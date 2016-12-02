@@ -57,8 +57,8 @@ class rds_parser_table_qt(gr.sync_block):
         self.TMC_data={}
         self.decoder_frequencies={}
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        workdir="/user/wire2/richter/hackrf_prototypes/"
-        #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
+        #workdir="/user/wire2/richter/hackrf_prototypes/"
+        workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
         reader = csv.reader(open(workdir+'RDS_ODA AIDs_names_only.csv'), delimiter=',', quotechar='"')
         reader.next()#skip header
         for row in reader:
@@ -576,7 +576,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 
         
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
-        self.location_filter=QtGui.QLineEdit("Baden-Württemberg")
+        self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
 
         button = QtGui.QPushButton("code.interact")
         button.clicked.connect(self.onCLick)
@@ -688,9 +688,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	#view.resize(360, 240)
 	view.resize(330, 420)
 	rds_data=self.tableobj.RDS_data[PI].copy()
-	del rds_data['blockcounts']
-	del rds_data['PSN_valid']
-	del rds_data['RT_valid']
+	try:
+	 del rds_data['blockcounts']
+	 del rds_data['PSN_valid']
+	 del rds_data['RT_valid']
+	except KeyError:
+	 pass
 	l=QtGui.QLabel("Data:%s"%pp.pformat(rds_data))
 	l.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse |QtCore.Qt.TextSelectableByKeyboard)
 	l.setWordWrap(True)
