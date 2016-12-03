@@ -99,8 +99,8 @@ class max_freq(gr.sync_block):
 	  msg_string=str(i+1)+" "+str(station_freqs[i])
 	  send_pmt = pmt.string_to_symbol(msg_string)
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
-        print(max_indices)
-        print(station_indices)
-        print(station_freqs)
+        #print(max_indices)
+        #print(station_indices)
+        #print(station_freqs)
         return len(input_items[0])
 

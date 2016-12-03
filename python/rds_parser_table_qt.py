@@ -94,7 +94,7 @@ class rds_parser_table_qt(gr.sync_block):
 	#self.signals.DataUpdateEvent.emit({'row':decoder_num,'freq':freq_str})
 	#print("nr:%i freq:%s"%(tgtnum,freq_str))
 
-    def handle_msg(self, msg, port):
+    def handle_msg(self, msg, port):#port from 0 to 3
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
 	groupNR=array[2]&0b11110000
@@ -686,7 +686,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	view = chart.DialogViewer()
 	view.setGraph(mychart)
 	#view.resize(360, 240)
-	view.resize(330, 420)
+	view.resize(380, 500)
 	rds_data=self.tableobj.RDS_data[PI].copy()
 	try:
 	 del rds_data['blockcounts']
