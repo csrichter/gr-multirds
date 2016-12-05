@@ -63,9 +63,10 @@ class max_freq(gr.sync_block):
         #max_indices=[[421, 428, 429, 430, 431, 432, 433, 434, 436, 437, 438, 831, 832, 837, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851,852, 853, 854, 855, 856, 857]]
         max_indices=np.where(numbers>threshold)
         station_indices=[]
-        
-        last_index=max_indices[0][0]
-        #last_index=0
+        try:
+          last_index=max_indices[0][0]
+        except IndexError:
+          last_index=0
         count=1#counts number of consecutive maximums
         threshold_reached=False
 
