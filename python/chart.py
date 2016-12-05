@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from gnuradio import gr
 from itertools import cycle
 from PyQt4.Qt import *
 
@@ -353,6 +356,9 @@ class DialogViewer(QDialog):
    def __init__(self):
         QDialog.__init__(self)
         self.viewer = Viewer()
+        #self.viewer.resize(360, 240)
+        self.viewer.setMinimumSize(360,240)
+        #self.setMinimumSize(100,100)
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self.viewer)

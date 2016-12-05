@@ -23,7 +23,8 @@ import numpy
 from gnuradio import gr
 import pmt,functools,csv,md5,collections
 from datetime import datetime
-import chart#local file
+import crfa.chart as chart
+
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code#for easier testing
 pp = pprint.PrettyPrinter()
@@ -39,7 +40,7 @@ class rds_parser_table_qt(gr.sync_block):
     """
     docstring for block qtguitest
     """
-    def __init__(self,signals,nPorts):
+    def __init__(self,signals,nPorts,slot,freq):
 	#QObject.__init__()
         gr.sync_block.__init__(self,
             name="RDS Table",
@@ -52,6 +53,8 @@ class rds_parser_table_qt(gr.sync_block):
 	self.set_msg_handler(pmt.intern('freq'), self.set_freq)
 	self.signals=signals
 	self.RDS_data={}
+	self.change_freq_tune=slot
+	self.tuning_frequency=int(freq)
         self.printcounter=0
         self.ODA_application_names={}
         self.TMC_data={}
@@ -91,9 +94,27 @@ class rds_parser_table_qt(gr.sync_block):
 	  freq_str="%i:%0.1fM"% (decoder_num,freq/1e6)
 	except ValueError:
 	  pass#leave string as is
+	message_string="decoder frequencies:"
+	for num in self.decoder_frequencies:
+	  freq=self.decoder_frequencies[num]
+	  message_string+="\t %i:%0.1fM"% (num,freq/1e6)
+	message_string+="\t tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
+	self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
 	#self.signals.DataUpdateEvent.emit({'row':decoder_num,'freq':freq_str})
 	#print("nr:%i freq:%s"%(tgtnum,freq_str))
-
+    def init_data_for_PI(self,PI):
+	  self.RDS_data[PI]={}
+	  self.RDS_data[PI]["blockcounts"]={}
+	  self.RDS_data[PI]["blockcounts"]["any"]=0
+	  self.RDS_data[PI]["AID_list"]={}
+	  self.RDS_data[PI]["PSN"]="_"*8
+	  self.RDS_data[PI]["PSN_valid"]=[False]*8
+	  self.RDS_data[PI]["AF"]={}
+	  self.RDS_data[PI]["TP"]=-1
+	  self.RDS_data[PI]["TA"]=-1
+	  self.RDS_data[PI]["PTY"]=""
+	  self.RDS_data[PI]["DI"]=[2,2,2,2]
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}      
     def handle_msg(self, msg, port):#port from 0 to 3
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
@@ -108,26 +129,22 @@ class rds_parser_table_qt(gr.sync_block):
 	block2=(array[2]<<8)|(array[3]) #block2
 	PTY=(block2>>5)&0x1F
 	wrong_blocks=int(array[12])
+	#initialize dict 1st packet from station:
+	if not self.RDS_data.has_key(PI):
+	  self.init_data_for_PI(PI)
+	  print("found station %s"%PI)
+	  
 	if self.decoder_frequencies.has_key(port):
 	  freq=self.decoder_frequencies[port]
 	  freq_str="%i:%0.1fM"% (port,freq/1e6)
-	  self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
-	#initialize dict 1st packet from station:
-	if not self.RDS_data.has_key(PI):
-	  self.RDS_data[PI]={}
-	  self.RDS_data[PI]["blockcounts"]={}
-	  self.RDS_data[PI]["blockcounts"]["any"]=0
-	  self.RDS_data[PI]["AID_list"]={}
-	  self.RDS_data[PI]["PSN"]="_"*8
-	  self.RDS_data[PI]["PSN_valid"]=[False]*8
-	  self.RDS_data[PI]["AF"]={}
-	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}
-	  print("found station %s"%PI)
+	  self.RDS_data[PI]["tuned_freq"]=freq
+	  #self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	self.RDS_data[PI]["blockcounts"]["any"]+=1
 	if self.RDS_data[PI]["blockcounts"]["any"]==5:
 	  self.RDS_data[PI]["blockcounts"]["any"]=0
 	dots="."*self.RDS_data[PI]["blockcounts"]["any"]
+	self.RDS_data[PI]["TP"]=TP
+	self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
 	self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_blocks':wrong_blocks,'dots':dots})
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
@@ -140,6 +157,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  #d3		Static PTY		Dynamic PTY
 	  TA=(array[3]>>4)&0x1
 	  MS=(array[3]>>3)&0x1
+	  self.RDS_data[PI]["TA"]=TA
 	  flag_string="TP:%i, TA:%i, MS:%i, DI:%s"%(TP,TA,MS,str(self.RDS_data[PI]["DI"]))
 	  self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'flags':flag_string})
 	  
@@ -147,10 +165,23 @@ class rds_parser_table_qt(gr.sync_block):
 	  #225 1110 0001 = 1AF
 	  #249 1111 1001 = 25AF
 	  fillercode=205#1100 1101
-	  
+	  if not self.RDS_data[PI]["AF"].has_key("main") and self.RDS_data[PI].has_key("tuned_freq"):
+	    freq=self.decode_AF_freq(array[4])
+	    if freq==self.RDS_data[PI]["tuned_freq"]:
+	      self.RDS_data[PI]["AF"]["main"]=freq
+	      print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
+	      freq_str="0A:%0.1fM"% (freq/1e6)
+	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
+	    freq=self.decode_AF_freq(array[5])
+	    if freq==self.RDS_data[PI]["tuned_freq"]:
+	      self.RDS_data[PI]["AF"]["main"]=freq
+	      print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
+	      freq_str="0A:%0.1fM"% (freq/1e6)
+	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	  if(array[4]>= 224 and array[4]<= 249):
 	    #print("AF1 detected")
 	    self.RDS_data[PI]["AF"]['number']=array[4]-224
+	    #self.RDS_data[PI]["AF"]['main']=self.decode_AF_freq(array[5])
 	    self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'AF':self.RDS_data[PI]["AF"]})
 	  if(array[5]>= 224 and array[5]<= 249):
 	    print("AF2 detected (shouldn't happen)")
@@ -435,19 +466,73 @@ class rds_parser_table_qt(gr.sync_block):
 	    TP_ON=(array[3]>>4)&0x1
 	    PI_ON="%02X%02X" %(array[6],array[7])
 	    variant=array[3]&0xf
+	    self.signals.DataUpdateEvent.emit({'PI':PI_ON,'TP':TP_ON})
+	    if not self.RDS_data.has_key(PI_ON):
+	      self.init_data_for_PI(PI_ON)
+	      self.RDS_data[PI_ON]["TP"]=TP_ON
+	      print("found station %s via EON on station %s"%(PI_ON,PI))	      
 	    if not self.RDS_data[PI]["EON"].has_key(PI_ON):
 	      self.RDS_data[PI]["EON"][PI_ON]={}
 	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]="_"*8
 	    if variant in range(4):#variant 0..3 -> PS_ON
 	      segment=self.decode_chars(chr(array[4])+chr(array[5]))
-	      name_list=list(self.RDS_data[PI]["EON"][PI_ON]["PSN"])
+	      name_list=list(self.RDS_data[PI_ON]["PSN"])
+	      #name_list=list(self.RDS_data[PI]["EON"][PI_ON]["PSN"])
 	      name_list[variant*2:variant*2+2]=segment
-	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]="".join(name_list)
+	      if (name_list[variant*2:variant*2+2]==list(segment)):#segment already there
+		segmentcolor="purple"
+	      elif(name_list[variant*2:variant*2+2]==['_']*2): #segment new
+		segmentcolor="purple"
+		name_list[variant*2:variant*2+2]=segment
+	      else:#name changed (böse)
+		segmentcolor="red"
+		name_list=['_']*8 #reset name
+		name_list[variant*2:variant*2+2]=segment
+		#reset stored text:
+		self.RDS_data[PI_ON]["PSN"]="_"*8
+		self.RDS_data[PI_ON]["PSN_valid"]=[False]*8
+	      self.RDS_data[PI_ON]["PSN_valid"][variant*2:variant*2+2]=[True] *2
+	      PS_ON_str="".join(name_list)
+	      self.RDS_data[PI_ON]["PSN"]=PS_ON_str
+	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]=PS_ON_str
+	      #determine if text is valid
+	      valid=True
+	      for i in range(0,8):
+		if (not self.RDS_data[PI_ON]["PSN_valid"][i]):
+		  valid = False
+	      if(valid):
+		textcolor="black"
+	      else:
+		textcolor="gray"	  
+	      formatted_text=self.color_text(self.RDS_data[PI_ON]["PSN"],variant*2,variant*2+2,textcolor,segmentcolor)
+	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]=PS_ON_str
+	      self.RDS_data[PI_ON]["PSN"]=PS_ON_str
+	      #formatted_text="<font face='Courier New' color='%s'>%s</font>"%("purple",PS_ON_str)
+	      self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PSN':formatted_text})
+	    if variant==4:#AF_ON
+	      print("AF_ON method A")#TODO
+	    if variant in range(5,10):#variant 5..9 -> mapped freqs
+	      freq_TN=self.decode_AF_freq(array[4])
+	      freq_ON=self.decode_AF_freq(array[5])
+	      #lock in tuned network if freq_TN matches decoder frequency
+	      if(self.RDS_data[PI].has_key("tuned_freq") and freq_TN==self.RDS_data[PI]["tuned_freq"]and not self.RDS_data[PI]["AF"].has_key("main")):
+		print("main frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq_TN/1e6))
+		self.RDS_data[PI]["AF"]["main"]=freq_TN
+	      #lock in ON if TN is locked in
+	      if(self.RDS_data[PI]["AF"].has_key("main") and self.RDS_data[PI]["AF"]["main"]==freq_TN and not self.RDS_data[PI_ON]["AF"].has_key("main")):
+		print("mapped frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI_ON]["PSN"],freq_ON/1e6))
+		self.RDS_data[PI_ON]["AF"]["main"]=freq_ON
+		freq_str="EON:%0.1fM"% (freq_ON/1e6)
+		self.signals.DataUpdateEvent.emit({'PI':PI_ON,'freq':freq_str})
+	      #print("mapped freq in variant %i:, %i->%i"%(variant,freq_TN,freq_ON))
 	    if variant==13:#PTY and TA of ON
 	      PTY_ON=array[4]>>3
 	      TA_ON=array[5]&0x1
 	      self.RDS_data[PI]["EON"][PI_ON]["TA_ON"]=TA_ON
 	      self.RDS_data[PI]["EON"][PI_ON]["PTY_ON"]=PTY_ON
+	      self.RDS_data[PI_ON]["TA"]=TA_ON
+	      self.RDS_data[PI_ON]["PTY"]=self.pty_dict[PTY_ON]
+	      self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PTY':self.pty_dict[PTY_ON],'TA':TA_ON})
 	      #rest is reserved
 	    if variant==14:#programme item number of ON
 	      PIN_ON=(array[4]<<8)|(array[5])
@@ -474,7 +559,13 @@ class rds_parser_table_qt(gr.sync_block):
 	        print("RT+:",end="")
 	        pp.pprint(self.RDS_data[key]["RT+"])
 	    self.printcounter=0
-	    #print("group of type %s not decoded on station %s"% (groupType,PI))	
+	    #print("group of type %s not decoded on station %s"% (groupType,PI))
+    def decode_AF_freq(self,freq_raw):
+      if freq_raw in range(1,205):#1..204
+	return(87500000+freq_raw*100000)#returns int
+	#return(87.5e6+freq_raw*0.1e6)#returns float
+      else:
+	return(0)
     def ref_locs(self,loc,name_string):
       if(loc==34196):#europe
 	return(name_string)
@@ -570,7 +661,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         layout.addWidget(self.table)
         
         self.table.setHorizontalHeaderLabels(horHeaders)  
-        self.table.setMaximumHeight(250)#TODO use dynamic value
+        #self.table.setMaximumHeight(300)#TODO use dynamic value
 
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
 
@@ -581,7 +672,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         button = QtGui.QPushButton("code.interact")
         button.clicked.connect(self.onCLick)
         layout.addWidget(button)
-        
+        self.freq_label=QtGui.QLabel("decoder frequencies:")
+        layout.addWidget(self.freq_label)
         filter_layout = Qt.QHBoxLayout()
         filter_layout.addWidget(QtGui.QLabel("event filter:"))
         filter_layout.addWidget(self.event_filter)
@@ -593,7 +685,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.logOutput = Qt.QTextEdit()
         self.logOutput.setReadOnly(True)
         self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
-        #self.logOutput.setMaximumHeight(100)
+        self.logOutput.setMaximumHeight(150)
         font = self.logOutput.font()
         font.setFamily("Courier")
         font.setPointSize(10)
@@ -608,7 +700,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
       button.clicked.connect(functools.partial(self.getDetails, row=rowPosition))
     def display_data(self, event):
 	#pp.pprint(event)
-
+	if type(event)==dict and event.has_key('decoder_frequencies'):
+	  self.freq_label.setText(event['decoder_frequencies'])
 	if type(event)==dict and event.has_key('TMC_log'): 
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
@@ -686,7 +779,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	view = chart.DialogViewer()
 	view.setGraph(mychart)
 	#view.resize(360, 240)
-	view.resize(380, 500)
+	#view.resize(380, 550)
 	rds_data=self.tableobj.RDS_data[PI].copy()
 	try:
 	 del rds_data['blockcounts']
@@ -699,10 +792,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	l.setWordWrap(True)
 	#l=QtGui.QLabel("Data:")
 	view.layout().addWidget(l)
+	#code.interact(local=locals())
 	view.exec_()
     def onCLick(self):
 	print("button clicked")
 	code.interact(local=locals())
+	#self.logOutput.clear()
 	#self.reset_color()
 	#pp.pprint(event)
 if __name__ == "__main__":

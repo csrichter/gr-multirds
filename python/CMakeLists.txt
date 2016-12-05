@@ -36,7 +36,8 @@ GR_PYTHON_INSTALL(
     rds_table_qt.py
     rds_parser_table_qt.py
     max_freq.py
-    smooth_vectors.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    smooth_vectors.py
+    chart.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################

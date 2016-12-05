@@ -49,12 +49,15 @@ class max_freq(gr.sync_block):
       #ii=input_items
         carrier_width=2
         carrier=self.fft_len/2
-        numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#reads input and disregards center
-        #threshold=100 uni
+        numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#read input and disregard center (hackrf LO)
+        #threshold=100# uni
         threshold=80#home
         #minimum number of consecutive maximums (in fft domain) to consider signal as station:
-#        min_consec_max_threshold=1#uni
+        #min_consec_max_threshold=1#uni
         min_consec_max_threshold=5#home
+        #fuzzyness=2#uni
+        fuzzyness=10#home
+        
         #TODO: what if no numbers over threshold?
         #TODO auto threshold
         #max_indices=[[421, 428, 429, 430, 431, 432, 433, 434, 436, 437, 438, 831, 832, 837, 840, 841, 842, 843, 844, 845, 846, 847, 848, 849, 850, 851,852, 853, 854, 855, 856, 857]]
@@ -65,8 +68,7 @@ class max_freq(gr.sync_block):
         #last_index=0
         count=1#counts number of consecutive maximums
         threshold_reached=False
-        #fuzzyness=2#uni
-        fuzzyness=10#home
+
 #        max_indices[0].append(0)#to detect last station
         max_indices=np.append(max_indices,0)#to detect last station
         #try:

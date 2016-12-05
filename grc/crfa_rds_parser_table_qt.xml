@@ -12,9 +12,15 @@
 	#set $label = '"%s"'%$id
 #end if
 $(signals) = rds_parser_table_qt_Signals()
-self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts)
+self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune)
 $(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id))
 $(gui_hint()($win))</make>
+  <param>
+    <name>tuned frequency</name>
+    <key>freq_tune</key>
+    <value></value>
+    <type>float</type>
+  </param>
   <param>
     <name>Label</name>
     <key>label</key>
