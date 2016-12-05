@@ -51,10 +51,10 @@ class max_freq(gr.sync_block):
         carrier=self.fft_len/2
         numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#read input and disregard center (hackrf LO)
         #threshold=100# uni
-        threshold=80#home
+        threshold=60#home
         #minimum number of consecutive maximums (in fft domain) to consider signal as station:
         #min_consec_max_threshold=1#uni
-        min_consec_max_threshold=5#home
+        min_consec_max_threshold=3#home
         #fuzzyness=2#uni
         fuzzyness=10#home
         
@@ -90,10 +90,13 @@ class max_freq(gr.sync_block):
           if count>=min_consec_max_threshold:
             threshold_reached=True
           last_index=i
-          
+        #sort station_indices by signal strength
+        station_indices_sorted=sorted(station_indices,key=lambda elem:numbers[elem],reverse=True)
+        
+        
         station_freqs=[]
         #index to freq:
-        for index in station_indices:
+        for index in station_indices_sorted:
           startfreq=self.center_freq-self.samp_rate/2
           freq=self.samp_rate*index/self.fft_len+startfreq
           num_decimals=int(round(math.log(self.snapto,10)))
@@ -102,8 +105,8 @@ class max_freq(gr.sync_block):
 	  msg_string=str(i+1)+" "+str(station_freqs[i])
 	  send_pmt = pmt.string_to_symbol(msg_string)
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
-        #print(max_indices)
-        #print(station_indices)
-        #print(station_freqs)
+        print(max_indices)
+        print(station_indices_sorted)
+        print(station_freqs)
         return len(input_items[0])
 
