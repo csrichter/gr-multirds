@@ -4,7 +4,7 @@
   <key>crfa_max_freq</key>
   <category>[crfa]</category>
   <import>import crfa</import>
-  <make>crfa.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate,$round_to)</make>
+  <make>crfa.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate,$round_to,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
@@ -25,6 +25,7 @@
     <name>number of decoders</name>
     <key>num_decoders</key>
     <type>int</type>
+    <hide>part</hide>
   </param>
   <param>
     <name>center frequency</name>
@@ -36,6 +37,21 @@
     <key>samp_rate</key>
     <type>int</type>
   </param>
+	<param>
+		<name>Debug</name>
+		<key>debug</key>
+		<value>False</value>
+		<type>bool</type>
+		<hide>part</hide>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
 
 
   <!-- Make one 'sink' node per input. Sub-nodes:

@@ -21,7 +21,7 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5,collections
+import pmt,functools,csv,md5,collections,copy
 from datetime import datetime
 import crfa.chart as chart
 
@@ -40,7 +40,7 @@ class rds_parser_table_qt(gr.sync_block):
     """
     docstring for block qtguitest
     """
-    def __init__(self,signals,nPorts,slot,freq):
+    def __init__(self,signals,nPorts,slot,freq,log,debug):
 	#QObject.__init__()
         gr.sync_block.__init__(self,
             name="RDS Table",
@@ -51,6 +51,8 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
 	self.message_port_register_in(pmt.intern('freq'))
 	self.set_msg_handler(pmt.intern('freq'), self.set_freq)
+	self.log=log
+	self.debug=debug
 	self.signals=signals
 	self.RDS_data={}
 	self.change_freq_tune=slot
@@ -60,9 +62,10 @@ class rds_parser_table_qt(gr.sync_block):
         self.TMC_data={}
         self.decoder_frequencies={}
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        #workdir="/user/wire2/richter/hackrf_prototypes/"
-        workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
-        reader = csv.reader(open(workdir+'RDS_ODA AIDs_names_only.csv'), delimiter=',', quotechar='"')
+        #workdir=""
+        workdir="/user/wire2/richter/hackrf_prototypes/"
+        #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
+        reader = csv.reader(open(workdir+'RDS_ODA-AIDs_names_only.csv'), delimiter=',', quotechar='"')
         reader.next()#skip header
         for row in reader:
 	  self.ODA_application_names[int(row[0])]=row[1]
@@ -84,6 +87,14 @@ class rds_parser_table_qt(gr.sync_block):
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
+    def set_freq_tune(self,freq):
+      self.tuning_frequency=int(freq)
+      message_string="decoder frequencies:"
+      for num in self.decoder_frequencies:
+	freq=self.decoder_frequencies[num]
+	message_string+="\t %i:%0.1fM"% (num,freq/1e6)
+      message_string+="\t tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
+      self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
     def set_freq(self,msg):
 	m = pmt.symbol_to_string(msg)
 	decoder_num=int(m.split()[0])-1#msgs are 1-indexed, decoder_num is 0-indexed
@@ -104,7 +115,9 @@ class rds_parser_table_qt(gr.sync_block):
 	#print("nr:%i freq:%s"%(tgtnum,freq_str))
     def init_data_for_PI(self,PI):
 	  self.RDS_data[PI]={}
-	  self.RDS_data[PI]["blockcounts"]={}
+	  #self.RDS_data[PI]["blockcounts"]={}# no defaults (works aswell)
+	  #defaults are to keep colors in piechart  consistent between stations:
+	  self.RDS_data[PI]["blockcounts"]={"0A":0,"1A":0,"2A":0,"3A":0,"4A":0,"6A":0,"8A":0,"12A":0,"14A":0}
 	  self.RDS_data[PI]["blockcounts"]["any"]=0
 	  self.RDS_data[PI]["AID_list"]={}
 	  self.RDS_data[PI]["PSN"]="_"*8
@@ -132,7 +145,8 @@ class rds_parser_table_qt(gr.sync_block):
 	#initialize dict 1st packet from station:
 	if not self.RDS_data.has_key(PI):
 	  self.init_data_for_PI(PI)
-	  print("found station %s"%PI)
+	  if self.log:
+	    print("found station %s"%PI)
 	  
 	if self.decoder_frequencies.has_key(port):
 	  freq=self.decoder_frequencies[port]
@@ -169,13 +183,15 @@ class rds_parser_table_qt(gr.sync_block):
 	    freq=self.decode_AF_freq(array[4])
 	    if freq==self.RDS_data[PI]["tuned_freq"]:
 	      self.RDS_data[PI]["AF"]["main"]=freq
-	      print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
+	      if self.log:
+		print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	    freq=self.decode_AF_freq(array[5])
 	    if freq==self.RDS_data[PI]["tuned_freq"]:
 	      self.RDS_data[PI]["AF"]["main"]=freq
-	      print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
+	      if self.log:
+		print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	  if(array[4]>= 224 and array[4]<= 249):
@@ -229,7 +245,8 @@ class rds_parser_table_qt(gr.sync_block):
 	    language_codes=SLC
 	  elif variant==6:
 	    #for use by broadcasters
-	    print("PI:%s PSN:%s uses variant 6 of 1A"%(PI,self.RDS_data[PI]["PSN"]))
+	    if self.debug:
+	      print("PI:%s PSN:%s uses variant 6 of 1A"%(PI,self.RDS_data[PI]["PSN"]))
 	  elif variant==7:
 	    ESW_channel_identification=SLC
 	  PIN_day=(PIN>>11)&0x1f
@@ -298,12 +315,18 @@ class rds_parser_table_qt(gr.sync_block):
 		app_group=str(app_group_raw >> 1)+"B"
 	  
 	  if not self.RDS_data[PI]["AID_list"].has_key(AID):#new ODA found
-	    app_name=self.ODA_application_names[AID]
+	    try:
+	      app_name=self.ODA_application_names[AID]
+	    except KeyError:
+	      if self.debug:
+		print("ERROR: ODA-app-id (AID) '%i' not found in list on station %s, app group:%s"%(AID,app_group,PI))
+	      app_name="unknown"
 	    self.RDS_data[PI]["AID_list"][AID]={}
 	    self.RDS_data[PI]["AID_list"][AID]["groupType"]=app_group
 	    self.RDS_data[PI]["AID_list"][AID]["app_name"]=app_name
 	    self.RDS_data[PI]["AID_list"][AID]["app_data"]=app_data
-	    print("new ODA: AID:%i, name:%s, app_group:%s, station:%s" %(AID,app_name,app_group,PI))
+	    if self.log:
+	      print("new ODA: AID:%i, name:%s, app_group:%s, station:%s" %(AID,app_name,app_group,PI))
 	  #decode 3A group of TMC
 	  if AID==52550:#TMC alert-c
 	    variant=app_data>>14
@@ -321,7 +344,7 @@ class rds_parser_table_qt(gr.sync_block):
 	      activity_time=(app_data>>4)&0x3
 	      window_time=(app_data>>2)&0x3
 	      delay_time=(app_data>>0)&0x3
-	    else:
+	    elif self.debug:
 	      print("unknown variant %i in TMC 3A group"%variant)
 	elif (groupType == "4A"):#CT clock time
 	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)
@@ -393,13 +416,16 @@ class rds_parser_table_qt(gr.sync_block):
 	    if  4 <= adr and adr <= 9:
 	      #seen variants 4569, 6 most often
 	      #print("TMC-info variant:%i"%adr)
-	      if adr== 7:
-		freq=tmc_y>>8
-		print("TMC-info: TN:%i"%freq)
-		self.RDS_data[PI]["TMC_TN"]=freq
+	      if adr== 7:#freq of tuned an mapped station (not seen yet)
+		freq_TN=tmc_y>>8
+		freq_ON=tmc_y&0xff#mapped frequency
+		if self.debug:
+		  print("TMC-info: TN:%i"%freq_TN)
+		self.RDS_data[PI]["TMC_TN"]=freq_TN
 	    else:
 	      a=0
-	      print("alert plus")
+	      if self.debug:
+		print("alert plus")#(not seen yet)
 	    
 	 
 	#RadioText+ (grouptype mostly 12A):
@@ -426,10 +452,11 @@ class rds_parser_table_qt(gr.sync_block):
 	  tag2_len=int(tag2&(2**5-1))
 	  if not self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] == item_toggle_bit: #new item
 	    #self.RDS_data[PI]["RT+"]["history"][str(datetime.now())]=self.RDS_data[PI]["internals"]["last_rt_tooltip"]
-	    self.RDS_data[PI]["RT+_history"][str(datetime.now())]=self.RDS_data[PI]["RT+"]#save old item
+	    self.RDS_data[PI]["RT+_history"][str(datetime.now())]=copy.deepcopy(self.RDS_data[PI]["RT+"])#save old item
 	    self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] = item_toggle_bit
 	    rtcol=self.colorder.index('text')
-	    print("toggle bit changed on PI:%s, cleared RT-tt"%PI)
+	    if self.debug:
+	      print("toggle bit changed on PI:%s, cleared RT-tt"%PI)
 	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':""})
 	  if self.RDS_data[PI].has_key("RT"):
 	    rt=self.RDS_data[PI]["RT"]
@@ -470,7 +497,8 @@ class rds_parser_table_qt(gr.sync_block):
 	    if not self.RDS_data.has_key(PI_ON):
 	      self.init_data_for_PI(PI_ON)
 	      self.RDS_data[PI_ON]["TP"]=TP_ON
-	      print("found station %s via EON on station %s"%(PI_ON,PI))	      
+	      if self.log:
+		print("found station %s via EON on station %s"%(PI_ON,PI))	      
 	    if not self.RDS_data[PI]["EON"].has_key(PI_ON):
 	      self.RDS_data[PI]["EON"][PI_ON]={}
 	      self.RDS_data[PI]["EON"][PI_ON]["PSN"]="_"*8
@@ -510,17 +538,20 @@ class rds_parser_table_qt(gr.sync_block):
 	      #formatted_text="<font face='Courier New' color='%s'>%s</font>"%("purple",PS_ON_str)
 	      self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PSN':formatted_text})
 	    if variant==4:#AF_ON
-	      print("AF_ON method A")#TODO
+	      if self.debug:
+		print("AF_ON method A")#TODO
 	    if variant in range(5,10):#variant 5..9 -> mapped freqs
 	      freq_TN=self.decode_AF_freq(array[4])
 	      freq_ON=self.decode_AF_freq(array[5])
 	      #lock in tuned network if freq_TN matches decoder frequency
 	      if(self.RDS_data[PI].has_key("tuned_freq") and freq_TN==self.RDS_data[PI]["tuned_freq"]and not self.RDS_data[PI]["AF"].has_key("main")):
-		print("main frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq_TN/1e6))
+		if self.log:
+		  print("main frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq_TN/1e6))
 		self.RDS_data[PI]["AF"]["main"]=freq_TN
 	      #lock in ON if TN is locked in
 	      if(self.RDS_data[PI]["AF"].has_key("main") and self.RDS_data[PI]["AF"]["main"]==freq_TN and not self.RDS_data[PI_ON]["AF"].has_key("main")):
-		print("mapped frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI_ON]["PSN"],freq_ON/1e6))
+		if self.log:
+		  print("mapped frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI_ON]["PSN"],freq_ON/1e6))
 		self.RDS_data[PI_ON]["AF"]["main"]=freq_ON
 		freq_str="EON:%0.1fM"% (freq_ON/1e6)
 		self.signals.DataUpdateEvent.emit({'PI':PI_ON,'freq':freq_str})
@@ -538,15 +569,15 @@ class rds_parser_table_qt(gr.sync_block):
 	      PIN_ON=(array[4]<<8)|(array[5])
 	#else:#other group
 	if 1==1:
-	  #printdelay=50
-	  printdelay=500
-	  self.printcounter+=0#printing disabled
 	  if self.RDS_data[PI]["blockcounts"].has_key(groupType):
 	      self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
 	  else:
 	      self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
-
-	  if self.printcounter == printdelay:
+	  
+	  #printdelay=50
+	  printdelay=500
+	  self.printcounter+=0#printing disabled
+	  if self.printcounter == printdelay and self.debug:
 	    #code.interact(local=locals())
 	    for key in self.RDS_data:
 	      if self.RDS_data[key].has_key("PSN"):
@@ -598,7 +629,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  try:
 	    charlist[i]=alphabet[alnr][index]
 	  except KeyError:
-	    charlist[i]=char
+	    charlist[i]='?'#symbol not decoded #TODO
 	    pass
       return "".join(charlist)
     def color_text(self, text, start,end,textcolor,segmentcolor):

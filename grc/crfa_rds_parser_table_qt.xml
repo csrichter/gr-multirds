@@ -12,9 +12,10 @@
 	#set $label = '"%s"'%$id
 #end if
 $(signals) = rds_parser_table_qt_Signals()
-self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune)
+self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug)
 $(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id))
 $(gui_hint()($win))</make>
+  <callback>set_freq_tune($freq_tune);</callback>
   <param>
     <name>tuned frequency</name>
     <key>freq_tune</key>
@@ -42,6 +43,34 @@ $(gui_hint()($win))</make>
     <type>int</type>
     <hide>part</hide>
   </param>
+	<param>
+		<name>Log</name>
+		<key>log</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+	<param>
+		<name>Debug</name>
+		<key>debug</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
   <sink>
     <name>in</name>
     <type>message</type>

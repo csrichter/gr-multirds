@@ -27,7 +27,7 @@ class max_freq(gr.sync_block):
     """
     docstring for block max_freq
     """
-    def __init__(self, fft_len=1024,num_decoders=4,center_freq=0,samp_rate=0,round_to=100e3):
+    def __init__(self, fft_len=1024,num_decoders=4,center_freq=0,samp_rate=0,round_to=100e3,debug=False):
         gr.sync_block.__init__(self,
             name="max_freq",
             in_sig=[(np.float32,fft_len)],
@@ -37,6 +37,8 @@ class max_freq(gr.sync_block):
         self.center_freq=center_freq
         self.samp_rate=samp_rate
         self.snapto=round_to
+        self.debug=debug
+        self.last_station_freqs=[]
 	self.message_port_register_out(pmt.intern('out'))
     def set_center_freq(self, freq=None):
 		if freq is not None:
@@ -90,23 +92,34 @@ class max_freq(gr.sync_block):
           if count>=min_consec_max_threshold:
             threshold_reached=True
           last_index=i
-        #sort station_indices by signal strength
-        station_indices_sorted=sorted(station_indices,key=lambda elem:numbers[elem],reverse=True)
+        #sort station_indices by signal strength (dont bother decoding quiet stations)
+        station_indices_sorted=sorted(station_indices,reverse=True,key=lambda elem:numbers[elem])
         
+        #prevents back and forth switching if two station have similar signal strength
+        station_indices_tune=list(station_indices_sorted)#copy list
+        del station_indices_tune[self.num_decoders:]#remove non decodable incidices
+        station_indices_tune.sort()
         
+        station_strength=[]
         station_freqs=[]
         #index to freq:
-        for index in station_indices_sorted:
+        for index in station_indices_tune:
           startfreq=self.center_freq-self.samp_rate/2
           freq=self.samp_rate*index/self.fft_len+startfreq
           num_decimals=int(round(math.log(self.snapto,10)))
           station_freqs.append(round(freq,-num_decimals))
+          station_strength.append(round(numbers[index],-2))
         for i in range(0,min(self.num_decoders,len(station_freqs))):
 	  msg_string=str(i+1)+" "+str(station_freqs[i])
 	  send_pmt = pmt.string_to_symbol(msg_string)
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
-        print(max_indices)
-        print(station_indices_sorted)
-        print(station_freqs)
+	if self.debug:
+	  print(max_indices)
+	  print(station_indices_sorted)
+	  print(station_indices_tune)
+	  print(station_strength)
+	  print(station_freqs)
+	  
+	self.last_station_freqs=station_freqs
         return len(input_items[0])
 

@@ -5,7 +5,7 @@
   <category>[crfa]</category>
   <import>import crfa</import>
   <make>crfa.rds_decoder($log, $debug)</make>
- <param>
+	<param>
 		<name>Log</name>
 		<key>log</key>
 		<value>False</value>
