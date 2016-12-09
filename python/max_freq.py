@@ -52,13 +52,13 @@ class max_freq(gr.sync_block):
         carrier_width=2
         carrier=self.fft_len/2
         numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#read input and disregard center (hackrf LO)
-        #threshold=100# uni
-        threshold=60#home
+        threshold=40# uni
+        #threshold=60#home
         #minimum number of consecutive maximums (in fft domain) to consider signal as station:
         #min_consec_max_threshold=1#uni
         min_consec_max_threshold=3#home
-        #fuzzyness=2#uni
-        fuzzyness=10#home
+        fuzzyness=2#uni
+        #fuzzyness=10#home
         
         #TODO: what if no numbers over threshold?
         #TODO auto threshold

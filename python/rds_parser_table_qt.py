@@ -21,7 +21,7 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5,collections,copy
+import pmt,functools,csv,md5,collections,copy,sqlite3,atexit
 from datetime import datetime
 import crfa.chart as chart
 
@@ -40,7 +40,9 @@ class rds_parser_table_qt(gr.sync_block):
     """
     docstring for block qtguitest
     """
-    def __init__(self,signals,nPorts,slot,freq,log,debug):
+    def goodbye(self):
+      print("You are now leaving the Python sector.")
+    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir):
 	#QObject.__init__()
         gr.sync_block.__init__(self,
             name="RDS Table",
@@ -60,29 +62,47 @@ class rds_parser_table_qt(gr.sync_block):
         self.printcounter=0
         self.ODA_application_names={}
         self.TMC_data={}
+        self.IH_data={}
         self.decoder_frequencies={}
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        #workdir=""
-        workdir="/user/wire2/richter/hackrf_prototypes/"
+        self.workdir=workdir
+        atexit.register(self.goodbye)
+        #create new DB file
+        self.db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db'
+        db=sqlite3.connect(self.db_name)
+        #self.db= sqlite3.connect(workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db', check_same_thread=False)
+        #self.dbc= self.db.cursor()
+        #create tables
+        db.execute('''CREATE TABLE stations
+             (PI text,PSN text, freq real, PTY text,TP integer)''')
+        db.execute('''CREATE TABLE groups
+             (time text,PI text,PSN text, grouptype text,content blob)''')
+	db.execute('''CREATE TABLE data
+             (time text,PI text,PSN text, dataType text,data blob)''')
+	db.commit()
+	db.close()
+	#self.dbc.execute('''CREATE TABLE rtp
+        #     (time text,PI text,rtp_string text)''')
+        #workdir="/user/wire2/richter/hackrf_prototypes/"
         #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
-        reader = csv.reader(open(workdir+'RDS_ODA-AIDs_names_only.csv'), delimiter=',', quotechar='"')
+        reader = csv.reader(open(self.workdir+'RDS_ODA-AIDs_names_only.csv'), delimiter=',', quotechar='"')
         reader.next()#skip header
         for row in reader:
 	  self.ODA_application_names[int(row[0])]=row[1]
 	#read location code list:
-	reader = csv.reader(open(workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
+	reader = csv.reader(open(self.workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
 	reader.next()#skip header
 	self.lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
 	#read RT+ class name list:
-	reader = csv.reader(open(workdir+'RTplus_classnames.csv'), delimiter=',', quotechar='"')
+	reader = csv.reader(open(self.workdir+'RTplus_classnames.csv'), delimiter=',', quotechar='"')
 	reader.next()#skip header
 	self.rtp_classnames=dict((int(rows[0]),rows[1]) for rows in reader)
 	#read TMC-event list
-	reader = csv.reader(open(workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
+	reader = csv.reader(open(self.workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
 	#no header
 	self.ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	#read PTY list
-	f=open(workdir+'pty-list.csv')
+	f=open(self.workdir+'pty-list.csv')
 	reader = csv.reader(f, delimiter=',', quotechar='"')
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
@@ -142,6 +162,7 @@ class rds_parser_table_qt(gr.sync_block):
 	block2=(array[2]<<8)|(array[3]) #block2
 	PTY=(block2>>5)&0x1F
 	wrong_blocks=int(array[12])
+	
 	#initialize dict 1st packet from station:
 	if not self.RDS_data.has_key(PI):
 	  self.init_data_for_PI(PI)
@@ -160,6 +181,13 @@ class rds_parser_table_qt(gr.sync_block):
 	self.RDS_data[PI]["TP"]=TP
 	self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
 	self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_blocks':wrong_blocks,'dots':dots})
+	#save block to sqlite (commit at end of handle_msg)
+	#(time text,PI text,PSN text, grouptype text,content blob)
+	content="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
+	db=sqlite3.connect(self.db_name)
+	#t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],groupType,content)
+	#db.execute("INSERT INTO groups  VALUES (?,?,?,?,?)",t)
+	
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
 	  segment=self.decode_chars(chr(array[6])+chr(array[7]))
@@ -187,6 +215,8 @@ class rds_parser_table_qt(gr.sync_block):
 		print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
+	      t=(PI,self.RDS_data[PI]["PSN"],freq,self.RDS_data[PI]["PTY"],self.RDS_data[PI]["TP"])
+	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	    freq=self.decode_AF_freq(array[5])
 	    if freq==self.RDS_data[PI]["tuned_freq"]:
 	      self.RDS_data[PI]["AF"]["main"]=freq
@@ -194,6 +224,8 @@ class rds_parser_table_qt(gr.sync_block):
 		print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
+	      t=(PI,self.RDS_data[PI]["PSN"],freq,self.RDS_data[PI]["PTY"],self.RDS_data[PI]["TP"])
+	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	  if(array[4]>= 224 and array[4]<= 249):
 	    #print("AF1 detected")
 	    self.RDS_data[PI]["AF"]['number']=array[4]-224
@@ -224,37 +256,55 @@ class rds_parser_table_qt(gr.sync_block):
 	    valid = False
 	  if(valid):
 	   textcolor="black"
+	   t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PSN_valid",self.RDS_data[PI]["PSN"])
+	   db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	  else:
 	   textcolor="gray"	  
 	  formatted_text=self.color_text(self.RDS_data[PI]["PSN"],adr*2,adr*2+2,textcolor,segmentcolor)
 	  self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PSN':formatted_text})
 	elif (groupType == "1A"):#PIN programme item number
+	  #wer nutzt 1A gruppen?
+	  #antenne1: variants: 0(ECC),
 	  PIN=(array[6]<<8)|(array[7])
 	  SLC=(array[4]<<8)|(array[5])&0xfff#slow labeling code
 	  radio_paging=array[3]&0x1f
 	  LA=array[4]>>7#linkage actuator
 	  variant=(array[4]>>4)&0x7
-	  if variant==0:
-	    paging=array[4]&0xf
-	    extended_country_code=array[5]
-	  elif variant==1:
-	    TMC_info=SLC
-	  elif variant==2:
-	    paging_info=SLC
-	  elif variant==3:
-	    language_codes=SLC
-	  elif variant==6:
-	    #for use by broadcasters
-	    if self.debug:
-	      print("PI:%s PSN:%s uses variant 6 of 1A"%(PI,self.RDS_data[PI]["PSN"]))
-	  elif variant==7:
-	    ESW_channel_identification=SLC
 	  PIN_day=(PIN>>11)&0x1f
 	  PIN_hour=(PIN>>6)&0x1f
 	  PIN_minute=PIN&0x3f
 	  PIN_valid= PIN_day in range(1,32) and PIN_hour in range(0,24) and PIN_minute in range(0,60)
 	  if PIN_valid:
 	    self.RDS_data[PI]["PIN"]=[PIN_day,PIN_hour,PIN_minute]
+	    data_string="variant:%i,SLC:%04X,PIN (valid):%s "%(variant,SLC,str([PIN_day,PIN_hour,PIN_minute]))
+	  else:
+	    data_string="variant:%i,SLC:%04X,PIN:%04X "%(variant,SLC,PIN)
+	  #%02X%02X%02X%02X%02X
+	  
+	  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PIN",data_string)
+	  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	  if self.debug and not variant==0:#print if not seen before
+	    print("PI:%s PSN:%s uses variant %i of 1A"%(PI,self.RDS_data[PI]["PSN"],variant))
+	  if variant==0:
+	    paging=array[4]&0xf
+	    extended_country_code=array[5]
+	    self.RDS_data[PI]["ECC"]=extended_country_code
+	    #print("ECC:%s"%hex(extended_country_code))
+	  elif variant==1:
+	    TMC_info=SLC
+	  elif variant==2:
+	    paging_info=SLC
+	  elif variant==3:
+	    language_codes=SLC
+	    if self.debug:
+	      print("language_codes:%s"%hex(language_codes))
+	  elif variant==6:
+	    #for use by broadcasters
+	    if self.debug:
+	      print("PI:%s PSN:%s uses variant 6 of 1A"%(PI,self.RDS_data[PI]["PSN"]))
+	  elif variant==7:
+	    ESW_channel_identification=SLC
+	  #end of 1A decode
 	elif (groupType == "2A"):#RT radiotext
 	   if(not self.RDS_data[PI].has_key("RT")):#initialize variables
 	    self.RDS_data[PI]["RT"]="_"*64
@@ -296,6 +346,10 @@ class rds_parser_table_qt(gr.sync_block):
 	      self.RDS_data[PI]["RT_all_valid"] = False
 	   if(self.RDS_data[PI]["RT_all_valid"]):
 	     textcolor="black"
+	     l=list(self.RDS_data[PI]["RT"])
+	     rt="".join(l[0:text_end])
+	     t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",rt)
+	     db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	   else:
 	     textcolor="gray"
 	   #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,self.RDS_data[PI]["RT"][:adr*4],segmentcolor,self.RDS_data[PI]["RT"][adr*4:adr*4+4],textcolor,self.RDS_data[PI]["RT"][adr*4+4:])
@@ -368,6 +422,26 @@ class rds_parser_table_qt(gr.sync_block):
 	  datestring="%02i.%02i.%4i" % (day,month,year)
 	  ctcol=self.colorder.index('time')
 	  self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
+	  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring)
+	  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	elif (groupType == "6A"):#IH inhouse data -> save for analysis
+	  """In House Data:
+{'130A': {'1E1077FFFF': {'count': 1,
+                         'last_time': '2016-12-08 16:26:54.767596'},
+          '1F23022015': {'count': 1,
+                         'last_time': '2016-12-08 16:26:56.341271'}},
+ 'D00F': {'1E1023FFFF': {'count': 1,
+                         'last_time': '2016-12-08 16:26:54.769165'},
+          '1F28032008': {'count': 3,
+                         'last_time': '2016-12-08 16:26:58.272420'}}}"""
+	  ih_data="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
+	  if not self.IH_data.has_key(PI):
+	    self.IH_data[PI]={}
+	  if not self.IH_data[PI].has_key(ih_data):
+	    self.IH_data[PI][ih_data]={}
+	    self.IH_data[PI][ih_data]["count"]=0
+	  self.IH_data[PI][ih_data]["count"]+=1
+	  self.IH_data[PI][ih_data]["last_time"]=str(datetime.now())
 	#TMC-alert-c (grouptype mostly 8A):
 	elif self.RDS_data[PI]["AID_list"].has_key(52550) and self.RDS_data[PI]["AID_list"][52550]["groupType"]==groupType:#TMC alert-C
 	  tmc_x=array[3]&0x1f #lower 5 bit of block2
@@ -406,6 +480,8 @@ class rds_parser_table_qt(gr.sync_block):
 	        message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
 	        self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
 	        self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
+	        t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
+		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	        #print(message_string)
 	    except KeyError:
 	      #print("location '%i' not found"%tmc_location)
@@ -452,6 +528,8 @@ class rds_parser_table_qt(gr.sync_block):
 	  tag2_len=int(tag2&(2**5-1))
 	  if not self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] == item_toggle_bit: #new item
 	    #self.RDS_data[PI]["RT+"]["history"][str(datetime.now())]=self.RDS_data[PI]["internals"]["last_rt_tooltip"]
+	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
+	    db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	    self.RDS_data[PI]["RT+_history"][str(datetime.now())]=copy.deepcopy(self.RDS_data[PI]["RT+"])#save old item
 	    self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] = item_toggle_bit
 	    rtcol=self.colorder.index('text')
@@ -591,6 +669,10 @@ class rds_parser_table_qt(gr.sync_block):
 	        pp.pprint(self.RDS_data[key]["RT+"])
 	    self.printcounter=0
 	    #print("group of type %s not decoded on station %s"% (groupType,PI))
+	    
+	db.commit()
+	db.close()
+	#end of handle_msg
     def decode_AF_freq(self,freq_raw):
       if freq_raw in range(1,205):#1..204
 	return(87500000+freq_raw*100000)#returns int
@@ -694,17 +776,26 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.table.setHorizontalHeaderLabels(horHeaders)  
         #self.table.setMaximumHeight(300)#TODO use dynamic value
 
-        self.tmc_message_label=QtGui.QLabel("TMC messages:")
 
+	
+	
+	button_layout = Qt.QHBoxLayout()
+        codebutton = QtGui.QPushButton("code.interact")
+        codebutton.clicked.connect(self.onCLick)
+        button_layout.addWidget(codebutton)
+	ih_button = QtGui.QPushButton("show IH data")
+        ih_button.clicked.connect(self.showIHdata)
+        button_layout.addWidget(ih_button)
+        save_button = QtGui.QPushButton("save")
+        save_button.clicked.connect(self.saveData)
+        button_layout.addWidget(save_button)
+        layout.addLayout(button_layout)
         
+        self.freq_label=QtGui.QLabel("decoder frequencies:")
+        layout.addWidget(self.freq_label)     
+        self.tmc_message_label=QtGui.QLabel("TMC messages:")
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
-
-        button = QtGui.QPushButton("code.interact")
-        button.clicked.connect(self.onCLick)
-        layout.addWidget(button)
-        self.freq_label=QtGui.QLabel("decoder frequencies:")
-        layout.addWidget(self.freq_label)
         filter_layout = Qt.QHBoxLayout()
         filter_layout.addWidget(QtGui.QLabel("event filter:"))
         filter_layout.addWidget(self.event_filter)
@@ -721,6 +812,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         font.setFamily("Courier")
         font.setPointSize(10)
         layout.addWidget(self.logOutput)
+
     def insert_empty_row(self):
       rowPosition = self.table.rowCount()
       self.table.insertRow(rowPosition)
@@ -790,6 +882,31 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item=self.table.cellWidget(row,PSNcol)
 	    item.setText(event['PSN'])
 	self.table.resizeColumnsToContents()
+    def saveData(self):
+	filename="RDS_data_"+str(datetime.now())+".txt"
+	f=open(self.tableobj.workdir+filename,"w")
+	rds_data=copy.deepcopy(self.tableobj.RDS_data)
+	for PI in sorted(rds_data):
+	  try:
+	    del rds_data[PI]['PSN_valid']
+	    del rds_data[PI]['RT_valid']
+	  except KeyError:
+	    pass
+	f.write("Data:%s"%pp.pformat(rds_data))
+	f.write("\n\nIn House Data:\n%s"%pp.pformat(self.tableobj.IH_data))
+	f.close()
+	print("data saved in file %s"%filename)
+    def showIHdata(self):
+	view=Qt.QDialog()
+	l=QtGui.QLabel("In House Data:\n%s"%pp.pformat(self.tableobj.IH_data))
+	l.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse |QtCore.Qt.TextSelectableByKeyboard)
+	l.setWordWrap(True)
+	#self.IH_data
+	layout=Qt.QVBoxLayout()
+	layout.addWidget(l)
+	view.setLayout(layout)
+	#code.interact(local=locals())
+	view.exec_()
     def getDetails(self,row):
 	PIcol=self.colorder.index('ID')
 	PI=str(self.table.cellWidget(row,PIcol).text())
@@ -800,7 +917,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	table.addColumn('groupType')
 	table.addColumn('numPackets')
 	#ordered_blockcounts=self.tableobj.RDS_data["D00F"]['blockcounts']
-	blockcounts=self.tableobj.RDS_data[PI]['blockcounts'].copy()
+	blockcounts=copy.deepcopy(self.tableobj.RDS_data[PI]['blockcounts'])
 	del blockcounts['any']
 	#lambda function removes last character of PI string (A or B) and sorts based on integer valure of number in front
 	for key in sorted(blockcounts,key=lambda elem: int(elem[0:-1])):
@@ -811,7 +928,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	view.setGraph(mychart)
 	#view.resize(360, 240)
 	#view.resize(380, 550)
-	rds_data=self.tableobj.RDS_data[PI].copy()
+	rds_data=copy.deepcopy(self.tableobj.RDS_data[PI])
 	try:
 	 del rds_data['blockcounts']
 	 del rds_data['PSN_valid']
