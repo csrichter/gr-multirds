@@ -28,7 +28,9 @@ import crfa.chart as chart
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code#for easier testing
 pp = pprint.PrettyPrinter()
-
+import cProfile, pstats, StringIO #for profiling
+pr = cProfile.Profile()
+from threading import Timer#to periodically save DB
 
 from PyQt4.QtCore import QObject, pyqtSignal
 
@@ -41,7 +43,9 @@ class rds_parser_table_qt(gr.sync_block):
     docstring for block qtguitest
     """
     def goodbye(self):
-      print("You are now leaving the Python sector.")
+      print("rds parser table, closing db")
+      self.db.commit()
+      self.db.close()
     def __init__(self,signals,nPorts,slot,freq,log,debug,workdir):
 	#QObject.__init__()
         gr.sync_block.__init__(self,
@@ -69,8 +73,9 @@ class rds_parser_table_qt(gr.sync_block):
         atexit.register(self.goodbye)
         #create new DB file
         self.db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db'
-        db=sqlite3.connect(self.db_name)
-        #self.db= sqlite3.connect(workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db', check_same_thread=False)
+        #db=sqlite3.connect(self.db_name)
+        db=sqlite3.connect(self.db_name, check_same_thread=False)
+        
         #self.dbc= self.db.cursor()
         #create tables
         db.execute('''CREATE TABLE stations
@@ -80,7 +85,13 @@ class rds_parser_table_qt(gr.sync_block):
 	db.execute('''CREATE TABLE data
              (time text,PI text,PSN text, dataType text,data blob)''')
 	db.commit()
-	db.close()
+	#db.close()
+	self.db=db#TODO fix sqlite
+	t = Timer(10, self.commit_db)#every 10 seconds
+	t.start()
+	
+	
+	
 	#self.dbc.execute('''CREATE TABLE rtp
         #     (time text,PI text,rtp_string text)''')
         #workdir="/user/wire2/richter/hackrf_prototypes/"
@@ -107,6 +118,8 @@ class rds_parser_table_qt(gr.sync_block):
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
+    def commit_db(self):
+	self.db.commit()
     def set_freq_tune(self,freq):
       self.tuning_frequency=int(freq)
       message_string="decoder frequencies:"
@@ -149,6 +162,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
 	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}      
     def handle_msg(self, msg, port):#port from 0 to 3
+	pr.enable()
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
 	groupNR=array[2]&0b11110000
@@ -184,7 +198,8 @@ class rds_parser_table_qt(gr.sync_block):
 	#save block to sqlite (commit at end of handle_msg)
 	#(time text,PI text,PSN text, grouptype text,content blob)
 	content="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
-	db=sqlite3.connect(self.db_name)
+	#db=sqlite3.connect(self.db_name)#TODO
+	db=self.db
 	#t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],groupType,content)
 	#db.execute("INSERT INTO groups  VALUES (?,?,?,?,?)",t)
 	
@@ -670,9 +685,16 @@ class rds_parser_table_qt(gr.sync_block):
 	    self.printcounter=0
 	    #print("group of type %s not decoded on station %s"% (groupType,PI))
 	    
-	db.commit()
-	db.close()
+	#db.commit()
+	#db.close()
+	pr.disable() 
 	#end of handle_msg
+    def print_results(self):
+	s = StringIO.StringIO()
+	sortby = 'cumulative'
+	ps = pstats.Stats(pr, stream=s).sort_stats(sortby) 
+	ps.print_stats() 
+	print(s.getvalue())
     def decode_AF_freq(self,freq_raw):
       if freq_raw in range(1,205):#1..204
 	return(87500000+freq_raw*100000)#returns int
@@ -944,7 +966,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	view.exec_()
     def onCLick(self):
 	print("button clicked")
-	code.interact(local=locals())
+	self.tableobj.print_results()
+	#code.interact(local=locals())
 	#self.logOutput.clear()
 	#self.reset_color()
 	#pp.pprint(event)
