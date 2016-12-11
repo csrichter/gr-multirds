@@ -21,7 +21,7 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5,collections,copy,sqlite3,atexit
+import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time
 from datetime import datetime
 import crfa.chart as chart
 
@@ -30,6 +30,7 @@ import pprint,code#for easier testing
 pp = pprint.PrettyPrinter()
 import cProfile, pstats, StringIO #for profiling
 pr = cProfile.Profile()
+
 from threading import Timer#to periodically save DB
 
 from PyQt4.QtCore import QObject, pyqtSignal
@@ -160,7 +161,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["TA"]=-1
 	  self.RDS_data[PI]["PTY"]=""
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}      
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}  
     def handle_msg(self, msg, port):#port from 0 to 3
 	pr.enable()
 	#code.interact(local=locals())
@@ -833,8 +834,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         font = self.logOutput.font()
         font.setFamily("Courier")
         font.setPointSize(10)
+        self.lastResizeTime=0
         layout.addWidget(self.logOutput)
-
     def insert_empty_row(self):
       rowPosition = self.table.rowCount()
       self.table.insertRow(rowPosition)
@@ -903,7 +904,16 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    PSNcol=self.colorder.index('name')
 	    item=self.table.cellWidget(row,PSNcol)
 	    item.setText(event['PSN'])
-	self.table.resizeColumnsToContents()
+	#end of display-data
+	if time.time()-self.lastResizeTime > 2:#every 2 seconds
+		self.table.resizeColumnsToContents()
+		self.lastResizeTime=time.time()
+    def resize_columns(self):#doesn't work -> not thread safe
+	try:
+	    print("resized")
+	    self.table.resizeColumnsToContents()
+	except:
+	    print("caught exception :(")
     def saveData(self):
 	filename="RDS_data_"+str(datetime.now())+".txt"
 	f=open(self.tableobj.workdir+filename,"w")
