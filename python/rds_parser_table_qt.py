@@ -34,7 +34,113 @@ pr = cProfile.Profile()
 from threading import Timer#to periodically save DB
 
 from PyQt4.QtCore import QObject, pyqtSignal
+#from bitarray import bitarray
+from bitstring import BitArray 
 
+class tmc_message:
+  #def ref_locs(self,loc,name_string):
+      #if(loc==34196):#europe
+	#return(name_string)
+      #else:
+	#try:
+	  #locarray=self.lcl_dict[loc]
+	  #aref=int(locarray[6])
+	  #loc_name=locarray[4]
+	  #return(self.ref_locs(aref,name_string+","+loc_name))
+	  ##return(loc_name)
+	#except KeyError:
+	  #return(name_string)
+  def __hash__(self):
+    if self.is_single:
+      return self.tmc_hash
+    else:
+      return self.ci
+  def __repr__(self):
+    #event_name=self.ecl_dict[self.tmc_event]
+    #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,self.tmc_location,self.ref_locs(self.tmc_location,""),self.RDS_data[PI]["PSN"])
+    return "single:%i,complete:%i,event:%i location:%i"%(self.is_single,self.is_complete,self.tmc_event,self.tmc_location)
+      
+  def __init__(self,PI,tmc_x,tmc_y,tmc_z):#TODO handle out of sequence data
+    self.tmc_hash=hash((PI,tmc_x,tmc_y,tmc_z))
+    tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
+    assert tmc_T==0, "this is tuning info and no alert_c message"
+    Y15=int(tmc_y>>15)
+    self.PI=PI
+    tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
+    self.is_single=(tmc_F==1)
+    self.is_multi=(tmc_F==0)
+    if self.is_single or (self.is_multi and Y15==1):#single group or 1st group of multigroup
+      if self.is_single:
+	self.tmc_D=Y15 #diversion bit(Y15)
+	self.tmc_DP=int(tmc_x&0x7) #duration and persistence 3 bits
+	self.is_complete=True
+      else:#1st group of multigroup -> no diversion bit
+	self.is_complete=False
+	self.tmc_D=-1
+	self.tmc_DP=-1
+	self.ci=int(tmc_x&0x7) #continuity index
+	self.data_arr=BitArray()
+	self.mgm_list=[]
+      self.tmc_location=tmc_z
+      self.tmc_event=int(tmc_y&0x7ff) #Y10-Y0
+      self.tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
+      self.tmc_dir=int((tmc_y>>14)&0x1) #+-direction bit (Y14)
+    else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
+      raise ValueError, "subsequent groups must be added to existing tmc message"
+  def add_group(self,tmc_y,tmc_z):
+    sg=int((tmc_y>>14)&0x1)#=1 if second group Y14
+    gsi=int((tmc_y>>12)&0x3)#group sequence indicator Y12..13 ,max length:5
+    if sg==1:#if second group
+      self.length=gsi
+      self.count=self.length
+    try:
+      if self.count==self.length: #group in sequence
+	data1=int(tmc_y&0xfff)#data block 1
+	data2=int(tmc_z)#data block 2
+	#code.interact(local=locals())
+	self.data_arr.append(hex(data1))
+	self.data_arr.append(hex(data2))
+	if self.count==0:#last group
+	  self.is_complete=True
+	  while len(self.data_arr)>4:#decode mgm
+	    label=self.data_arr[0:4].uint
+	    del self.data_arr[0:4]
+	    fieldlen=mgm_tag.field_lengths[label]
+	    data=self.data_arr[0:fieldlen]
+	    del self.data_arr[0:fieldlen]
+	    if not (label==0 and data.uint ==0):#ignore trailing zeros
+	      self.mgm_list.append(mgm_tag(label,data))
+	self.count-=1
+    except AttributeError:
+      print("out of sequence")
+
+
+class mgm_tag:
+  field_lengths=[3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0]
+  field_names={0:"Duration (value 000 is not allowed)"
+,1:"Control code."
+,2:"Length of route affected."
+,3:"Speed limit advice."
+,4:"quantifier (5 bit field)"
+,5:"quantifier (8 bit field)"
+,6:"Supplementary information code."
+,7:"Explicit start time (or time when problem was reported) for driver information only."
+,8:"Explicit stop time for driver information and message management."
+,9:"Additional event."
+,10:"Detailed diversion instructions."
+,11:"Destination."
+,12:"Reserved for future use"
+,13:"Cross linkage to source of problem, on another route."
+,14:"Content Separator."
+,15:"Reserved for future use."}
+  def __repr__(self):
+    return "%i:%s"%(self.label,str(self.data))
+  def __init__(self,label,data):
+    assert 0<=label and label <16,"mgm-tag label has to be between 0 and 15"
+    self.label = label
+    self.data = data
+  def label_string(self):
+    return field_names[self.label]
 class rds_parser_table_qt_Signals(QObject):
     DataUpdateEvent = QtCore.pyqtSignal(dict)
     def __init__(self, parent=None):
@@ -80,12 +186,26 @@ class rds_parser_table_qt(gr.sync_block):
         #self.dbc= self.db.cursor()
         #create tables
         db.execute('''CREATE TABLE stations
-             (PI text,PSN text, freq real, PTY text,TP integer)''')
+             (PI text PRIMARY KEY UNIQUE,PSN text, freq real, PTY text,TP integer)''')
         db.execute('''CREATE TABLE groups
              (time text,PI text,PSN text, grouptype text,content blob)''')
 	db.execute('''CREATE TABLE data
              (time text,PI text,PSN text, dataType text,data blob)''')
+	db.execute('''CREATE TABLE grouptypeCounts
+             (PI text,grouptype text,count integer,unique (PI, grouptype))''')
+	db.execute('''CREATE TABLE TMC
+             (hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text)''')
 	db.commit()
+	"""
+	tmc_F=(tmc_x>>3)&0x1 #single/multiple group
+	    tmc_event=int(tmc_y&0x7ff) #Y10-Y0
+	    tmc_location=tmc_z
+	    tmc_DP=tmc_x&0x7 #duration and persistence 3 bits
+	    tmc_extent=(tmc_y>>11)&0x7 #3 bits (Y13-Y11)
+	    tmc_D=tmc_y>>15 #diversion bit(Y15)
+	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)"""
+	    
+	    
 	#db.close()
 	self.db=db#TODO fix sqlite
 	t = Timer(10, self.commit_db)#every 10 seconds
@@ -161,7 +281,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["TA"]=-1
 	  self.RDS_data[PI]["PTY"]=""
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":""}  
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{}}  
     def handle_msg(self, msg, port):#port from 0 to 3
 	pr.enable()
 	#code.interact(local=locals())
@@ -203,6 +323,12 @@ class rds_parser_table_qt(gr.sync_block):
 	db=self.db
 	#t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],groupType,content)
 	#db.execute("INSERT INTO groups  VALUES (?,?,?,?,?)",t)
+	if self.RDS_data[PI]["blockcounts"].has_key(groupType):
+	  self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
+	else:
+	  self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
+	t=(PI,groupType,self.RDS_data[PI]["blockcounts"][groupType])
+	db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
@@ -231,7 +357,7 @@ class rds_parser_table_qt(gr.sync_block):
 		print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
-	      t=(PI,self.RDS_data[PI]["PSN"],freq,self.RDS_data[PI]["PTY"],self.RDS_data[PI]["TP"])
+	      t=(PI,self.RDS_data[PI]["PSN"],float(freq),self.RDS_data[PI]["PTY"],int(self.RDS_data[PI]["TP"]))
 	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	    freq=self.decode_AF_freq(array[5])
 	    if freq==self.RDS_data[PI]["tuned_freq"]:
@@ -240,7 +366,7 @@ class rds_parser_table_qt(gr.sync_block):
 		print("main frequency found in 0A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq/1e6))
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
-	      t=(PI,self.RDS_data[PI]["PSN"],freq,self.RDS_data[PI]["PTY"],self.RDS_data[PI]["TP"])
+	      t=(PI,self.RDS_data[PI]["PSN"],float(freq),self.RDS_data[PI]["PTY"],int(self.RDS_data[PI]["TP"]))
 	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	  if(array[4]>= 224 and array[4]<= 249):
 	    #print("AF1 detected")
@@ -465,44 +591,86 @@ class rds_parser_table_qt(gr.sync_block):
 	  tmc_z=(array[6]<<8)|(array[7])#block4
 	  tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
 	  tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
-	  if tmc_T == 0: #message
-	    #print("TMC-message")
-	    tmc_F=(tmc_x>>3)&0x1 #single/multiple group
-	    tmc_event=int(tmc_y&0x7ff) #Y10-Y0
-	    tmc_location=tmc_z
-	    tmc_DP=tmc_x&0x7 #duration and persistence 3 bits
-	    tmc_extent=(tmc_y>>11)&0x7 #3 bits (Y13-Y11)
-	    tmc_D=tmc_y>>15 #diversion bit(Y15)
-	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)
- #LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
-	    try:
-	      location=self.lcl_dict[tmc_location]
-	      loc_type=location[0]
-	      loc_subtype=location[1]
-	      loc_roadnumber=location[2]
-	      loc_roadname=location[3]
-	      loc_first_name=location[4]
-	      loc_second_name=location[5]
-	      loc_area_ref=int(location[6])
-	      event_name=self.ecl_dict[tmc_event]
-	      refloc_name=""
-	      try:
-		refloc=self.lcl_dict[loc_area_ref]
-		refloc_name=refloc[4]
-	      except KeyError:
-		#print("location '%i' not found"%tmc_location)
-		pass
-	      if not self.TMC_data.has_key(tmc_hash):#if message new
-	        message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
-	        self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
-	        self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
-	        t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
-		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
-	        #print(message_string)
-	    except KeyError:
-	      #print("location '%i' not found"%tmc_location)
-	      pass
-	    #code.interact(local=locals())
+	  tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
+	  Y15=int(tmc_y>>15)
+	  if tmc_T == 0:
+	    if tmc_F==1:#single group
+	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z)
+	      self.print_tmc_msg(tmc_msg)
+	    elif tmc_F==0 and Y15==1:#1st group of multigroup
+	      ci=int(tmc_x&0x7)
+	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z)
+	      self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]=tmc_msg
+	    else:
+	      ci=int(tmc_x&0x7)
+	      if self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
+		tmc_msg=self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]
+		tmc_msg.add_group(tmc_y,tmc_z)
+		if tmc_msg.is_complete:
+		  self.print_tmc_msg(tmc_msg)
+	      else:
+		print("ci%i not found, discarding"%ci)
+	      
+	  #if tmc_T == 0: #message #TODO: test message uniqueness here
+	    ##print("TMC-message")
+	    #tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
+	    #if tmc_F==1 or (tmc_F==0 and Y15==1):#single group or 1st group of multigroup
+	      #if tmc_F==1:#single group
+		#tmc_D=Y15 #diversion bit(Y15)
+	      #else:#1st group of multigroup -> no diversion bit
+		#tmc_D=-1
+	      #tmc_event=int(tmc_y&0x7ff) #Y10-Y0
+	      #tmc_location=tmc_z
+	      #tmc_DP=int(tmc_x&0x7) #duration and persistence 3 bits
+	      #tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
+	      #tmc_dir=int((tmc_y>>14)&0x1) #+-direction bit (Y14)
+  ##LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
+	      #try:
+		#location=self.lcl_dict[tmc_location]
+		#loc_type=location[0]
+		#loc_subtype=location[1]
+		#loc_roadnumber=location[2]
+		#loc_roadname=location[3]
+		#loc_first_name=location[4]
+		#loc_second_name=location[5]
+		#loc_area_ref=int(location[6])
+		#event_name=self.ecl_dict[tmc_event]
+		#refloc_name=""
+		#try:
+		  #refloc=self.lcl_dict[loc_area_ref]
+		  #refloc_name=refloc[4]
+		#except KeyError:
+		  ##print("location '%i' not found"%tmc_location)
+		  #pass
+		#if not self.TMC_data.has_key(tmc_hash):#if message new
+		  #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
+		  #self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
+		  #self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
+		  #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
+		  #db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+		  ##(hash,time,PI, F,event,location,DP,div,dir,extent,text)
+		  #message_string="%s ,firstname:%s, reflocs:%s"%(event_name,loc_first_name,self.ref_locs(tmc_location,""))
+		  #t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_event,int(tmc_location),tmc_DP,tmc_D,tmc_dir,tmc_extent,message_string.decode("utf-8"))
+		  #db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text) VALUES (?,?,?,?,?,?,?,?,?,?,?)",t)
+		  ##print(message_string)
+	      #except KeyError:
+		##print("location '%i' not found"%tmc_location)
+		#pass
+	    #else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
+	      #sg=int((tmc_y>>14)&0x1)#=1 if second group Y14
+	      #gsi=int((tmc_y>>12)&0x3)#group sequence indicator Y12..13 ,max length:5
+	      #if sg==1:#if second group
+		#pass
+	      #if not self.TMC_data.has_key(tmc_hash):#if message new
+		#data1=tmc_y&0xfff#data block 1
+		#data2=tmc_z#data block 2
+		#message_string="SG:%i, GSI:%i, content:%03X%04X"%(sg,gsi,data1,data2)
+		##decode_TMC_MGM(array)
+		#self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
+		##self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
+		#t=(tmc_hash,str(datetime.now()),PI,message_string)
+		#db.execute("INSERT INTO TMC (hash,time,PI,text) VALUES (?,?,?,?)",t)
+	    ##code.interact(local=locals())
 	  else:#alert plus or provider info
 	    adr=tmc_x&0xf
 	    if  4 <= adr and adr <= 9:
@@ -663,11 +831,6 @@ class rds_parser_table_qt(gr.sync_block):
 	      PIN_ON=(array[4]<<8)|(array[5])
 	#else:#other group
 	if 1==1:
-	  if self.RDS_data[PI]["blockcounts"].has_key(groupType):
-	      self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
-	  else:
-	      self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
-	  
 	  #printdelay=50
 	  printdelay=500
 	  self.printcounter+=0#printing disabled
@@ -690,6 +853,47 @@ class rds_parser_table_qt(gr.sync_block):
 	#db.close()
 	pr.disable() 
 	#end of handle_msg
+    def print_tmc_msg(self,tmc_msg):
+      try:
+	PI=tmc_msg.PI
+	tmc_F=tmc_msg.is_single
+	tmc_hash=tmc_msg.tmc_hash
+	tmc_location=tmc_msg.tmc_location
+	tmc_event=tmc_msg.tmc_event
+	location=self.lcl_dict[tmc_location]
+	loc_type=location[0]
+	loc_subtype=location[1]
+	loc_roadnumber=location[2]
+	loc_roadname=location[3]
+	loc_first_name=location[4]
+	loc_second_name=location[5]
+	loc_area_ref=int(location[6])
+	event_name=self.ecl_dict[tmc_event]
+	refloc_name=""
+	try:
+	  refloc=self.lcl_dict[loc_area_ref]
+	  refloc_name=refloc[4]
+	except KeyError:
+	  #print("location '%i' not found"%tmc_location)
+	  pass
+	if not self.TMC_data.has_key(tmc_hash):#if message new
+	  message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
+	  self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
+	  self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
+	  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
+	  self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	  #(hash,time,PI, F,event,location,DP,div,dir,extent,text)
+	  message_string="%s ,firstname:%s, reflocs:%s"%(event_name,loc_first_name,self.ref_locs(tmc_location,""))
+	  if tmc_msg.is_single:
+	    multi_str="single"
+	  else:
+	    multi_str="complete:%i, list:%s"%(tmc_msg.is_complete,tmc_msg.mgm_list)
+	  t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_event,int(tmc_location),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str)
+	  self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",t)
+	  #print(message_string)
+      except KeyError:
+	#print("location '%i' not found"%tmc_location)
+	pass
     def print_results(self):
 	s = StringIO.StringIO()
 	sortby = 'cumulative'
