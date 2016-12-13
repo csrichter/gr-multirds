@@ -31,26 +31,23 @@ pp = pprint.PrettyPrinter()
 import cProfile, pstats, StringIO #for profiling
 pr = cProfile.Profile()
 
-from threading import Timer#to periodically save DB
+#from threading import Timer#to periodically save DB
 
 from PyQt4.QtCore import QObject, pyqtSignal
-#from bitarray import bitarray
 from bitstring import BitArray 
 
+SUFFIXES = {1: 'st', 2: 'nd', 3: 'rd'}
+def ordinal(num):
+    # I'm checking for 10-20 because those are the digits that
+    # don't follow the normal counting scheme. 
+    if 10 <= num % 100 <= 20:
+        suffix = 'th'
+    else:
+        # the second parameter is a default.
+        suffix = SUFFIXES.get(num % 10, 'th')
+    return str(num) + suffix
 class tmc_message:
-  #def ref_locs(self,loc,name_string):
-      #if(loc==34196):#europe
-	#return(name_string)
-      #else:
-	#try:
-	  #locarray=self.lcl_dict[loc]
-	  #aref=int(locarray[6])
-	  #loc_name=locarray[4]
-	  #return(self.ref_locs(aref,name_string+","+loc_name))
-	  ##return(loc_name)
-	#except KeyError:
-	  #return(name_string)
-  def __hash__(self):
+  def __hash__(self):#unused
     if self.is_single:
       return self.tmc_hash
     else:
@@ -74,10 +71,10 @@ class tmc_message:
 	self.tmc_D=Y15 #diversion bit(Y15)
 	self.tmc_DP=int(tmc_x&0x7) #duration and persistence 3 bits
 	self.is_complete=True
-      else:#1st group of multigroup -> no diversion bit
+      else:#1st group of multigroup -> no diversion bit, no duration (sent in mgm_tags)
 	self.is_complete=False
-	self.tmc_D=-1
-	self.tmc_DP=-1
+	self.tmc_D=0
+	self.tmc_DP=0
 	self.ci=int(tmc_x&0x7) #continuity index
 	self.data_arr=BitArray()
 	self.mgm_list=[]
@@ -94,7 +91,7 @@ class tmc_message:
       self.length=gsi
       self.count=self.length
     try:
-      if self.count==self.length: #group in sequence
+      if self.count==gsi: #group in sequence
 	data1=int(tmc_y&0xfff)#data block 1
 	data2=int(tmc_z)#data block 2
 	#code.interact(local=locals())
@@ -110,12 +107,28 @@ class tmc_message:
 	    del self.data_arr[0:fieldlen]
 	    if not (label==0 and data.uint ==0):#ignore trailing zeros
 	      self.mgm_list.append(mgm_tag(label,data))
+	      if label==0:
+		self.tmc_DP=data.uint
+	      elif label==1 and data.uint==5:
+		self.tmc_D=1#set diversion bit
 	self.count-=1
     except AttributeError:
+      #3rd or later group receiver before second
       print("out of sequence")
+      pass
 
+workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/data/"
+#workdir="/user/wire2/richter/data/" #TODO store in repo
+#read location code list:
+reader = csv.reader(open(workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
+reader.next()#skip header
+lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
+#read TMC-event list
+reader = csv.reader(open(workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
+#no header
+ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 
-class mgm_tag:
+class mgm_tag:#mgm=multi group message
   field_lengths=[3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0]
   field_names={0:"Duration (value 000 is not allowed)"
 ,1:"Control code."
@@ -133,8 +146,67 @@ class mgm_tag:
 ,13:"Cross linkage to source of problem, on another route."
 ,14:"Content Separator."
 ,15:"Reserved for future use."}
+  control_codes={0:"Default urgency increased by one level."
+,1: "Default urgency reduced by one level."
+,2:" Default directionality of message changed."
+,3:" Default 'dynamic' or 'longer-lasting' provision interchanged."
+,4:" Default spoken or unspoken duration interchanged."
+,5:" Equivalent of diversion bit set to '1'."
+,6:" Increase the number of steps in the problem extent by 8."
+,7:" Increase the number of steps in the problem extent by 16."}
+  def decode_time_date(self,raw):#label7/8 raw to datestring
+    if raw<=95:
+      hrs=int(raw/4)#takes floor
+      mns=(95%4)*15
+      return "%i:%i"%(hrs,mns)
+    elif raw<=200:#hour and day
+      return "%i hours"%(raw-96)
+    elif raw<=231:#day of month
+      return "%s of month"%ordinal(raw-200)
+    elif raw<=255:#months
+      return "%s months"%((raw-231)/2.0)
+    else:
+      raise ValueError, "label7/8 time must be between 0 and 255"
+  def length_to_km(self,raw):#label2 raw to km
+    if raw==0:
+      return 100
+    elif raw <=10:
+      return raw
+    elif raw <=15:
+      return 2*raw-10
+    elif raw <=31:
+      return 5*raw-55
+    else:
+      raise ValueError, "label2-length must be between 0 and 31"
+	
   def __repr__(self):
-    return "%i:%s"%(self.label,str(self.data))
+    try:
+      if(self.label==0):
+        return "duration: %i"%self.data.uint
+      elif(self.label==1):
+        return "control code: %i"%self.data.uint
+      elif(self.label==2):
+        return "length affected: %i km"%self.length_to_km(self.data.uint)
+      elif(self.label==3):
+        return "speed limit: %i km/h"%(self.data.uint*5)
+      elif(self.label==7):
+        return "start: %s"%self.decode_time_date(self.data.uint)
+      elif(self.label==8):
+        return "stop: %s"%self.decode_time_date(self.data.uint)
+      elif(self.label==9):
+	event_string="event: %s"%ecl_dict[self.data.uint]
+	return event_string
+      elif(self.label==11):
+	location_string="dest.: %s"%",".join(lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
+	return location_string
+      elif(self.label==13):
+	location_string="crosslink: %s"%",".join(lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
+	return location_string
+      else:
+        return "%i:%s"%(self.label,str(self.data))
+    except KeyError:
+	return "%i:%s"%(self.label,str(self.data))
+      
   def __init__(self,label,data):
     assert 0<=label and label <16,"mgm-tag label has to be between 0 and 15"
     self.label = label
@@ -150,7 +222,7 @@ class rds_parser_table_qt(gr.sync_block):
     docstring for block qtguitest
     """
     def goodbye(self):
-      print("rds parser table, closing db")
+      print("quitting rds parser table, closing db")
       self.db.commit()
       self.db.close()
     def __init__(self,signals,nPorts,slot,freq,log,debug,workdir):
@@ -177,13 +249,12 @@ class rds_parser_table_qt(gr.sync_block):
         self.decoder_frequencies={}
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
         self.workdir=workdir
-        atexit.register(self.goodbye)
+        self.PI_dict={}#contains PI:numpackets (string:integer)
+        
         #create new DB file
         self.db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db'
-        #db=sqlite3.connect(self.db_name)
         db=sqlite3.connect(self.db_name, check_same_thread=False)
         
-        #self.dbc= self.db.cursor()
         #create tables
         db.execute('''CREATE TABLE stations
              (PI text PRIMARY KEY UNIQUE,PSN text, freq real, PTY text,TP integer)''')
@@ -205,12 +276,8 @@ class rds_parser_table_qt(gr.sync_block):
 	    tmc_D=tmc_y>>15 #diversion bit(Y15)
 	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)"""
 	    
-	    
-	#db.close()
 	self.db=db#TODO fix sqlite
-	t = Timer(10, self.commit_db)#every 10 seconds
-	t.start()
-	
+	atexit.register(self.goodbye)
 	
 	
 	#self.dbc.execute('''CREATE TABLE rtp
@@ -239,7 +306,11 @@ class rds_parser_table_qt(gr.sync_block):
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
-    def commit_db(self):
+	self.save_data_timer=time.time()
+    def clean_data_and_commit_db(self):
+	for PI in self.PI_dict:
+	  self.PI_dict[PI]-=1
+	#print(self.PI_dict)
 	self.db.commit()
     def set_freq_tune(self,freq):
       self.tuning_frequency=int(freq)
@@ -283,6 +354,9 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
 	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{}}  
     def handle_msg(self, msg, port):#port from 0 to 3
+	if time.time()-self.save_data_timer > 10:#every 10 seconds
+	  self.save_data_timer=time.time()
+	  self.clean_data_and_commit_db()
 	pr.enable()
 	#code.interact(local=locals())
 	array=pmt.to_python(msg)[1]
@@ -298,12 +372,22 @@ class rds_parser_table_qt(gr.sync_block):
 	PTY=(block2>>5)&0x1F
 	wrong_blocks=int(array[12])
 	
-	#initialize dict 1st packet from station:
-	if not self.RDS_data.has_key(PI):
-	  self.init_data_for_PI(PI)
-	  if self.log:
-	    print("found station %s"%PI)
-	  
+	try:
+	  self.PI_dict[PI]+=1
+	except KeyError:
+	  pass
+	
+	if not self.RDS_data.has_key(PI):#station invalid/new
+	  if not self.PI_dict.has_key(PI):#1st group
+	    self.PI_dict[PI]=1
+	    return#dont decode further if not yet valid
+	  elif self.PI_dict[PI]>2:#count station as valid if more than 2 packets received
+	    self.init_data_for_PI(PI)#initialize dict for station
+	    if self.log:
+	      print("found station %s"%PI)
+	  else:
+	    return#dont decode further if not yet valid
+
 	if self.decoder_frequencies.has_key(port):
 	  freq=self.decoder_frequencies[port]
 	  freq_str="%i:%0.1fM"% (port,freq/1e6)
@@ -327,7 +411,11 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
 	else:
 	  self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
-	t=(PI,groupType,self.RDS_data[PI]["blockcounts"][groupType])
+	#error 161213: 
+	  # db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
+	  #InterfaceError: Error binding parameter 0 - probably unsupported type.
+	  #fix?: added str() to PI, but it should already be a string
+	t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])
 	db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	
 	if (groupType == "0A"):#AF PSN
@@ -400,6 +488,8 @@ class rds_parser_table_qt(gr.sync_block):
 	   textcolor="black"
 	   t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PSN_valid",self.RDS_data[PI]["PSN"])
 	   db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	   t=(self.RDS_data[PI]["PSN"],PI)
+	   db.execute("UPDATE OR IGNORE stations SET PSN=? WHERE PI IS ?",t)
 	  else:
 	   textcolor="gray"	  
 	  formatted_text=self.color_text(self.RDS_data[PI]["PSN"],adr*2,adr*2+2,textcolor,segmentcolor)
@@ -607,9 +697,12 @@ class rds_parser_table_qt(gr.sync_block):
 		tmc_msg=self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]
 		tmc_msg.add_group(tmc_y,tmc_z)
 		if tmc_msg.is_complete:
-		  self.print_tmc_msg(tmc_msg)
+		  self.print_tmc_msg(tmc_msg)#print and store message
+		  del self.RDS_data[PI]["internals"]["unfinished_TMC"][tmc_msg.ci]#delete finished message
 	      else:
-		print("ci%i not found, discarding"%ci)
+		#if not ci==0:
+		  #print("ci %i not found, discarding"%ci)
+		pass
 	      
 	  #if tmc_T == 0: #message #TODO: test message uniqueness here
 	    ##print("TMC-message")
@@ -792,6 +885,7 @@ class rds_parser_table_qt(gr.sync_block):
 		  valid = False
 	      if(valid):
 		textcolor="black"
+		
 	      else:
 		textcolor="gray"	  
 	      formatted_text=self.color_text(self.RDS_data[PI_ON]["PSN"],variant*2,variant*2+2,textcolor,segmentcolor)
@@ -799,6 +893,12 @@ class rds_parser_table_qt(gr.sync_block):
 	      self.RDS_data[PI_ON]["PSN"]=PS_ON_str
 	      #formatted_text="<font face='Courier New' color='%s'>%s</font>"%("purple",PS_ON_str)
 	      self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PSN':formatted_text})
+	      try:
+		t=(PI_ON,self.RDS_data[PI_ON]["PSN"],float(self.RDS_data[PI_ON]["AF"]["main"]),self.RDS_data[PI_ON]["PTY"],int(self.RDS_data[PI_ON]["TP"]))
+		db.execute("INSERT OR REPLACE INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+	      except KeyError:
+		#not all info present -> no db update
+		pass
 	    if variant==4:#AF_ON
 	      if self.debug:
 		print("AF_ON method A")#TODO
@@ -884,12 +984,19 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	  #(hash,time,PI, F,event,location,DP,div,dir,extent,text)
 	  message_string="%s ,firstname:%s, reflocs:%s"%(event_name,loc_first_name,self.ref_locs(tmc_location,""))
-	  if tmc_msg.is_single:
-	    multi_str="single"
-	  else:
-	    multi_str="complete:%i, list:%s"%(tmc_msg.is_complete,tmc_msg.mgm_list)
-	  t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_event,int(tmc_location),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str)
-	  self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",t)
+	  try:
+	    if tmc_msg.is_single:
+	      multi_str="single"
+	    else:
+	      multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
+	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_event,int(tmc_location),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"))
+	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",t)
+	    self.signals.DataUpdateEvent.emit({'TMC_log':multi_str})
+	  except Exception as e:
+	    print(e)
+	    #pickle mgm_list:
+	    #"(lp0\n(icrfa.rds_parser_table_qt\nmgm_tag\np1\n(dp2\nS'data'\np3\nccopy_reg\n_reconstructor\np4\n(cbitstring\nBitArray\np5\nc__builtin__\nobject\np6\nNtp7\nRp8\nsS'label'\np9\nI14\nsba(icrfa.rds_parser_table_qt\nmgm_tag\np10\n(dp11\ng3\ng4\n(g5\ng6\nNtp12\nRp13\nsg9\nI9\nsba(icrfa.rds_parser_table_qt\nmgm_tag\np14\n(dp15\ng3\ng4\n(g5\ng6\nNtp16\nRp17\nsg9\nI2\nsba."
+	    code.interact(local=locals())
 	  #print(message_string)
       except KeyError:
 	#print("location '%i' not found"%tmc_location)
@@ -1089,16 +1196,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  if event.has_key('tooltip'):
 	    item=self.table.cellWidget(row,event['col'])
 	    item.setToolTip(Qt.QString(event['tooltip'])) 
-	  #if event.has_key('PI'):
-	    ##setPI
-	    #PIcol=self.colorder.index('ID')
-	    ##rtpcol=self.colorder.index('RT+')
-	    #rtcol=self.colorder.index('text')
-	    #if not str(self.table.item(row,PIcol).text()) == event['PI']:
-	      ##self.table.cellWidget(row,rtpcol).setText("")#clear RT+ on changed PI
-	      #print("PI changed on row %i, cleared RT-tt"%row)
-	      #self.table.cellWidget(row,rtcol).setToolTip(Qt.QString("")) 
-	    #self.table.item(row,PIcol).setText(event['PI'])
 	  if event.has_key('AF'):
 	    #setAF
 	    PIcol=self.colorder.index('AF')
@@ -1108,16 +1205,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    PSNcol=self.colorder.index('name')
 	    item=self.table.cellWidget(row,PSNcol)
 	    item.setText(event['PSN'])
-	#end of display-data
 	if time.time()-self.lastResizeTime > 2:#every 2 seconds
 		self.table.resizeColumnsToContents()
 		self.lastResizeTime=time.time()
-    def resize_columns(self):#doesn't work -> not thread safe
-	try:
-	    print("resized")
-	    self.table.resizeColumnsToContents()
-	except:
-	    print("caught exception :(")
+	#end of display-data
     def saveData(self):
 	filename="RDS_data_"+str(datetime.now())+".txt"
 	f=open(self.tableobj.workdir+filename,"w")
@@ -1146,22 +1237,19 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
     def getDetails(self,row):
 	PIcol=self.colorder.index('ID')
 	PI=str(self.table.cellWidget(row,PIcol).text())
-	#PI=
-	#print("row:%i,PI:%s"%(row,PI))
-	#print(self.tableobj.RDS_data[PI])
-	table=chart.DataTable()
-	table.addColumn('groupType')
-	table.addColumn('numPackets')
-	#ordered_blockcounts=self.tableobj.RDS_data["D00F"]['blockcounts']
-	blockcounts=copy.deepcopy(self.tableobj.RDS_data[PI]['blockcounts'])
-	del blockcounts['any']
-	#lambda function removes last character of PI string (A or B) and sorts based on integer valure of number in front
-	for key in sorted(blockcounts,key=lambda elem: int(elem[0:-1])):
-	  count=blockcounts[key]
-	  table.addRow([key+": "+str(count),count])
-	mychart=chart.PieChart(table)
 	view = chart.DialogViewer()
-	view.setGraph(mychart)
+	if self.tableobj.PI_dict.has_key(PI) and self.tableobj.PI_dict[PI]>3:#dont print piechart if no packets received (detected via EON)
+	  table=chart.DataTable()
+	  table.addColumn('groupType')
+	  table.addColumn('numPackets')
+	  blockcounts=copy.deepcopy(self.tableobj.RDS_data[PI]['blockcounts'])
+	  del blockcounts['any']
+	  #lambda function removes last character of PI string (A or B) and sorts based on integer valure of number in front
+	  for key in sorted(blockcounts,key=lambda elem: int(elem[0:-1])):
+	    count=blockcounts[key]
+	    table.addRow([key+": "+str(count),count])
+	  mychart=chart.PieChart(table)
+	  view.setGraph(mychart)
 	#view.resize(360, 240)
 	#view.resize(380, 550)
 	rds_data=copy.deepcopy(self.tableobj.RDS_data[PI])
