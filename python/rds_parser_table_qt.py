@@ -26,7 +26,7 @@ from datetime import datetime
 import crfa.chart as chart
 
 from PyQt4 import Qt, QtCore, QtGui
-import pprint,code#for easier testing
+import pprint,code,pickle#for easier testing
 pp = pprint.PrettyPrinter()
 import cProfile, pstats, StringIO #for profiling
 pr = cProfile.Profile()
@@ -46,6 +46,55 @@ def ordinal(num):
         # the second parameter is a default.
         suffix = SUFFIXES.get(num % 10, 'th')
     return str(num) + suffix
+class tmc_location:
+  def __ref_locs(self,lcn,name_string=""):
+    #if not self.is_valid: #not used, since not called from outside
+    #  return ""
+    if(lcn==34196):#europe
+      return(name_string)
+    else:
+      try:
+	locarray=self.tableobj.lcl_dict[lcn]
+	aref=int(locarray[6])
+	loc_name=locarray[4]
+	return(self.__ref_locs(aref,name_string+","+loc_name))
+	#return(loc_name)
+      except KeyError:
+	return(name_string)
+  def __repr__(self):
+    if not self.is_valid:
+      return "invalid lcn:%i"%(self.lcn)
+    #elif self.ltype[0:2] == "P1" and  #junction
+    elif self.first_name=="":#no first name-> use aref name
+      name=self.aref
+    else:
+      name=self.roadname+","+self.first_name
+    return "%s:%s"%(self.ltype,name)
+    #if self.ltype[0]=="A":#area
+      #return "%s:%s"%(self.ltype,self.first_name)
+    #elif self.ltype[0]=="L":#line
+      #return "%s:%s"%(self.ltype,self.first_name)
+    #elif self.ltype[0]=="P":#point
+      #return "%s:%s"%(self.ltype,self.first_name)
+  def __init__(self,lcn,tableobj):
+    self.tableobj=tableobj
+    self.reflocs=self.__ref_locs(lcn)
+    self.lcn=lcn
+    try:
+      loc_array=tableobj.lcl_dict[lcn]
+      self.ltype=loc_array[0]
+      self.subtype=loc_array[1]
+      self.roadnumber=loc_array[2]
+      self.roadname=loc_array[3]
+      self.first_name=loc_array[4]
+      self.second_name=loc_array[5]
+      self.is_valid=True
+      if not lcn==34196:#Europe does not have an area reference
+	self.aref=tmc_location(int(loc_array[6]),tableobj)
+    except KeyError:
+      #print("location '%i' not found"%lcn)
+      self.is_valid=False
+    ##LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
 class tmc_message:
   def __hash__(self):#unused
     if self.is_single:
@@ -55,9 +104,11 @@ class tmc_message:
   def __repr__(self):
     #event_name=self.ecl_dict[self.tmc_event]
     #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,self.tmc_location,self.ref_locs(self.tmc_location,""),self.RDS_data[PI]["PSN"])
-    return "single:%i,complete:%i,event:%i location:%i"%(self.is_single,self.is_complete,self.tmc_event,self.tmc_location)
+    return "single:%i,complete:%i,event:%i location:%s"%(self.is_single,self.is_complete,self.event,self.location)
       
-  def __init__(self,PI,tmc_x,tmc_y,tmc_z):#TODO handle out of sequence data
+  def __init__(self,PI,tmc_x,tmc_y,tmc_z,tableobj):#TODO handle out of sequence data
+    self.debug_data=""
+    self.tableobj=tableobj
     self.tmc_hash=hash((PI,tmc_x,tmc_y,tmc_z))
     tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
     assert tmc_T==0, "this is tuning info and no alert_c message"
@@ -73,13 +124,20 @@ class tmc_message:
 	self.is_complete=True
       else:#1st group of multigroup -> no diversion bit, no duration (sent in mgm_tags)
 	self.is_complete=False
+	self._second_group_received=False
 	self.tmc_D=0
 	self.tmc_DP=0
 	self.ci=int(tmc_x&0x7) #continuity index
 	self.data_arr=BitArray()
 	self.mgm_list=[]
-      self.tmc_location=tmc_z
-      self.tmc_event=int(tmc_y&0x7ff) #Y10-Y0
+      self.location=tmc_location(tmc_z,tableobj)
+      self.tmc_location=self.location#decrepated
+      self.event=int(tmc_y&0x7ff) #Y10-Y0
+      self.tmc_event=self.event#decrepated
+      try:
+	self.event_name = self.tableobj.ecl_dict[self.event]
+      except KeyError:
+	self.event_name="##Error##"
       self.tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
       self.tmc_dir=int((tmc_y>>14)&0x1) #+-direction bit (Y14)
     else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
@@ -87,9 +145,10 @@ class tmc_message:
   def add_group(self,tmc_y,tmc_z):
     sg=int((tmc_y>>14)&0x1)#=1 if second group Y14
     gsi=int((tmc_y>>12)&0x3)#group sequence indicator Y12..13 ,max length:5
-    if sg==1:#if second group
+    if sg==1 and not self._second_group_received:#if second group
       self.length=gsi
       self.count=self.length
+      self._second_group_received=True #prevents duplicate second group from resetting counters 
     try:
       if self.count==gsi: #group in sequence
 	data1=int(tmc_y&0xfff)#data block 1
@@ -97,8 +156,11 @@ class tmc_message:
 	#code.interact(local=locals())
 	self.data_arr.append(hex(data1))
 	self.data_arr.append(hex(data2))
+	#print(gsi)
+	#code.interact(local=locals())
 	if self.count==0:#last group
 	  self.is_complete=True
+	  self.debug_data=copy.deepcopy(self.data_arr)
 	  while len(self.data_arr)>4:#decode mgm
 	    label=self.data_arr[0:4].uint
 	    del self.data_arr[0:4]
@@ -106,7 +168,7 @@ class tmc_message:
 	    data=self.data_arr[0:fieldlen]
 	    del self.data_arr[0:fieldlen]
 	    if not (label==0 and data.uint ==0):#ignore trailing zeros
-	      self.mgm_list.append(mgm_tag(label,data))
+	      self.mgm_list.append(mgm_tag(label,data,self.tableobj))
 	      if label==0:
 		self.tmc_DP=data.uint
 	      elif label==1 and data.uint==5:
@@ -117,16 +179,16 @@ class tmc_message:
       print("out of sequence")
       pass
 
-workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/data/"
-#workdir="/user/wire2/richter/data/" #TODO store in repo
-#read location code list:
-reader = csv.reader(open(workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
-reader.next()#skip header
-lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
-#read TMC-event list
-reader = csv.reader(open(workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
-#no header
-ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
+#workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/data/"
+##workdir="/user/wire2/richter/data/" #TODO store in repo
+##read location code list:
+#reader = csv.reader(open(workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
+#reader.next()#skip header
+#lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
+##read TMC-event list
+#reader = csv.reader(open(workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
+##no header
+#ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 
 class mgm_tag:#mgm=multi group message
   field_lengths=[3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0]
@@ -189,25 +251,32 @@ class mgm_tag:#mgm=multi group message
         return "length affected: %i km"%self.length_to_km(self.data.uint)
       elif(self.label==3):
         return "speed limit: %i km/h"%(self.data.uint*5)
+      elif(self.label==6):
+        return "info:%s"%self.tableobj.label6_suppl_info[self.data.uint]
       elif(self.label==7):
         return "start: %s"%self.decode_time_date(self.data.uint)
       elif(self.label==8):
         return "stop: %s"%self.decode_time_date(self.data.uint)
       elif(self.label==9):
-	event_string="event: %s"%ecl_dict[self.data.uint]
+	event_string="event: %s"%self.tableobj.ecl_dict[self.data.uint]
 	return event_string
+      elif(self.label==10):
+	#location_string="divert via: %s"%",".join(self.tableobj.lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
+	location_string="divert via: %s"%tmc_location(self.data.uint,self.tableobj)
+	return location_string
       elif(self.label==11):
-	location_string="dest.: %s"%",".join(lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
+	location_string="dest.: %s"%tmc_location(self.data.uint,self.tableobj)
 	return location_string
       elif(self.label==13):
-	location_string="crosslink: %s"%",".join(lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
+	location_string="crosslink: %s"%tmc_location(self.data.uint,self.tableobj)
 	return location_string
       else:
         return "%i:%s"%(self.label,str(self.data))
     except KeyError:
 	return "%i:%s"%(self.label,str(self.data))
       
-  def __init__(self,label,data):
+  def __init__(self,label,data,tableobj):
+    self.tableobj=tableobj
     assert 0<=label and label <16,"mgm-tag label has to be between 0 and 15"
     self.label = label
     self.data = data
@@ -265,7 +334,7 @@ class rds_parser_table_qt(gr.sync_block):
 	db.execute('''CREATE TABLE grouptypeCounts
              (PI text,grouptype text,count integer,unique (PI, grouptype))''')
 	db.execute('''CREATE TABLE TMC
-             (hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text)''')
+             (hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)''')
 	db.commit()
 	"""
 	tmc_F=(tmc_x>>3)&0x1 #single/multiple group
@@ -300,6 +369,10 @@ class rds_parser_table_qt(gr.sync_block):
 	reader = csv.reader(open(self.workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
 	#no header
 	self.ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
+	#read supplementary information code list
+	reader = csv.reader(open(self.workdir+'label6-supplementary-information-codes.csv'), delimiter=',', quotechar='"')
+	#no header
+	self.label6_suppl_info=dict((int(rows[0]),rows[1]) for rows in reader)
 	#read PTY list
 	f=open(self.workdir+'pty-list.csv')
 	reader = csv.reader(f, delimiter=',', quotechar='"')
@@ -685,17 +758,23 @@ class rds_parser_table_qt(gr.sync_block):
 	  Y15=int(tmc_y>>15)
 	  if tmc_T == 0:
 	    if tmc_F==1:#single group
-	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z)
+	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,self)
 	      self.print_tmc_msg(tmc_msg)
 	    elif tmc_F==0 and Y15==1:#1st group of multigroup
 	      ci=int(tmc_x&0x7)
-	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z)
-	      self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]=tmc_msg
+	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,self)
+	      if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
+		print("overwriting parital message")
+	      self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]={"msg":tmc_msg,"time":time.time()}
 	    else:
 	      ci=int(tmc_x&0x7)
 	      if self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
-		tmc_msg=self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]
+		tmc_msg=self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["msg"]
 		tmc_msg.add_group(tmc_y,tmc_z)
+		age=time.time()-self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]
+		t=(time.time(),PI,age,ci,tmc_msg.is_complete)
+		print("%f: continuing message PI:%s,age:%f,ci:%i complete:%i"%t)
+		self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]=time.time()
 		if tmc_msg.is_complete:
 		  self.print_tmc_msg(tmc_msg)#print and store message
 		  del self.RDS_data[PI]["internals"]["unfinished_TMC"][tmc_msg.ci]#delete finished message
@@ -787,6 +866,7 @@ class rds_parser_table_qt(gr.sync_block):
 	    #self.RDS_data[PI]["RT+"]={"history":{},"last_item_toggle_bit":2}
 	    self.RDS_data[PI]["RT+"]={"last_item_toggle_bit":2}
 	    self.RDS_data[PI]["RT+_history"]={}
+	    self.RDS_data[PI]["internals"]["RT+_times"]={}
 	    #self.RDS_data[PI]["RT+"]["last_item_toggle_bit"]=2
 	  A3_data=self.RDS_data[PI]["AID_list"][19415]["app_data"]
 	  template_number=A3_data&0xff
@@ -818,12 +898,21 @@ class rds_parser_table_qt(gr.sync_block):
 	    rt_valid=self.RDS_data[PI]["RT_valid"]
 	    if not tag1_type=="DUMMY_CLASS" and all(rt_valid[tag1_start:tag1_start+tag1_len+1]):
 	      self.RDS_data[PI]["RT+"][tag1_type]=rt[tag1_start:tag1_start+tag1_len+1]
+	      self.RDS_data[PI]["internals"]["RT+_times"][tag1_type]=time.time()
 	    if not tag2_type=="DUMMY_CLASS" and all(rt_valid[tag2_start:tag2_start+tag2_len+1]):
 	      self.RDS_data[PI]["RT+"][tag2_type]=rt[tag2_start:tag2_start+tag2_len+1]
+	      self.RDS_data[PI]["internals"]["RT+_times"][tag2_type]=time.time()
+	  #check outdated tags:
+	  for tagtype in self.RDS_data[PI]["internals"]["RT+_times"].keys():#.keys() makes copy to avoid RuntimeError: dictionary changed size during iteration
+	    age=time.time()-self.RDS_data[PI]["internals"]["RT+_times"][tagtype]
+	    if age>30:#delete if older than 30 sek
+	      del self.RDS_data[PI]["internals"]["RT+_times"][tagtype]
+	      del self.RDS_data[PI]["RT+"][tagtype]
+	  
+	  
 	  tags="ir:%i,it:%i"%(item_running_bit,item_toggle_bit)
 	  afcol=self.colorder.index('AF')
 	  self.signals.DataUpdateEvent.emit({'col':afcol,'row':port,'PI':PI,'string':tags})
-	  #if(tag1_type=="ITEM.ARTIST"and tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT") and self.RDS_data[PI]["RT_all_valid"]):
 	  if(tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT")):#TODO remove duplicate code
 	    rt=self.RDS_data[PI]["RT"]
 	    rt_valid=self.RDS_data[PI]["RT_valid"]
@@ -951,53 +1040,46 @@ class rds_parser_table_qt(gr.sync_block):
 	    
 	#db.commit()
 	#db.close()
-	pr.disable() 
+	#pr.disable() 
 	#end of handle_msg
     def print_tmc_msg(self,tmc_msg):
       try:
 	PI=tmc_msg.PI
 	tmc_F=tmc_msg.is_single
 	tmc_hash=tmc_msg.tmc_hash
-	tmc_location=tmc_msg.tmc_location
-	tmc_event=tmc_msg.tmc_event
-	location=self.lcl_dict[tmc_location]
-	loc_type=location[0]
-	loc_subtype=location[1]
-	loc_roadnumber=location[2]
-	loc_roadname=location[3]
-	loc_first_name=location[4]
-	loc_second_name=location[5]
-	loc_area_ref=int(location[6])
-	event_name=self.ecl_dict[tmc_event]
+	#tmc_event=tmc_msg.event
+	#location=self.lcl_dict[tmc_location]
+	#loc_type=location[0]
+	#loc_subtype=location[1]
+	#loc_roadnumber=location[2]
+	#loc_roadname=location[3]
+	#loc_first_name=location[4]
+	#loc_second_name=location[5]
+	#loc_area_ref=int(location[6])
+	#event_name=self.ecl_dict[tmc_msg.event]
 	refloc_name=""
-	try:
-	  refloc=self.lcl_dict[loc_area_ref]
-	  refloc_name=refloc[4]
-	except KeyError:
-	  #print("location '%i' not found"%tmc_location)
-	  pass
+	#reflocs=self.ref_locs(tmc_msg.location.lcn,"")#old method
+	reflocs=tmc_msg.location.reflocs
 	if not self.TMC_data.has_key(tmc_hash):#if message new
-	  message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
-	  self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
-	  self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
-	  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
-	  self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
-	  #(hash,time,PI, F,event,location,DP,div,dir,extent,text)
-	  message_string="%s ,firstname:%s, reflocs:%s"%(event_name,loc_first_name,self.ref_locs(tmc_location,""))
 	  try:
 	    if tmc_msg.is_single:
 	      multi_str="single"
 	    else:
 	      multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
-	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_event,int(tmc_location),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"))
-	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",t)
-	    self.signals.DataUpdateEvent.emit({'TMC_log':multi_str})
+	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event_name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
+	    self.TMC_data[tmc_hash]=tmc_msg
+	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':multi_str})
+	    #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
+	    #self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	   
+	    message_string="%s ,locname:%s, reflocs:%s"%(tmc_msg.event_name,tmc_msg.location,reflocs)
+	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_msg.event,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"),str(tmc_msg.debug_data))
+	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
+	    #self.signals.DataUpdateEvent.emit({'TMC_log_str':multi_str})
 	  except Exception as e:
 	    print(e)
-	    #pickle mgm_list:
-	    #"(lp0\n(icrfa.rds_parser_table_qt\nmgm_tag\np1\n(dp2\nS'data'\np3\nccopy_reg\n_reconstructor\np4\n(cbitstring\nBitArray\np5\nc__builtin__\nobject\np6\nNtp7\nRp8\nsS'label'\np9\nI14\nsba(icrfa.rds_parser_table_qt\nmgm_tag\np10\n(dp11\ng3\ng4\n(g5\ng6\nNtp12\nRp13\nsg9\nI9\nsba(icrfa.rds_parser_table_qt\nmgm_tag\np14\n(dp15\ng3\ng4\n(g5\ng6\nNtp16\nRp17\nsg9\nI2\nsba."
+	    print("line 1064")
 	    code.interact(local=locals())
-	  #print(message_string)
       except KeyError:
 	#print("location '%i' not found"%tmc_location)
 	pass
@@ -1159,12 +1241,24 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	#pp.pprint(event)
 	if type(event)==dict and event.has_key('decoder_frequencies'):
 	  self.freq_label.setText(event['decoder_frequencies'])
-	if type(event)==dict and event.has_key('TMC_log'): 
+	if type(event)==dict and event.has_key('TMC_log'):
+	  tmc_msg=event['TMC_log']
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
-	  text=unicode(event['TMC_log'], encoding="UTF-8").lower()
+	  reflocs=tmc_msg.location.reflocs
+	  reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
+	  event_cmp=unicode(tmc_msg.event_name, encoding="UTF-8").lower()
+	  if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
+	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event_name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
+	    self.logOutput.append(Qt.QString.fromUtf8(message_string))
+	    if event.has_key('multi_str'):
+	      self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
+	if type(event)==dict and event.has_key('TMC_log_str'):
+	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
+	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
+	  text=unicode(event['TMC_log_str'], encoding="UTF-8").lower()
 	  if not text.find(lf)==-1 and not text.find(ef)==-1:
-	    self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log']))
+	    self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log_str']))
 	#if type(event)==dict and event.has_key('row'): 
 	if type(event)==dict and event.has_key('PI'): 
 	  #row=event['row']

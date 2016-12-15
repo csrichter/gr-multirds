@@ -34,7 +34,7 @@ $(gui_hint()($win))</make>
     <key>workdir</key>
     <value></value>
     <type>string</type>
-    <hide>part</hide>
+    <hide>#if $workdir() then 'part' else 'none'#</hide>
   </param>
   <param>
     <name>GUI Hint</name>
