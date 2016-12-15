@@ -21,7 +21,7 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time
+import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,folium
 from datetime import datetime
 import crfa.chart as chart
 
@@ -35,6 +35,7 @@ pr = cProfile.Profile()
 
 from PyQt4.QtCore import QObject, pyqtSignal
 from bitstring import BitArray 
+
 
 SUFFIXES = {1: 'st', 2: 'nd', 3: 'rd'}
 def ordinal(num):
@@ -64,12 +65,16 @@ class tmc_location:
   def __repr__(self):
     if not self.is_valid:
       return "invalid lcn:%i"%(self.lcn)
-    #elif self.ltype[0:2] == "P1" and  #junction
+    #elif self.ltype[0:2] == "P1":  #junction
     elif self.first_name=="":#no first name-> use aref name
       name=self.aref
     else:
       name=self.roadname+","+self.first_name
-    return "%s:%s"%(self.ltype,name)
+    if self.has_koord:
+      return "%s,%i:%s, geo:%s"%(self.ltype,self.subtype,name,self.koord_str)
+      #return '%s,%i:%s, geo:<a href="%s">%s</a>'%(self.ltype,self.subtype,name,self.google_maps_link,self.koord_str)
+    else:
+      return "%s,%i:%s"%(self.ltype,self.subtype,name)
     #if self.ltype[0]=="A":#area
       #return "%s:%s"%(self.ltype,self.first_name)
     #elif self.ltype[0]=="L":#line
@@ -80,14 +85,29 @@ class tmc_location:
     self.tableobj=tableobj
     self.reflocs=self.__ref_locs(lcn)
     self.lcn=lcn
+    self.has_koord=False
     try:
       loc_array=tableobj.lcl_dict[lcn]
       self.ltype=loc_array[0]
-      self.subtype=loc_array[1]
+      try:
+	self.subtype=int(loc_array[1])
+      except ValueError:#should not happen, all rows have int
+	self.subtype=0
+	print("location subtype %s is invalid in location %i"%(loc_array[1],lcn))
       self.roadnumber=loc_array[2]
       self.roadname=loc_array[3]
       self.first_name=loc_array[4]
       self.second_name=loc_array[5]
+      try:
+	#koords stored in WGS84 format with decimal degrees multiplied with 10^5
+	self.xkoord=int(loc_array[27])/100000.0
+	self.ykoord=int(loc_array[28])/100000.0
+	self.koord_str="%f,%f"%(self.ykoord,self.xkoord)
+	#self.koord_str="%f° N, %f° E"%(self.ykoord,self.xkoord)
+	self.google_maps_link="https://www.google.de/maps/place/%f,%f"%(self.ykoord,self.xkoord)
+	self.has_koord=True
+      except ValueError:
+	self.has_koord=False
       self.is_valid=True
       if not lcn==34196:#Europe does not have an area reference
 	self.aref=tmc_location(int(loc_array[6]),tableobj)
@@ -96,6 +116,10 @@ class tmc_location:
       self.is_valid=False
     ##LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
 class tmc_message:
+  def __copy__(self):#doesn't copy, tmc_messages dont change if complete
+    return self
+  def __deepcopy__(self,memo):#return self, because deep copy fails
+    return self
   def __hash__(self):#unused
     if self.is_single:
       return self.tmc_hash
@@ -154,8 +178,8 @@ class tmc_message:
 	data1=int(tmc_y&0xfff)#data block 1
 	data2=int(tmc_z)#data block 2
 	#code.interact(local=locals())
-	self.data_arr.append(hex(data1))
-	self.data_arr.append(hex(data2))
+	self.data_arr.append("0x%03X"%data1)#3 hex characters
+	self.data_arr.append("0x%04X"%data2)#4 hex characters
 	#print(gsi)
 	#code.interact(local=locals())
 	if self.count==0:#last group
@@ -176,7 +200,7 @@ class tmc_message:
 	self.count-=1
     except AttributeError:
       #3rd or later group receiver before second
-      print("out of sequence")
+      #print("out of sequence")
       pass
 
 #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/data/"
@@ -379,12 +403,48 @@ class rds_parser_table_qt(gr.sync_block):
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
+	
+	with open(workdir+'google_maps_template.html', 'r') as myfile:
+	  self.gmaps_html_template=myfile.read()
+	self.map_markers=[]
 	self.save_data_timer=time.time()
+	self.marker_template="""var marker_{marker_id} = new google.maps.Marker({{
+          position: {{lat: {lat}, lng: {lon}}},
+          map: map,
+          title: '{text}'
+        }});
+        var infowindow_{marker_id} = new google.maps.InfoWindow({{
+          content: '{text}'
+        }});
+        marker_{marker_id}.addListener('click', function() {{
+          infowindow_{marker_id}.open(map, marker_{marker_id});
+        }});
+        
+        
+        """
+        
+        
+	self.osm_map = folium.Map(location=[48.7,9.2],zoom_start=10)#centered on stuttgart
+	self.osm_map.save(self.workdir+'osm.html')
     def clean_data_and_commit_db(self):
 	for PI in self.PI_dict:
 	  self.PI_dict[PI]-=1
 	#print(self.PI_dict)
 	self.db.commit()
+	self.osm_map.save(self.workdir+'osm.html')
+	#re read template during development #TODO
+	with open(self.workdir+'google_maps_template.html', 'r') as myfile:
+	  self.gmaps_html_template=myfile.read()
+	
+	f=open(self.workdir+'google_maps.html', 'w')
+	markerstring="\n".join(self.map_markers)
+	f.write(self.gmaps_html_template.format(markers=markerstring))
+	f.close()
+	#f=open(self.workdir+'google_maps.html', 'w')
+	#markerstring="\n".join(self.map_markers)
+	#formatted_html=self.gmaps_html_template.format(markers=markerstring)
+	#f.write(formatted_html)
+	#f.close()
     def set_freq_tune(self,freq):
       self.tuning_frequency=int(freq)
       message_string="decoder frequencies:"
@@ -763,8 +823,8 @@ class rds_parser_table_qt(gr.sync_block):
 	    elif tmc_F==0 and Y15==1:#1st group of multigroup
 	      ci=int(tmc_x&0x7)
 	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,self)
-	      if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
-		print("overwriting parital message")
+	      #if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
+		#print("overwriting parital message")
 	      self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]={"msg":tmc_msg,"time":time.time()}
 	    else:
 	      ci=int(tmc_x&0x7)
@@ -773,7 +833,7 @@ class rds_parser_table_qt(gr.sync_block):
 		tmc_msg.add_group(tmc_y,tmc_z)
 		age=time.time()-self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]
 		t=(time.time(),PI,age,ci,tmc_msg.is_complete)
-		print("%f: continuing message PI:%s,age:%f,ci:%i complete:%i"%t)
+		#print("%f: continuing message PI:%s,age:%f,ci:%i complete:%i"%t)
 		self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]=time.time()
 		if tmc_msg.is_complete:
 		  self.print_tmc_msg(tmc_msg)#print and store message
@@ -905,7 +965,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  #check outdated tags:
 	  for tagtype in self.RDS_data[PI]["internals"]["RT+_times"].keys():#.keys() makes copy to avoid RuntimeError: dictionary changed size during iteration
 	    age=time.time()-self.RDS_data[PI]["internals"]["RT+_times"][tagtype]
-	    if age>30:#delete if older than 30 sek
+	    if age>90:#delete if older than 90 sek#TODO delete if toggle bit changes?, delete if tag changes? (title change -> delete artist)
 	      del self.RDS_data[PI]["internals"]["RT+_times"][tagtype]
 	      del self.RDS_data[PI]["RT+"][tagtype]
 	  
@@ -1063,9 +1123,11 @@ class rds_parser_table_qt(gr.sync_block):
 	if not self.TMC_data.has_key(tmc_hash):#if message new
 	  try:
 	    if tmc_msg.is_single:
-	      multi_str="single"
+	      #multi_str="single"
+	      multi_str=""
 	    else:
-	      multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
+	      #multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
+	      multi_str="%i:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
 	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event_name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
 	    self.TMC_data[tmc_hash]=tmc_msg
 	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':multi_str})
@@ -1076,10 +1138,23 @@ class rds_parser_table_qt(gr.sync_block):
 	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_msg.event,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"),str(tmc_msg.debug_data))
 	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
 	    #self.signals.DataUpdateEvent.emit({'TMC_log_str':multi_str})
+	    if tmc_msg.location.has_koord:#show on map
+	      map_tag=tmc_msg.event_name+"; "+multi_str
+	      folium.Marker([tmc_msg.location.ykoord,tmc_msg.location.xkoord], popup=map_tag.decode("utf-8")).add_to(self.osm_map)
+	      #self.osm_map.save(self.workdir+'osm.html')
+	      #code.interact(local=locals())
+	      #print to google map
+	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag,marker_id=len(self.map_markers))#without hmtl escape
+	      #marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=self.html_escape(map_tag))
+	      self.map_markers.append(marker_string)
+
+	      #code.interact(local=locals())
+	    
 	  except Exception as e:
 	    print(e)
-	    print("line 1064")
-	    code.interact(local=locals())
+	    pass
+	    #print("line 1064")
+	    #code.interact(local=locals())
       except KeyError:
 	#print("location '%i' not found"%tmc_location)
 	pass
@@ -1348,11 +1423,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	#view.resize(380, 550)
 	rds_data=copy.deepcopy(self.tableobj.RDS_data[PI])
 	try:
-	 del rds_data['blockcounts']
-	 del rds_data['PSN_valid']
-	 del rds_data['RT_valid']
+	  del rds_data['blockcounts']
+	  del rds_data['PSN_valid']
+	  del rds_data['RT_valid']
+	  del rds_data['RT_valid']
 	except KeyError:
-	 pass
+	  pass
 	l=QtGui.QLabel("Data:%s"%pp.pformat(rds_data))
 	l.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse |QtCore.Qt.TextSelectableByKeyboard)
 	l.setWordWrap(True)
