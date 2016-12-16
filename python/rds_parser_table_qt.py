@@ -47,6 +47,21 @@ def ordinal(num):
         # the second parameter is a default.
         suffix = SUFFIXES.get(num % 10, 'th')
     return str(num) + suffix
+class tmc_event:
+  def __init__(self,ecn,tableobj,tags=[]):
+    self.text_raw=""
+    try:
+      #Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
+      event_array=tableobj.ecl_dict[ecn]
+      self.text_raw=event_array[1]
+      self.is_valid=True
+    except KeyError:
+      print("event '%i' not found"%ecn)
+      self.is_valid=False
+  def __repr__(self):
+    return self.text_raw
+  def __add_tag(self,tag):
+    pass
 class tmc_location:
   def __ref_locs(self,lcn,name_string=""):
     #if not self.is_valid: #not used, since not called from outside
@@ -126,7 +141,7 @@ class tmc_message:
     else:
       return self.ci
   def __repr__(self):
-    #event_name=self.ecl_dict[self.tmc_event]
+    #event_name=self.ecl_dict[self.tmc_event][1]
     #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,self.tmc_location,self.ref_locs(self.tmc_location,""),self.RDS_data[PI]["PSN"])
     return "single:%i,complete:%i,event:%i location:%s"%(self.is_single,self.is_complete,self.event,self.location)
       
@@ -159,7 +174,7 @@ class tmc_message:
       self.event=int(tmc_y&0x7ff) #Y10-Y0
       self.tmc_event=self.event#decrepated
       try:
-	self.event_name = self.tableobj.ecl_dict[self.event]
+	self.event_name = self.tableobj.ecl_dict[self.event][1]
       except KeyError:
 	self.event_name="##Error##"
       self.tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
@@ -202,17 +217,6 @@ class tmc_message:
       #3rd or later group receiver before second
       #print("out of sequence")
       pass
-
-#workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/data/"
-##workdir="/user/wire2/richter/data/" #TODO store in repo
-##read location code list:
-#reader = csv.reader(open(workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
-#reader.next()#skip header
-#lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
-##read TMC-event list
-#reader = csv.reader(open(workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
-##no header
-#ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 
 class mgm_tag:#mgm=multi group message
   field_lengths=[3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0]
@@ -275,6 +279,10 @@ class mgm_tag:#mgm=multi group message
         return "length affected: %i km"%self.length_to_km(self.data.uint)
       elif(self.label==3):
         return "speed limit: %i km/h"%(self.data.uint*5)
+      elif(self.label==4):
+        return "5 bit quantifier: %i"%(self.data.uint)
+      elif(self.label==5):
+        return "8 bit quantifier: %i"%(self.data.uint)
       elif(self.label==6):
         return "info:%s"%self.tableobj.label6_suppl_info[self.data.uint]
       elif(self.label==7):
@@ -282,7 +290,7 @@ class mgm_tag:#mgm=multi group message
       elif(self.label==8):
         return "stop: %s"%self.decode_time_date(self.data.uint)
       elif(self.label==9):
-	event_string="event: %s"%self.tableobj.ecl_dict[self.data.uint]
+	event_string="event: %s"%self.tableobj.ecl_dict[self.data.uint][1]
 	return event_string
       elif(self.label==10):
 	#location_string="divert via: %s"%",".join(self.tableobj.lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
@@ -315,8 +323,9 @@ class rds_parser_table_qt(gr.sync_block):
     docstring for block qtguitest
     """
     def goodbye(self):
+      self.clean_data_and_commit_db()
       print("quitting rds parser table, closing db")
-      self.db.commit()
+      #self.db.commit()
       self.db.close()
     def __init__(self,signals,nPorts,slot,freq,log,debug,workdir):
 	#QObject.__init__()
@@ -390,13 +399,52 @@ class rds_parser_table_qt(gr.sync_block):
 	reader.next()#skip header
 	self.rtp_classnames=dict((int(rows[0]),rows[1]) for rows in reader)
 	#read TMC-event list
-	reader = csv.reader(open(self.workdir+'event-list_code+de-name_sort.csv'), delimiter=',', quotechar='"')
-	#no header
-	self.ecl_dict=dict((int(rows[0]),rows[1]) for rows in reader)
+	reader = csv.reader(open(self.workdir+'event-list_with_forecast_sort.csv'), delimiter=',', quotechar='"')
+	reader.next()#skip header
+	#Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
+	#N:nature (blank): information, F:forecast, S:silent
+	#Q:quantifier type: (0..12) or blank (no quantifier)
+	#T:duration type: D:dynamic, L:long lasting, in brackets or if time-of-day quantifier (no 7) is used in message -> no display, only for management
+	#D:direction: 1:unidirectional, 2:bidirectional
+	#U:urgency: blank: normal, X:extremely urgent, U:urgent
+	#C: update class:
+#1. LEVEL OF SERVICE	Verkehrslage
+#2. EXPECTED LEVEL OF SERVICE	Erwartete Verkehrslage
+#3. ACCIDENTS		Unfälle
+#4. INCIDENTS		Vorfälle
+#5. CLOSURES AND LANE RESTRICTIONS	Straßen- und Fahrbahnsperrungen	Straßen- und Fahrbahnsperrungen
+#6. CARRIAGEWAY RESTRICTIONS		Fahrbahnbeschränkungen
+#7. EXIT RESTRICTIONS		Beschränkungen der Ausfahrt
+#8. ENTRY RESTRICTIONS		Beschränkungen der Einfahrt
+#9. TRAFFIC RESTRICTIONS		Verkehrsbeschränkungen
+#10. CARPOOL INFORMATION		Informationen für Fahrgemeinschaften
+#11. ROADWORKS		Bauarbeiten
+#12. OBSTRUCTION HAZARDS		Behinderungen auf der Fahrbahn
+#13. DANGEROUS SITUATIONS		Gefährliche Situationen
+#14. ROAD CONDITIONS		Straßenzustand
+#15.TEMPERATURES		Temperaturen
+#16. PRECIPITATION AND VISIBILITY		Niederschlag und Sichtbehinderungen
+#17. WIND AND AIR QUALITY		Wind und Luftqualität
+#18. ACTIVITIES		Veranstaltungen
+#19. SECURITY ALERTS		Sicherheitsvorfälle
+#20. DELAYS		Zeitverluste
+#21. CANCELLATIONS		Ausfälle
+#22. TRAVEL TIME INFORMATION		Reiseinformationen
+#23. DANGEROUS VEHICLES		Gefährliche Fahrzeuge
+#24. EXCEPTIONAL LOADS/VEHICLES		Außergewöhnliche Ladungen und Fahrzeuge
+#25. TRAFFIC EQUIPMENT STATUS		Störungen an Lichtsignalanlagen und sonstigen Straßenausrüstungen
+#26. SIZE AND WEIGHT LIMITS		Beschränkung der Fahrzeugmaße und -gewichte
+#27. PARKING RESTRICTIONS		Parkregelungen
+#28. PARKING		Parken
+#29. REFERENCE TO AUDIO BROADCASTS		Information
+#30. SERVICE MESSAGES		Service Meldungen
+#31. SPECIAL MESSAGES		Spezielle Meldungen
+
+	self.ecl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
 	#read supplementary information code list
 	reader = csv.reader(open(self.workdir+'label6-supplementary-information-codes.csv'), delimiter=',', quotechar='"')
-	#no header
-	self.label6_suppl_info=dict((int(rows[0]),rows[1]) for rows in reader)
+	reader.next()#skip header
+	self.label6_suppl_info=dict((int(rows[0]),rows[2]) for rows in reader)#code,english,german
 	#read PTY list
 	f=open(self.workdir+'pty-list.csv')
 	reader = csv.reader(f, delimiter=',', quotechar='"')
@@ -404,26 +452,11 @@ class rds_parser_table_qt(gr.sync_block):
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
 	
-	with open(workdir+'google_maps_template.html', 'r') as myfile:
-	  self.gmaps_html_template=myfile.read()
+	#with open(workdir+'google_maps_template.html', 'r') as myfile:
+	#  self.gmaps_html_template=myfile.read()
 	self.map_markers=[]
 	self.save_data_timer=time.time()
-	self.marker_template="""var marker_{marker_id} = new google.maps.Marker({{
-          position: {{lat: {lat}, lng: {lon}}},
-          map: map,
-          title: '{text}'
-        }});
-        var infowindow_{marker_id} = new google.maps.InfoWindow({{
-          content: '{text}'
-        }});
-        marker_{marker_id}.addListener('click', function() {{
-          infowindow_{marker_id}.open(map, marker_{marker_id});
-        }});
-        
-        
-        """
-        
-        
+	self.marker_template="addMarker({{lat: {lat}, lng:  {lon}}},'{text}')"
 	self.osm_map = folium.Map(location=[48.7,9.2],zoom_start=10)#centered on stuttgart
 	self.osm_map.save(self.workdir+'osm.html')
     def clean_data_and_commit_db(self):
@@ -432,19 +465,12 @@ class rds_parser_table_qt(gr.sync_block):
 	#print(self.PI_dict)
 	self.db.commit()
 	self.osm_map.save(self.workdir+'osm.html')
-	#re read template during development #TODO
-	with open(self.workdir+'google_maps_template.html', 'r') as myfile:
-	  self.gmaps_html_template=myfile.read()
-	
-	f=open(self.workdir+'google_maps.html', 'w')
+	f=open(self.workdir+'google_maps_markers.js', 'w')
 	markerstring="\n".join(self.map_markers)
-	f.write(self.gmaps_html_template.format(markers=markerstring))
+	markerstring+='\n console.log("loaded "+markers.length+" markers")'
+	markerstring+='\n document.getElementById("errorid").innerHTML = "loaded "+markers.length+" markers";'
+	f.write(markerstring)
 	f.close()
-	#f=open(self.workdir+'google_maps.html', 'w')
-	#markerstring="\n".join(self.map_markers)
-	#formatted_html=self.gmaps_html_template.format(markers=markerstring)
-	#f.write(formatted_html)
-	#f.close()
     def set_freq_tune(self,freq):
       self.tuning_frequency=int(freq)
       message_string="decoder frequencies:"
@@ -485,9 +511,9 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["TA"]=-1
 	  self.RDS_data[PI]["PTY"]=""
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{}}  
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":""}  
     def handle_msg(self, msg, port):#port from 0 to 3
-	if time.time()-self.save_data_timer > 10:#every 10 seconds
+	if time.time()-self.save_data_timer > 2:#every 10 seconds #TODO lower frequency (high freq for testing)
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
 	pr.enable()
@@ -536,7 +562,7 @@ class rds_parser_table_qt(gr.sync_block):
 	#save block to sqlite (commit at end of handle_msg)
 	#(time text,PI text,PSN text, grouptype text,content blob)
 	content="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
-	#db=sqlite3.connect(self.db_name)#TODO
+	#db=sqlite3.connect(self.db_name)
 	db=self.db
 	#t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],groupType,content)
 	#db.execute("INSERT INTO groups  VALUES (?,?,?,?,?)",t)
@@ -548,7 +574,8 @@ class rds_parser_table_qt(gr.sync_block):
 	  # db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	  #InterfaceError: Error binding parameter 0 - probably unsupported type.
 	  #fix?: added str() to PI, but it should already be a string
-	t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])
+	  
+	t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])#TODO only update DB every few seconds
 	db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	
 	if (groupType == "0A"):#AF PSN
@@ -619,10 +646,12 @@ class rds_parser_table_qt(gr.sync_block):
 	    valid = False
 	  if(valid):
 	   textcolor="black"
-	   t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PSN_valid",self.RDS_data[PI]["PSN"])
-	   db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
-	   t=(self.RDS_data[PI]["PSN"],PI)
-	   db.execute("UPDATE OR IGNORE stations SET PSN=? WHERE PI IS ?",t)
+	   if not self.RDS_data[PI]["internals"]["last_valid_psn"]==self.RDS_data[PI]["PSN"]:#ignore duplicates
+	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PSN_valid",self.RDS_data[PI]["PSN"])
+	    db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	    t=(self.RDS_data[PI]["PSN"],PI)
+	    db.execute("UPDATE OR IGNORE stations SET PSN=? WHERE PI IS ?",t)
+	    self.RDS_data[PI]["internals"]["last_valid_psn"]=self.RDS_data[PI]["PSN"]
 	  else:
 	   textcolor="gray"	  
 	  formatted_text=self.color_text(self.RDS_data[PI]["PSN"],adr*2,adr*2+2,textcolor,segmentcolor)
@@ -712,9 +741,16 @@ class rds_parser_table_qt(gr.sync_block):
 	   if(self.RDS_data[PI]["RT_all_valid"]):
 	     textcolor="black"
 	     l=list(self.RDS_data[PI]["RT"])
-	     rt="".join(l[0:text_end])
-	     t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",rt)
-	     db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
+	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
+	      t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",rt)
+	      db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	      self.RDS_data[PI]["internals"]["last_valid_rt"]=rt
+	      try:#print rt+ if it exist
+		t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
+		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	      except KeyError:
+		pass#no rt+ -> dont save
 	   else:
 	     textcolor="gray"
 	   #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,self.RDS_data[PI]["RT"][:adr*4],segmentcolor,self.RDS_data[PI]["RT"][adr*4:adr*4+4],textcolor,self.RDS_data[PI]["RT"][adr*4+4:])
@@ -842,67 +878,7 @@ class rds_parser_table_qt(gr.sync_block):
 		#if not ci==0:
 		  #print("ci %i not found, discarding"%ci)
 		pass
-	      
-	  #if tmc_T == 0: #message #TODO: test message uniqueness here
-	    ##print("TMC-message")
-	    #tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
-	    #if tmc_F==1 or (tmc_F==0 and Y15==1):#single group or 1st group of multigroup
-	      #if tmc_F==1:#single group
-		#tmc_D=Y15 #diversion bit(Y15)
-	      #else:#1st group of multigroup -> no diversion bit
-		#tmc_D=-1
-	      #tmc_event=int(tmc_y&0x7ff) #Y10-Y0
-	      #tmc_location=tmc_z
-	      #tmc_DP=int(tmc_x&0x7) #duration and persistence 3 bits
-	      #tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
-	      #tmc_dir=int((tmc_y>>14)&0x1) #+-direction bit (Y14)
-  ##LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
-	      #try:
-		#location=self.lcl_dict[tmc_location]
-		#loc_type=location[0]
-		#loc_subtype=location[1]
-		#loc_roadnumber=location[2]
-		#loc_roadname=location[3]
-		#loc_first_name=location[4]
-		#loc_second_name=location[5]
-		#loc_area_ref=int(location[6])
-		#event_name=self.ecl_dict[tmc_event]
-		#refloc_name=""
-		#try:
-		  #refloc=self.lcl_dict[loc_area_ref]
-		  #refloc_name=refloc[4]
-		#except KeyError:
-		  ##print("location '%i' not found"%tmc_location)
-		  #pass
-		#if not self.TMC_data.has_key(tmc_hash):#if message new
-		  #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,tmc_location,self.ref_locs(tmc_location,""),self.RDS_data[PI]["PSN"])
-		  #self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
-		  #self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
-		  #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
-		  #db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
-		  ##(hash,time,PI, F,event,location,DP,div,dir,extent,text)
-		  #message_string="%s ,firstname:%s, reflocs:%s"%(event_name,loc_first_name,self.ref_locs(tmc_location,""))
-		  #t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_event,int(tmc_location),tmc_DP,tmc_D,tmc_dir,tmc_extent,message_string.decode("utf-8"))
-		  #db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text) VALUES (?,?,?,?,?,?,?,?,?,?,?)",t)
-		  ##print(message_string)
-	      #except KeyError:
-		##print("location '%i' not found"%tmc_location)
-		#pass
-	    #else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
-	      #sg=int((tmc_y>>14)&0x1)#=1 if second group Y14
-	      #gsi=int((tmc_y>>12)&0x3)#group sequence indicator Y12..13 ,max length:5
-	      #if sg==1:#if second group
-		#pass
-	      #if not self.TMC_data.has_key(tmc_hash):#if message new
-		#data1=tmc_y&0xfff#data block 1
-		#data2=tmc_z#data block 2
-		#message_string="SG:%i, GSI:%i, content:%03X%04X"%(sg,gsi,data1,data2)
-		##decode_TMC_MGM(array)
-		#self.TMC_data[tmc_hash]={"PI":PI,"string":message_string}
-		##self.signals.DataUpdateEvent.emit({'TMC_log':message_string})
-		#t=(tmc_hash,str(datetime.now()),PI,message_string)
-		#db.execute("INSERT INTO TMC (hash,time,PI,text) VALUES (?,?,?,?)",t)
-	    ##code.interact(local=locals())
+
 	  else:#alert plus or provider info
 	    adr=tmc_x&0xf
 	    if  4 <= adr and adr <= 9:
@@ -1107,18 +1083,7 @@ class rds_parser_table_qt(gr.sync_block):
 	PI=tmc_msg.PI
 	tmc_F=tmc_msg.is_single
 	tmc_hash=tmc_msg.tmc_hash
-	#tmc_event=tmc_msg.event
-	#location=self.lcl_dict[tmc_location]
-	#loc_type=location[0]
-	#loc_subtype=location[1]
-	#loc_roadnumber=location[2]
-	#loc_roadname=location[3]
-	#loc_first_name=location[4]
-	#loc_second_name=location[5]
-	#loc_area_ref=int(location[6])
-	#event_name=self.ecl_dict[tmc_msg.event]
 	refloc_name=""
-	#reflocs=self.ref_locs(tmc_msg.location.lcn,"")#old method
 	reflocs=tmc_msg.location.reflocs
 	if not self.TMC_data.has_key(tmc_hash):#if message new
 	  try:
@@ -1140,12 +1105,12 @@ class rds_parser_table_qt(gr.sync_block):
 	    #self.signals.DataUpdateEvent.emit({'TMC_log_str':multi_str})
 	    if tmc_msg.location.has_koord:#show on map
 	      map_tag=tmc_msg.event_name+"; "+multi_str
-	      folium.Marker([tmc_msg.location.ykoord,tmc_msg.location.xkoord], popup=map_tag.decode("utf-8")).add_to(self.osm_map)
-	      #self.osm_map.save(self.workdir+'osm.html')
-	      #code.interact(local=locals())
+	      #print to osm map (disabled because slow)
+	      #folium.Marker([tmc_msg.location.ykoord,tmc_msg.location.xkoord], popup=map_tag.decode("utf-8")).add_to(self.osm_map)
+
 	      #print to google map
-	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag,marker_id=len(self.map_markers))#without hmtl escape
-	      #marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=self.html_escape(map_tag))
+	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag,marker_id=len(self.map_markers))
+	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag)#without ID
 	      self.map_markers.append(marker_string)
 
 	      #code.interact(local=locals())
@@ -1165,7 +1130,8 @@ class rds_parser_table_qt(gr.sync_block):
 	ps.print_stats() 
 	print(s.getvalue())
     def decode_AF_freq(self,freq_raw):
-      if freq_raw in range(1,205):#1..204
+      #if freq_raw in range(1,205):#1..204 BAD coding -> memory usage
+      if 1<=freq_raw <=204:
 	return(87500000+freq_raw*100000)#returns int
 	#return(87.5e6+freq_raw*0.1e6)#returns float
       else:
@@ -1188,7 +1154,7 @@ class rds_parser_table_qt(gr.sync_block):
       0b1000:u"áàéèíìóòúùÑÇŞßiĲ",
       0b1001:u"âäêëîïôöûüñçş??ĳ",
       0b1100:u"ÁÀÉÈÍÌÓÒÚÙŘČŠŽĐĿ",
-      0b1101:u"áàéèíìóòúùřčšžđŀ"}
+      0b1101:u"ÂÄÊËÎÏÔÖÛÜřčšžđŀ"}
       charlist=list(charstring)
       for i,char in enumerate(charstring):
       	#code.interact(local=locals())
