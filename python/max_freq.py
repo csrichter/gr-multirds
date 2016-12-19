@@ -38,8 +38,14 @@ class max_freq(gr.sync_block):
         self.samp_rate=samp_rate
         self.snapto=round_to
         self.debug=debug
-        self.last_station_freqs=[]
+        self.last_station_indices=[0]*self.num_decoders
 	self.message_port_register_out(pmt.intern('out'))
+	self.counter=0
+	self.message_port_register_in(pmt.intern('ctrl'))
+	self.set_msg_handler(pmt.intern('ctrl'), self.handle_ctrl_msg)
+    def handle_ctrl_msg(self,msg):
+      m = pmt.pmt_to_python.pmt_to_dict(msg)
+      print(m)
     def set_center_freq(self, freq=None):
 		if freq is not None:
 			if isinstance(freq, float) or isinstance(freq, int):
@@ -47,6 +53,11 @@ class max_freq(gr.sync_block):
 			else:
 				self.center_freq = int(freq)
     def work(self, input_items, output_items):
+      if self.counter<5:
+	self.counter+=1
+	return len(input_items[0])
+      else:
+	self.counter=0
       #in0 = input_items[0]
       #ii=input_items
         carrier_width=2
@@ -96,10 +107,85 @@ class max_freq(gr.sync_block):
         station_indices_sorted=sorted(station_indices,reverse=True,key=lambda elem:numbers[elem])
         
         #prevents back and forth switching if two station have similar signal strength
-        station_indices_tune=list(station_indices_sorted)#copy list
-        del station_indices_tune[self.num_decoders:]#remove non decodable incidices
-        station_indices_tune.sort()
+        station_indices_trunc=list(station_indices_sorted)#copy list
+        del station_indices_trunc[self.num_decoders:]#remove non decodable incidices
         
+        ###############################
+        #comparelist=[]
+        #for freq in station_indices_trunc:
+	  #comparelist.append({"freq":freq,"decoder":None,"new":True})#new detected-> no assigned decoder
+	#for decnum,freq in enumerate(self.last_station_indices):
+	  #comparelist.append({"freq":freq,"decoder":decnum,"new":False})
+	##comparelist.sort()
+	#comparelist_sorted=sorted(comparelist, key=lambda k: k['freq']) 
+	#print(comparelist_sorted)
+	
+	#differences=[]
+	#station_indices_tune=[0]*4#TODO what if < 4 max freqs?
+	#last_elem=None
+	#same_station_threshold=2
+	#new_freqs=[]
+	##for elem in comparelist_sorted:
+	#while len(comparelist_sorted)>0:
+	  #elem=comparelist_sorted.pop(0)#get and remove first
+	  #freq=elem["freq"]
+	  #if not last_elem==None and not elem["freq"]==0:
+	    #fdiff=abs(freq-last_elem["freq"])
+	    #differences.append(fdiff)
+	    #if fdiff<same_station_threshold:#freq approx same-> use old decoder
+	      #if elem["new"]:#if elem is new last_elem must be old
+		#decnum=last_elem["decoder"]     
+		#freq=elem["freq"]#use new freq
+	      #else:
+		#decnum=elem["decoder"]
+		#freq=last_elem["freq"]#use new freq
+	      #station_indices_tune[decnum]=freq
+	    #else:#stations different -> save last_elem and compare with next
+	      #if last_elem["new"]:#save new 
+		#new_freqs.append(last_elem["freq"])
+	  #last_elem=elem
+	#if last_elem["new"]:#save new 
+	  #new_freqs.append(last_elem["freq"]) 
+	#station_indices_tune=list(set(station_indices_tune))#remove duplicates
+	#for i,freq in enumerate(station_indices_tune):
+	  #if freq==0 and len(new_freqs)>0:#decoder unused
+	    #station_indices_tune[i]=new_freqs.pop()#assign new freq
+	      
+	#print("diff %s"%differences)
+	
+	#print("tune:%s"%station_indices_tune)
+	#print("nomatch:%s"%new_freqs)
+	###############################
+	#problems:
+	#very slow, sometimes switches
+	
+	
+	###############################
+        #station_indices_tune.sort()
+        ###############################
+        #problems: swtiching
+        station_indices_tune=[0]*self.num_decoders
+        same_station_threshold=3
+        new_stations=[]
+        for new_freq in station_indices_trunc:
+	  added=False
+	  for i,old_freq in enumerate(self.last_station_indices):
+	    if abs(old_freq-new_freq)<same_station_threshold:
+	      station_indices_tune[i]=new_freq
+	      added=True
+	  if not added:
+	    new_stations.append(new_freq)
+	#print("tune1:%s"%station_indices_tune)
+	#print("new_1 %s"%new_stations)
+	
+	for i,tune_freq in enumerate(station_indices_tune):
+	  if tune_freq == 0 and len(new_stations)>0:
+	    station_indices_tune[i]=new_stations.pop()
+	#print("tune2:%s"%station_indices_tune)
+        #print("new_2 %s"%new_stations)
+        
+        self.last_station_indices=station_indices_tune#save current stations to compare againts next
+
         station_strength=[]
         station_freqs=[]
         #index to freq:
@@ -119,7 +205,6 @@ class max_freq(gr.sync_block):
 	  print(station_indices_tune)
 	  print(station_strength)
 	  print(station_freqs)
-	  
-	self.last_station_freqs=station_freqs
+
         return len(input_items[0])
 

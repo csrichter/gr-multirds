@@ -48,16 +48,86 @@ def ordinal(num):
         suffix = SUFFIXES.get(num % 10, 'th')
     return str(num) + suffix
 class tmc_event:
-  def __init__(self,ecn,tableobj,tags=[]):
-    self.text_raw=""
+  def __repr__(self):
+    return self.ecn
+  def __init__(self,ecn,tableobj):
+    self.tableobj=tableobj
+    self.ecn=ecn
+    self.text_raw="##Error##"
+    self.name="##Error##"
     try:
       #Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
-      event_array=tableobj.ecl_dict[ecn]
+      event_array=self.tableobj.ecl_dict[ecn]
       self.text_raw=event_array[1]
+      self.text_noQ=event_array[2]
+      self.text_singleQ=event_array[3]
+      self.text_pluralQ=event_array[4]
+      self.name=self.text_noQ
+      self.nature=event_array[5]#N:nature (blank): information, F:forecast, S:silent
+      self.quantifierType=event_array[6]#Q:quantifier type: (0..12) or blank (no quantifier)
+      self.durationType=event_array[7]#T:duration type: D:dynamic, L:long lasting, in brackets or if time-of-day quantifier (no 7) is used in message -> no display, only for management
+      self.direction=event_array[8]#D:direction: 1:unidirectional, 2:bidirectional
+      self.urgency=event_array[9]#U:urgency: blank: normal, X:extremely urgent, U:urgent
+      self.updateClass=int(event_array[10])#C: update class:
+      self.updateClassName=self.tableobj.tmc_update_class_names[self.updateClass]
+      self.phrase_code=event_array[11]#R: phrase code
+      #04789
+      #if not self.quantifierType=="" and not self.quantifierType=="0" and not self.quantifierType=="4":
+	#print("type: %s, C:%s"%(self.quantifierType,self.updateClassName))
       self.is_valid=True
     except KeyError:
       print("event '%i' not found"%ecn)
       self.is_valid=False
+  def add_quantifier(self,data,bitLength):
+    self.name=self.text_raw#default
+    Q_raw=data.uint
+    if Q_raw==0:#binary zero represents highest value
+      Q=32
+    else:
+      Q=Q_raw
+    quantifier_string="type:%s,raw:%i"%(self.quantifierType,Q)
+    #print(str(self.ecn)+", "+quantifier_string+", "+str(bitLength)+", "+str(data)+", "+self.text_raw)
+    if self.quantifierType=="":
+      print("cannot add quantifier %i to event ecn:%i"%(Q_raw,self.ecn))
+    elif self.quantifierType=="0":#small numbers
+      if(Q <= 28):
+	quantifier_string=str(Q)
+      else:
+	quantifier_string=str(30+(Q-29)*2)#30,32,34,36
+      #print(quantifier_string)
+      self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
+    elif self.quantifierType=="1":#numbers
+      numbers=[1,2,3,4,10,20,30,40,50,60,70,80,90,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000]
+      quantifier_string=str(numbers[Q-1])
+    elif self.quantifierType=="2":#z.b. für sichtweiten, e.g. for visibility #TODO translate
+      quantifier_string="%i Metern"
+      self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
+    elif self.quantifierType=="4":
+      speed=Q*5#in kmh
+      quantifier_string="von bis zu %i km/h"%speed
+    elif self.quantifierType=="7":
+      hours=int((Q-1)/6)
+      minutes=((Q-1)%6)*10
+      quantifier_string="%i:%i"%(hours,minutes)
+      #print(quantifier_string)
+    elif self.quantifierType=="8":      
+      if Q<=100:
+	weight=Q*0.1
+      else:
+	weight=10+0.5*(Q-100)
+      quantifier_string="%it"%weight
+      self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
+      #print(quantifier_string)
+    elif self.quantifierType=="9":
+      if Q<=100:
+	length=Q*0.1
+      else:
+	length=10+0.5*(Q-100)
+      quantifier_string="%.1fm"%length
+      #print(quantifier_string)
+      self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
+      #print(self.name)
+    self.name=self.text_raw+"; Q="+quantifier_string
   def __repr__(self):
     return self.text_raw
   def __add_tag(self,tag):
@@ -143,11 +213,12 @@ class tmc_message:
   def __repr__(self):
     #event_name=self.ecl_dict[self.tmc_event][1]
     #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,self.tmc_location,self.ref_locs(self.tmc_location,""),self.RDS_data[PI]["PSN"])
-    return "single:%i,complete:%i,event:%i location:%s"%(self.is_single,self.is_complete,self.event,self.location)
+    return "single:%i,complete:%i,event:%i location:%s"%(self.is_single,self.is_complete,self.event.ecn,self.location)
       
   def __init__(self,PI,tmc_x,tmc_y,tmc_z,tableobj):#TODO handle out of sequence data
     self.debug_data=""
     self.tableobj=tableobj
+    self.isCancelled=False
     self.tmc_hash=hash((PI,tmc_x,tmc_y,tmc_z))
     tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
     assert tmc_T==0, "this is tuning info and no alert_c message"
@@ -171,12 +242,13 @@ class tmc_message:
 	self.mgm_list=[]
       self.location=tmc_location(tmc_z,tableobj)
       self.tmc_location=self.location#decrepated
-      self.event=int(tmc_y&0x7ff) #Y10-Y0
-      self.tmc_event=self.event#decrepated
-      try:
-	self.event_name = self.tableobj.ecl_dict[self.event][1]
-      except KeyError:
-	self.event_name="##Error##"
+      #self.event=int(tmc_y&0x7ff) #Y10-Y0
+      self.event=tmc_event(int(tmc_y&0x7ff),self.tableobj) #Y10-Y0
+      self.events=[self.event]
+      #try:
+	#self.event_name = self.tableobj.ecl_dict[self.event][1]
+      #except KeyError:
+	#self.event_name="##Error##"
       self.tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
       self.tmc_dir=int((tmc_y>>14)&0x1) #+-direction bit (Y14)
     else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
@@ -200,6 +272,7 @@ class tmc_message:
 	if self.count==0:#last group
 	  self.is_complete=True
 	  self.debug_data=copy.deepcopy(self.data_arr)
+	  last_event=self.event
 	  while len(self.data_arr)>4:#decode mgm
 	    label=self.data_arr[0:4].uint
 	    del self.data_arr[0:4]
@@ -212,6 +285,15 @@ class tmc_message:
 		self.tmc_DP=data.uint
 	      elif label==1 and data.uint==5:
 		self.tmc_D=1#set diversion bit
+	      elif label==4:#5 bit quantifier
+		last_event.add_quantifier(data,5)
+	      elif label==5:#8 bit quantifier
+		last_event.add_quantifier(data,8)
+	      elif label==9:#additional event
+		last_event=tmc_event(data.uint,self.tableobj)
+		self.events.append(last_event)
+		
+		
 	self.count-=1
     except AttributeError:
       #3rd or later group receiver before second
@@ -221,30 +303,31 @@ class tmc_message:
 class mgm_tag:#mgm=multi group message
   field_lengths=[3, 3, 5, 5, 5, 8, 8, 8, 8, 11, 16, 16, 16, 16, 0, 0]
   field_names={0:"Duration (value 000 is not allowed)"
-,1:"Control code."
-,2:"Length of route affected."
-,3:"Speed limit advice."
-,4:"quantifier (5 bit field)"
-,5:"quantifier (8 bit field)"
-,6:"Supplementary information code."
-,7:"Explicit start time (or time when problem was reported) for driver information only."
-,8:"Explicit stop time for driver information and message management."
-,9:"Additional event."
-,10:"Detailed diversion instructions."
-,11:"Destination."
-,12:"Reserved for future use"
-,13:"Cross linkage to source of problem, on another route."
-,14:"Content Separator."
-,15:"Reserved for future use."}
+  ,1:"Control code."
+  ,2:"Length of route affected."
+  ,3:"Speed limit advice."
+  ,4:"quantifier (5 bit field)"
+  ,5:"quantifier (8 bit field)"
+  ,6:"Supplementary information code."
+  ,7:"Explicit start time (or time when problem was reported) for driver information only."
+  ,8:"Explicit stop time for driver information and message management."
+  ,9:"Additional event."
+  ,10:"Detailed diversion instructions."
+  ,11:"Destination."
+  ,12:"Reserved for future use"
+  ,13:"Cross linkage to source of problem  , on another route."
+  ,14:"Content Separator."
+  ,15:"Reserved for future use."}
   control_codes={0:"Default urgency increased by one level."
-,1: "Default urgency reduced by one level."
-,2:" Default directionality of message changed."
-,3:" Default 'dynamic' or 'longer-lasting' provision interchanged."
-,4:" Default spoken or unspoken duration interchanged."
-,5:" Equivalent of diversion bit set to '1'."
-,6:" Increase the number of steps in the problem extent by 8."
-,7:" Increase the number of steps in the problem extent by 16."}
-  def decode_time_date(self,raw):#label7/8 raw to datestring
+  ,1: "Default urgency reduced by one level."
+  ,2:" Default directionality of message changed."
+  ,3:" Default 'dynamic' or 'longer-lasting' provision interchanged."
+  ,4:" Default spoken or unspoken duration interchanged."
+  ,5:" Equivalent of diversion bit set to '1'."
+  ,6:" Increase the number of steps in the problem extent by 8."
+  ,7:" Increase the number of steps in the problem extent by 16."}
+  @staticmethod
+  def decode_time_date(raw):#label7/8 raw to datestring
     if raw<=95:
       hrs=int(raw/4)#takes floor
       mns=(95%4)*15
@@ -257,7 +340,8 @@ class mgm_tag:#mgm=multi group message
       return "%s months"%((raw-231)/2.0)
     else:
       raise ValueError, "label7/8 time must be between 0 and 255"
-  def length_to_km(self,raw):#label2 raw to km
+  @staticmethod
+  def length_to_km(raw):#label2 raw to km
     if raw==0:
       return 100
     elif raw <=10:
@@ -290,8 +374,10 @@ class mgm_tag:#mgm=multi group message
       elif(self.label==8):
         return "stop: %s"%self.decode_time_date(self.data.uint)
       elif(self.label==9):
-	event_string="event: %s"%self.tableobj.ecl_dict[self.data.uint][1]
-	return event_string
+	event=tmc_event(self.data.uint,self.tableobj)
+	#event_string="event: %s"%self.tableobj.ecl_dict[self.data.uint][1]
+	#return event_string
+	return "event: %s"%event.name
       elif(self.label==10):
 	#location_string="divert via: %s"%",".join(self.tableobj.lcl_dict[self.data.uint][3:5])#roadname(col3) and firstname (col4)
 	location_string="divert via: %s"%tmc_location(self.data.uint,self.tableobj)
@@ -338,6 +424,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
 	self.message_port_register_in(pmt.intern('freq'))
 	self.set_msg_handler(pmt.intern('freq'), self.set_freq)
+	self.message_port_register_out(pmt.intern('ctrl'))
 	self.log=log
 	self.debug=debug
 	self.signals=signals
@@ -401,6 +488,7 @@ class rds_parser_table_qt(gr.sync_block):
 	#read TMC-event list
 	reader = csv.reader(open(self.workdir+'event-list_with_forecast_sort.csv'), delimiter=',', quotechar='"')
 	reader.next()#skip header
+	self.ecl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
 	#Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
 	#N:nature (blank): information, F:forecast, S:silent
 	#Q:quantifier type: (0..12) or blank (no quantifier)
@@ -408,39 +496,12 @@ class rds_parser_table_qt(gr.sync_block):
 	#D:direction: 1:unidirectional, 2:bidirectional
 	#U:urgency: blank: normal, X:extremely urgent, U:urgent
 	#C: update class:
-#1. LEVEL OF SERVICE	Verkehrslage
-#2. EXPECTED LEVEL OF SERVICE	Erwartete Verkehrslage
-#3. ACCIDENTS		Unfälle
-#4. INCIDENTS		Vorfälle
-#5. CLOSURES AND LANE RESTRICTIONS	Straßen- und Fahrbahnsperrungen	Straßen- und Fahrbahnsperrungen
-#6. CARRIAGEWAY RESTRICTIONS		Fahrbahnbeschränkungen
-#7. EXIT RESTRICTIONS		Beschränkungen der Ausfahrt
-#8. ENTRY RESTRICTIONS		Beschränkungen der Einfahrt
-#9. TRAFFIC RESTRICTIONS		Verkehrsbeschränkungen
-#10. CARPOOL INFORMATION		Informationen für Fahrgemeinschaften
-#11. ROADWORKS		Bauarbeiten
-#12. OBSTRUCTION HAZARDS		Behinderungen auf der Fahrbahn
-#13. DANGEROUS SITUATIONS		Gefährliche Situationen
-#14. ROAD CONDITIONS		Straßenzustand
-#15.TEMPERATURES		Temperaturen
-#16. PRECIPITATION AND VISIBILITY		Niederschlag und Sichtbehinderungen
-#17. WIND AND AIR QUALITY		Wind und Luftqualität
-#18. ACTIVITIES		Veranstaltungen
-#19. SECURITY ALERTS		Sicherheitsvorfälle
-#20. DELAYS		Zeitverluste
-#21. CANCELLATIONS		Ausfälle
-#22. TRAVEL TIME INFORMATION		Reiseinformationen
-#23. DANGEROUS VEHICLES		Gefährliche Fahrzeuge
-#24. EXCEPTIONAL LOADS/VEHICLES		Außergewöhnliche Ladungen und Fahrzeuge
-#25. TRAFFIC EQUIPMENT STATUS		Störungen an Lichtsignalanlagen und sonstigen Straßenausrüstungen
-#26. SIZE AND WEIGHT LIMITS		Beschränkung der Fahrzeugmaße und -gewichte
-#27. PARKING RESTRICTIONS		Parkregelungen
-#28. PARKING		Parken
-#29. REFERENCE TO AUDIO BROADCASTS		Information
-#30. SERVICE MESSAGES		Service Meldungen
-#31. SPECIAL MESSAGES		Spezielle Meldungen
-
-	self.ecl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
+	
+	#read update classes
+	reader = csv.reader(open(self.workdir+'tmc_update_class_names.csv'), delimiter=',', quotechar='"')
+	reader.next()#skip header, "code(C),english,german"
+	self.tmc_update_class_names=dict((int(rows[0]),rows[1]) for rows in reader)#only use german name
+	
 	#read supplementary information code list
 	reader = csv.reader(open(self.workdir+'label6-supplementary-information-codes.csv'), delimiter=',', quotechar='"')
 	reader.next()#skip header
@@ -513,7 +574,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
 	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":""}  
     def handle_msg(self, msg, port):#port from 0 to 3
-	if time.time()-self.save_data_timer > 2:#every 10 seconds #TODO lower frequency (high freq for testing)
+	if time.time()-self.save_data_timer > 10:#every 10 seconds
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
 	pr.enable()
@@ -1093,18 +1154,18 @@ class rds_parser_table_qt(gr.sync_block):
 	    else:
 	      #multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
 	      multi_str="%i:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
-	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event_name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
+	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event.name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
 	    self.TMC_data[tmc_hash]=tmc_msg
 	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':multi_str})
 	    #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
 	    #self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	   
-	    message_string="%s ,locname:%s, reflocs:%s"%(tmc_msg.event_name,tmc_msg.location,reflocs)
-	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_msg.event,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"),str(tmc_msg.debug_data))
+	    message_string="%s ,locname:%s, reflocs:%s"%(tmc_msg.event.name,tmc_msg.location,reflocs)
+	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"),str(tmc_msg.debug_data))
 	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
 	    #self.signals.DataUpdateEvent.emit({'TMC_log_str':multi_str})
 	    if tmc_msg.location.has_koord:#show on map
-	      map_tag=tmc_msg.event_name+"; "+multi_str
+	      map_tag=tmc_msg.event.name+"; "+multi_str
 	      #print to osm map (disabled because slow)
 	      #folium.Marker([tmc_msg.location.ykoord,tmc_msg.location.xkoord], popup=map_tag.decode("utf-8")).add_to(self.osm_map)
 
@@ -1117,7 +1178,7 @@ class rds_parser_table_qt(gr.sync_block):
 	    
 	  except Exception as e:
 	    print(e)
-	    pass
+	    raise
 	    #print("line 1064")
 	    #code.interact(local=locals())
       except KeyError:
@@ -1246,6 +1307,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         save_button = QtGui.QPushButton("save")
         save_button.clicked.connect(self.saveData)
         button_layout.addWidget(save_button)
+        print_button = QtGui.QPushButton("print profile")
+        print_button.clicked.connect(self.printProfile)
+        button_layout.addWidget(print_button)
+        mode_button = QtGui.QPushButton("mode")
+        mode_button.clicked.connect(self.switchMode)
+        button_layout.addWidget(mode_button)
         layout.addLayout(button_layout)
         
         self.freq_label=QtGui.QLabel("decoder frequencies:")
@@ -1288,9 +1355,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  reflocs=tmc_msg.location.reflocs
 	  reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
-	  event_cmp=unicode(tmc_msg.event_name, encoding="UTF-8").lower()
+	  event_cmp=unicode(tmc_msg.event.name, encoding="UTF-8").lower()
 	  if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
-	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event_name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
+	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event.name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
 	    self.logOutput.append(Qt.QString.fromUtf8(message_string))
 	    if event.has_key('multi_str'):
 	      self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
@@ -1344,6 +1411,13 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 		self.table.resizeColumnsToContents()
 		self.lastResizeTime=time.time()
 	#end of display-data
+    def printProfile(self):
+      self.tableobj.print_results()
+    def switchMode(self):
+      #print("mode switch message sent")
+      send_pmt = pmt.pmt_to_python.pmt_from_dict({"cmd":"switch mode"})
+      #send_pmt = pmt.string_to_symbol("switch mode")
+      self.tableobj.message_port_pub(pmt.intern('ctrl'), send_pmt)
     def saveData(self):
 	filename="RDS_data_"+str(datetime.now())+".txt"
 	f=open(self.tableobj.workdir+filename,"w")
@@ -1403,12 +1477,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	#code.interact(local=locals())
 	view.exec_()
     def onCLick(self):
-	print("button clicked")
-	self.tableobj.print_results()
-	#code.interact(local=locals())
-	#self.logOutput.clear()
-	#self.reset_color()
-	#pp.pprint(event)
+	print("button clicked")	
+	code.interact(local=locals())
 if __name__ == "__main__":
     from PyQt4 import Qt
     import sys
@@ -1428,3 +1498,4 @@ if __name__ == "__main__":
     sys.exit(app.exec_())
 
     widget = None
+

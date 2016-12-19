@@ -34,7 +34,7 @@ $(gui_hint()($win))</make>
     <key>workdir</key>
     <value></value>
     <type>string</type>
-    <hide>#if $workdir() then 'part' else 'none'#</hide>
+    <hide>part</hide>
   </param>
   <param>
     <name>GUI Hint</name>
@@ -89,5 +89,10 @@ $(gui_hint()($win))</make>
     <type>message</type>
     <optional>1</optional>
   </sink>
+  <source>
+    <name>ctrl</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
 
 </block>
