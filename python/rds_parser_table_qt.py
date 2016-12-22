@@ -21,15 +21,15 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,folium
+import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,re,folium
 from datetime import datetime
 import crfa.chart as chart
 
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code,pickle#for easier testing
 pp = pprint.PrettyPrinter()
-import cProfile, pstats, StringIO #for profiling
-pr = cProfile.Profile()
+#import cProfile, pstats, StringIO #for profiling
+#pr = cProfile.Profile()#disabled-internal-profiling
 
 #from threading import Timer#to periodically save DB
 
@@ -264,11 +264,11 @@ class tmc_message:
       if self.count==gsi: #group in sequence
 	data1=int(tmc_y&0xfff)#data block 1
 	data2=int(tmc_z)#data block 2
-	#code.interact(local=locals())
+	
 	self.data_arr.append("0x%03X"%data1)#3 hex characters
 	self.data_arr.append("0x%04X"%data2)#4 hex characters
 	#print(gsi)
-	#code.interact(local=locals())
+	
 	if self.count==0:#last group
 	  self.is_complete=True
 	  self.debug_data=copy.deepcopy(self.data_arr)
@@ -567,7 +567,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["AID_list"]={}
 	  self.RDS_data[PI]["PSN"]="_"*8
 	  self.RDS_data[PI]["PSN_valid"]=[False]*8
-	  self.RDS_data[PI]["AF"]={}
+	  self.RDS_data[PI]["AF"]={"set":set(),"rxset":set()}
 	  self.RDS_data[PI]["TP"]=-1
 	  self.RDS_data[PI]["TA"]=-1
 	  self.RDS_data[PI]["PTY"]=""
@@ -577,8 +577,10 @@ class rds_parser_table_qt(gr.sync_block):
 	if time.time()-self.save_data_timer > 10:#every 10 seconds
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
-	pr.enable()
-	#code.interact(local=locals())
+	#pr.enable()#disabled-internal-profiling
+	#db=sqlite3.connect(self.db_name)
+	db=self.db
+	
 	array=pmt.to_python(msg)[1]
 	groupNR=array[2]&0b11110000
 	groupVar=array[2]&0b00001000
@@ -613,9 +615,15 @@ class rds_parser_table_qt(gr.sync_block):
 	  freq_str="%i:%0.1fM"% (port,freq/1e6)
 	  self.RDS_data[PI]["tuned_freq"]=freq
 	  #self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
+	if self.RDS_data[PI]["blockcounts"].has_key(groupType):
+	  self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
+	else:
+	  self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
 	self.RDS_data[PI]["blockcounts"]["any"]+=1
 	if self.RDS_data[PI]["blockcounts"]["any"]==5:
 	  self.RDS_data[PI]["blockcounts"]["any"]=0
+	  t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])#TODO only update DB every few seconds
+	  db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	dots="."*self.RDS_data[PI]["blockcounts"]["any"]
 	self.RDS_data[PI]["TP"]=TP
 	self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
@@ -623,22 +631,15 @@ class rds_parser_table_qt(gr.sync_block):
 	#save block to sqlite (commit at end of handle_msg)
 	#(time text,PI text,PSN text, grouptype text,content blob)
 	content="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
-	#db=sqlite3.connect(self.db_name)
-	db=self.db
+	
 	#t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],groupType,content)
 	#db.execute("INSERT INTO groups  VALUES (?,?,?,?,?)",t)
-	if self.RDS_data[PI]["blockcounts"].has_key(groupType):
-	  self.RDS_data[PI]["blockcounts"][groupType] +=1 #increment
-	else:
-	  self.RDS_data[PI]["blockcounts"][groupType] = 1 #initialize (1st group of this type)
+	
 	#error 161213: 
 	  # db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	  #InterfaceError: Error binding parameter 0 - probably unsupported type.
 	  #fix?: added str() to PI, but it should already be a string
-	  
-	t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])#TODO only update DB every few seconds
-	db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
-	
+
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
 	  segment=self.decode_chars(chr(array[6])+chr(array[7]))
@@ -677,13 +678,32 @@ class rds_parser_table_qt(gr.sync_block):
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	      t=(PI,self.RDS_data[PI]["PSN"],float(freq),self.RDS_data[PI]["PTY"],int(self.RDS_data[PI]["TP"]))
 	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+	  if self.RDS_data[PI].has_key("tuned_freq") :#TODO add secondary freqs
+	    freq=self.decode_AF_freq(array[4])
+	    diff=abs(freq-self.RDS_data[PI]["tuned_freq"])
+	    if diff<100000:
+	      self.RDS_data[PI]["AF"]["rxset"].add(freq)
+	    freq=self.decode_AF_freq(array[5])
+	    diff=abs(freq-self.RDS_data[PI]["tuned_freq"])
+	    if diff<100000: 
+	      self.RDS_data[PI]["AF"]["rxset"].add(freq)
+	      
 	  if(array[4]>= 224 and array[4]<= 249):
 	    #print("AF1 detected")
 	    self.RDS_data[PI]["AF"]['number']=array[4]-224
 	    #self.RDS_data[PI]["AF"]['main']=self.decode_AF_freq(array[5])
 	    self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'AF':self.RDS_data[PI]["AF"]})
 	  if(array[5]>= 224 and array[5]<= 249):
-	    print("AF2 detected (shouldn't happen)")
+	    print("AF2 detected (shouldn't happen) %s"%array[5])
+	  
+	  
+	  #add frequencies to set
+	  self.RDS_data[PI]["AF"]["set"].add(self.decode_AF_freq(array[4]))
+	  self.RDS_data[PI]["AF"]["set"].add(self.decode_AF_freq(array[5]))
+	  try:
+	    self.RDS_data[PI]["AF"]["set"].remove(0)#remove control characters
+	  except KeyError:
+	    pass
 	  
 	  name_list=list(self.RDS_data[PI]["PSN"])
 	  if (name_list[adr*2:adr*2+2]==list(segment)):#segment already there
@@ -706,7 +726,8 @@ class rds_parser_table_qt(gr.sync_block):
 	   if (not self.RDS_data[PI]["PSN_valid"][i]):
 	    valid = False
 	  if(valid):
-	   textcolor="black"
+	   #textcolor="black"
+	   textcolor=""#use default color (white if background is black)
 	   if not self.RDS_data[PI]["internals"]["last_valid_psn"]==self.RDS_data[PI]["PSN"]:#ignore duplicates
 	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PSN_valid",self.RDS_data[PI]["PSN"])
 	    db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
@@ -800,7 +821,8 @@ class rds_parser_table_qt(gr.sync_block):
 	     if (not self.RDS_data[PI]["RT_valid"][i]):
 	      self.RDS_data[PI]["RT_all_valid"] = False
 	   if(self.RDS_data[PI]["RT_all_valid"]):
-	     textcolor="black"
+	     #textcolor="black"
+	     textcolor=""#use default color (white if background is black)
 	     l=list(self.RDS_data[PI]["RT"])
 	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
 	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
@@ -820,7 +842,7 @@ class rds_parser_table_qt(gr.sync_block):
 
 	   rtcol=self.colorder.index('text')
 	   self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'string':formatted_text})
-	   #code.interact(local=locals())
+	   
 	elif (groupType == "3A"):#ODA announcements (contain application ID "AID")
 	  AID=(array[6]<<8)|(array[7])#combine 2 bytes into 1 block
 	  app_data=(array[4]<<8)|(array[5])#content defined by ODA-app
@@ -1038,6 +1060,7 @@ class rds_parser_table_qt(gr.sync_block):
 	    if not self.RDS_data.has_key(PI_ON):
 	      self.init_data_for_PI(PI_ON)
 	      self.RDS_data[PI_ON]["TP"]=TP_ON
+	      self.PI_dict[PI_ON]=0#initialize dict, even if no packets received
 	      if self.log:
 		print("found station %s via EON on station %s"%(PI_ON,PI))	      
 	    if not self.RDS_data[PI]["EON"].has_key(PI_ON):
@@ -1070,7 +1093,8 @@ class rds_parser_table_qt(gr.sync_block):
 		if (not self.RDS_data[PI_ON]["PSN_valid"][i]):
 		  valid = False
 	      if(valid):
-		textcolor="black"
+		#textcolor="black"
+		textcolor=""#use default color (white if background is black)
 		
 	      else:
 		textcolor="gray"	  
@@ -1121,7 +1145,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  printdelay=500
 	  self.printcounter+=0#printing disabled
 	  if self.printcounter == printdelay and self.debug:
-	    #code.interact(local=locals())
+	    
 	    for key in self.RDS_data:
 	      if self.RDS_data[key].has_key("PSN"):
 		psn=self.RDS_data[key]["PSN"]
@@ -1137,7 +1161,7 @@ class rds_parser_table_qt(gr.sync_block):
 	    
 	#db.commit()
 	#db.close()
-	#pr.disable() 
+	#pr.disable() #disabled-internal-profiling
 	#end of handle_msg
     def print_tmc_msg(self,tmc_msg):
       try:
@@ -1174,13 +1198,13 @@ class rds_parser_table_qt(gr.sync_block):
 	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag)#without ID
 	      self.map_markers.append(marker_string)
 
-	      #code.interact(local=locals())
+	      
 	    
 	  except Exception as e:
 	    print(e)
 	    raise
 	    #print("line 1064")
-	    #code.interact(local=locals())
+	    
       except KeyError:
 	#print("location '%i' not found"%tmc_location)
 	pass
@@ -1216,24 +1240,30 @@ class rds_parser_table_qt(gr.sync_block):
       0b1001:u"âäêëîïôöûüñçş??ĳ",
       0b1100:u"ÁÀÉÈÍÌÓÒÚÙŘČŠŽĐĿ",
       0b1101:u"ÂÄÊËÎÏÔÖÛÜřčšžđŀ"}
-      charlist=list(charstring)
+      #charlist=list(charstring)
+      return_string=""
       for i,char in enumerate(charstring):
-      	#code.interact(local=locals())
+      	
 	if ord(char)<= 0b01111111:
-	  charlist[i]=char #use ascii
+	  #charlist[i]=char #use ascii
+	  return_string+=char
 	else:
 	  #split byte
 	  alnr=(ord(char)&0xF0 )>>4 #upper 4 bit
-	  index=ord(char)&0x0F #lower 4 bit
-	  #code.interact(local=locals())
+	  index=ord(char)&0x0F #lower 4 bit 
 	  try:
-	    charlist[i]=alphabet[alnr][index]
+	    #charlist[i]=alphabet[alnr][index]
+	    return_string+=alphabet[alnr][index]
 	  except KeyError:
-	    charlist[i]='?'#symbol not decoded #TODO
+	    return_string+="?%02X?"%ord(char)
+	    #charlist[i]='?'#symbol not decoded #TODO
 	    pass
-      return "".join(charlist)
+      #return "".join(charlist)
+      return return_string
     def color_text(self, text, start,end,textcolor,segmentcolor):
-      formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
+      #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
+      #formatted_text="<span style='background-color: yellow;color:%s'>%s</span><span style='color:%s'>%s</span><span style='color:%s'>%s</span>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
+      formatted_text=("<span style='font-family:Courier New;color:%s'>%s</span>"*3)% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
       return formatted_text
 class rds_parser_table_qt_Widget(QtGui.QWidget):
     def __init__(self, signals,label,tableobj):
@@ -1244,58 +1274,24 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         """ Creates the QT Range widget """
         QtGui.QWidget.__init__(self)
         layout = Qt.QVBoxLayout()
-        self.label = Qt.QLabel(label)
-        layout.addWidget(self.label)
+        #self.label = Qt.QLabel(label)
+        #layout.addWidget(self.label)#title of table disabled to save space
+        #layout.addWidget(self.label)
         self.setLayout(layout)
         #self.decoder_to_PI={}
         self.PI_to_row={}
         self.table=QtGui.QTableWidget(self)
-        rowcount=2
+        rowcount=0
         self.table.setRowCount(rowcount)
         self.table.setColumnCount(9)
         self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #disallow editing
-          #Data
-        empty_text32='________________________________'
-        empty_text64='________________________________________________________________'
-        #empty_text64='\xe4'*64
-        self.data = {'ID':[ QtGui.QLabel() for i in range(rowcount)],
-		'freq':[ QtGui.QLabel() for i in range(rowcount)],
-                'name':[ QtGui.QLabel() for i in range(rowcount)],
-                'PTY':[ QtGui.QLabel() for i in range(rowcount)],
-                'AF':[ QtGui.QLabel() for i in range(rowcount)],
-                'time':[ QtGui.QLabel() for i in range(rowcount)],
-                'text':[ QtGui.QLabel("_"*64) for i in range(rowcount)],
-                'quality':[ QtGui.QLabel() for i in range(rowcount)],
-                'buttons':[]}
-        #Enter data onto Table
+
         self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        horHeaders = []
-        for n, key in enumerate(self.colorder):
-        #for n, key in enumerate(sorted(self.data.keys())):
-            horHeaders.append(key)
-            for m, item in enumerate(self.data[key]):
-	      if type(item)==int:#convert ints to strings
-		newitem = QtGui.QTableWidgetItem(str(item))
-		self.table.setItem(m, n, newitem)
-	      elif isinstance(item,QtGui.QLabel):
-		self.table.setCellWidget(m,n,item)
-	      else:
-                newitem = QtGui.QTableWidgetItem(item)
-		self.table.setItem(m, n, newitem)
-        for i in range(rowcount):#create buttons
-	  button=QtGui.QPushButton("getDetails")
-	  self.table.setCellWidget(i,self.table.columnCount()-1,button)
-	  button.clicked.connect(functools.partial(self.getDetails, row=i))
-	  #button.clicked.connect(self.getDetails)
-        #Add Header
-        layout.addWidget(self.label)
+ ##button.clicked.connect(self.getDetails)
+     
         layout.addWidget(self.table)
-        
-        self.table.setHorizontalHeaderLabels(horHeaders)  
+        self.table.setHorizontalHeaderLabels(self.colorder) 
         #self.table.setMaximumHeight(300)#TODO use dynamic value
-
-
-	
 	
 	button_layout = Qt.QHBoxLayout()
         codebutton = QtGui.QPushButton("code.interact")
@@ -1337,6 +1333,22 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         font.setPointSize(10)
         self.lastResizeTime=0
         layout.addWidget(self.logOutput)
+        self.clip = QtGui.QApplication.clipboard()
+	#self.cb.clear(mode=cb.Clipboard )	
+	#self.cb.setText("Clipboard Text", mode=cb.Clipboard)
+    def keyPressEvent(self, e):
+      if (e.modifiers() & QtCore.Qt.ControlModifier):
+	  selected = self.table.selectedRanges().pop()
+	  selected.leftColumn()
+	  selected.topRow()
+	  if e.key() == QtCore.Qt.Key_C: #copy
+	    try:
+	      qs = self.table.cellWidget(selected.topRow(),selected.leftColumn()).text()#get QString from table
+	      s=re.sub("<.*?>","", str(qs))#remove html tags
+	      self.clip.setText(s)
+	    except Exception as e:
+	      print(e)
+	      print("no text, cant copy")
     def insert_empty_row(self):
       rowPosition = self.table.rowCount()
       self.table.insertRow(rowPosition)
@@ -1441,7 +1453,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	layout=Qt.QVBoxLayout()
 	layout.addWidget(l)
 	view.setLayout(layout)
-	#code.interact(local=locals())
+	
 	view.exec_()
     def getDetails(self,row):
 	PIcol=self.colorder.index('ID')
@@ -1474,7 +1486,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	l.setWordWrap(True)
 	#l=QtGui.QLabel("Data:")
 	view.layout().addWidget(l)
-	#code.interact(local=locals())
+	
 	view.exec_()
     def onCLick(self):
 	print("button clicked")	
@@ -1483,18 +1495,14 @@ if __name__ == "__main__":
     from PyQt4 import Qt
     import sys
 
- #   def valueChanged(frequency):
- #       print("Value updated - " + str(frequency))
 
     app = Qt.QApplication(sys.argv)
-   # widget = RangeWidget(Range(0, 100, 10, 1, 100), valueChanged, "Test", "counter_slider", int)
     mainobj= rds_parser_table_qt_Signals()
     #mainobj=None
     widget = rds_parser_table_qt_Widget(mainobj,"TestLabel")
     widget.show()
     widget.setWindowTitle("Test Qt gui")
     widget.setGeometry(200,200,600,300)
-    #code.interact(local=locals())
     sys.exit(app.exec_())
 
     widget = None
