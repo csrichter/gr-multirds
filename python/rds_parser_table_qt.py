@@ -21,7 +21,8 @@
 from __future__ import print_function#print without newline print('.', end="")
 import numpy
 from gnuradio import gr
-import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,re,folium
+import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,re,sys
+#old imports: folium
 from datetime import datetime
 import crfa.chart as chart
 
@@ -36,6 +37,7 @@ pp = pprint.PrettyPrinter()
 from PyQt4.QtCore import QObject, pyqtSignal
 from bitstring import BitArray 
 
+language="de"#currently supported: de, en (both partially)
 
 SUFFIXES = {1: 'st', 2: 'nd', 3: 'rd'}
 def ordinal(num):
@@ -58,11 +60,17 @@ class tmc_event:
     try:
       #Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
       event_array=self.tableobj.ecl_dict[ecn]
-      self.text_raw=event_array[1]
       self.text_noQ=event_array[2]
+      if language=="de":
+	self.text_raw=event_array[1]
+	self.name=self.text_noQ
+      else:
+	self.text_raw=event_array[0]
+	self.name=re.sub("\(([^()]+)\)","",self.text_raw)#removes everything between parentheses (assume no quantifier is used)
       self.text_singleQ=event_array[3]
       self.text_pluralQ=event_array[4]
-      self.name=self.text_noQ
+      self.length_str=None
+      self.speed_limit_str=None
       self.nature=event_array[5]#N:nature (blank): information, F:forecast, S:silent
       self.quantifierType=event_array[6]#Q:quantifier type: (0..12) or blank (no quantifier)
       self.durationType=event_array[7]#T:duration type: D:dynamic, L:long lasting, in brackets or if time-of-day quantifier (no 7) is used in message -> no display, only for management
@@ -78,7 +86,12 @@ class tmc_event:
     except KeyError:
       print("event '%i' not found"%ecn)
       self.is_valid=False
-  def add_quantifier(self,data,bitLength):
+  def add_length(self,data):#from label2
+    self.length_str="%i km"%mgm_tag.length_to_km(data.uint)
+    #self.name=self.name.replace("(L)",self.length_str)
+  def add_speed_limit(self,data):#from label3
+    self.speed_limit_str="%i km/h"%(data.uint*5)
+  def add_quantifier(self,data,bitLength):#from label 4
     self.name=self.text_raw#default
     Q_raw=data.uint
     if Q_raw==0:#binary zero represents highest value
@@ -128,8 +141,20 @@ class tmc_event:
       self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
       #print(self.name)
     self.name=self.text_raw+"; Q="+quantifier_string
+    #if not self.length_str == None:
+    #  self.name=self.name.replace("(L)",self.length_str)
   def __repr__(self):
     return self.text_raw
+  def __str__(self):
+    retstr=self.name
+    if not self.length_str == None:
+      retstr=self.name.replace("(L)",self.length_str)
+    if not self.speed_limit_str == None:
+      if language=="de":
+	retstr+=" (geschw. begrenzt: %s)"%self.speed_limit_str
+      else:
+	retstr+=" (speed limit: %s)"%self.speed_limit_str
+    return retstr
   def __add_tag(self,tag):
     pass
 class tmc_location:
@@ -285,6 +310,10 @@ class tmc_message:
 		self.tmc_DP=data.uint
 	      elif label==1 and data.uint==5:
 		self.tmc_D=1#set diversion bit
+	      elif label==2:#length
+		last_event.add_length(data)
+	      elif label==3:#speed
+		last_event.add_speed(data)
 	      elif label==4:#5 bit quantifier
 		last_event.add_quantifier(data,5)
 	      elif label==5:#8 bit quantifier
@@ -419,9 +448,13 @@ class rds_parser_table_qt(gr.sync_block):
             name="RDS Table",
             in_sig=None,
             out_sig=None)
-	for i in range(0,nPorts):
-	  self.message_port_register_in(pmt.intern('in%d'%i))
-	  self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
+	if nPorts==1:
+	  self.message_port_register_in(pmt.intern('in'))
+	  self.set_msg_handler(pmt.intern('in'), functools.partial(self.handle_msg, port=0))
+	else:
+	  for i in range(0,nPorts):
+	    self.message_port_register_in(pmt.intern('in%d'%i))
+	    self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
 	self.message_port_register_in(pmt.intern('freq'))
 	self.set_msg_handler(pmt.intern('freq'), self.set_freq)
 	self.message_port_register_out(pmt.intern('ctrl'))
@@ -466,16 +499,15 @@ class rds_parser_table_qt(gr.sync_block):
 	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)"""
 	    
 	self.db=db#TODO fix sqlite
-	atexit.register(self.goodbye)
 	
 	
 	#self.dbc.execute('''CREATE TABLE rtp
         #     (time text,PI text,rtp_string text)''')
         #workdir="/user/wire2/richter/hackrf_prototypes/"
         #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
-        reader = csv.reader(open(self.workdir+'RDS_ODA-AIDs_names_only.csv'), delimiter=',', quotechar='"')
-        reader.next()#skip header
-        for row in reader:
+	reader = csv.reader(open(self.workdir+'RDS_ODA-AIDs_names_only.csv'), delimiter=',', quotechar='"')
+	reader.next()#skip header
+	for row in reader:
 	  self.ODA_application_names[int(row[0])]=row[1]
 	#read location code list:
 	reader = csv.reader(open(self.workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
@@ -500,32 +532,38 @@ class rds_parser_table_qt(gr.sync_block):
 	#read update classes
 	reader = csv.reader(open(self.workdir+'tmc_update_class_names.csv'), delimiter=',', quotechar='"')
 	reader.next()#skip header, "code(C),english,german"
-	self.tmc_update_class_names=dict((int(rows[0]),rows[1]) for rows in reader)#only use german name
-	
+	if language=="de":
+	  self.tmc_update_class_names=dict((int(rows[0]),rows[2]) for rows in reader)#german names
+	else:
+	  self.tmc_update_class_names=dict((int(rows[0]),rows[1]) for rows in reader)#english names
 	#read supplementary information code list
 	reader = csv.reader(open(self.workdir+'label6-supplementary-information-codes.csv'), delimiter=',', quotechar='"')
-	reader.next()#skip header
-	self.label6_suppl_info=dict((int(rows[0]),rows[2]) for rows in reader)#code,english,german
+	reader.next()#skip header, "code,english,german"
+	if language=="de":
+	  self.label6_suppl_info=dict((int(rows[0]),rows[2]) for rows in reader)#german
+	else:
+	  self.label6_suppl_info=dict((int(rows[0]),rows[1]) for rows in reader)#english
 	#read PTY list
 	f=open(self.workdir+'pty-list.csv')
 	reader = csv.reader(f, delimiter=',', quotechar='"')
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
-	
+
 	#with open(workdir+'google_maps_template.html', 'r') as myfile:
 	#  self.gmaps_html_template=myfile.read()
 	self.map_markers=[]
 	self.save_data_timer=time.time()
 	self.marker_template="addMarker({{lat: {lat}, lng:  {lon}}},'{text}')"
-	self.osm_map = folium.Map(location=[48.7,9.2],zoom_start=10)#centered on stuttgart
-	self.osm_map.save(self.workdir+'osm.html')
+	#self.osm_map = folium.Map(location=[48.7,9.2],zoom_start=10)#centered on stuttgart
+	#self.osm_map.save(self.workdir+'osm.html')
+	atexit.register(self.goodbye)
     def clean_data_and_commit_db(self):
 	for PI in self.PI_dict:
 	  self.PI_dict[PI]-=1
 	#print(self.PI_dict)
 	self.db.commit()
-	self.osm_map.save(self.workdir+'osm.html')
+	#self.osm_map.save(self.workdir+'osm.html')
 	f=open(self.workdir+'google_maps_markers.js', 'w')
 	markerstring="\n".join(self.map_markers)
 	markerstring+='\n console.log("loaded "+markers.length+" markers")'
@@ -869,19 +907,21 @@ class rds_parser_table_qt(gr.sync_block):
 	  if AID==52550:#TMC alert-c
 	    variant=app_data>>14
 	    if variant==0:
-	      LTN=(app_data>>6)&0x3f#location table number
-	      AFI=(app_data>>5)&0x1#alternative frequency indicator
-	      M=(app_data>>4)&0x1#transmission mode indicator
-	      I=(app_data>>3)&0x1#international (EUROROAD)
-	      N=(app_data>>2)&0x1#national
-	      R=(app_data>>1)&0x1#regional
-	      U=(app_data>>0)&0x1#urban
+	      self.RDS_data[PI]["AID_list"][AID]["LTN"]=(app_data>>6)&0x3f#location table number
+	      self.RDS_data[PI]["AID_list"][AID]["AFI"]=(app_data>>5)&0x1#alternative frequency indicator
+	      self.RDS_data[PI]["AID_list"][AID]["M"]=(app_data>>4)&0x1#transmission mode indicator
+	      #Message Geographical Scope:
+	      self.RDS_data[PI]["AID_list"][AID]["I"]=(app_data>>3)&0x1#international (EUROROAD)
+	      self.RDS_data[PI]["AID_list"][AID]["N"]=(app_data>>2)&0x1#national
+	      self.RDS_data[PI]["AID_list"][AID]["R"]=(app_data>>1)&0x1#regional
+	      self.RDS_data[PI]["AID_list"][AID]["U"]=(app_data>>0)&0x1#urban
 	    elif variant==1:
-	      SID=(app_data>>6)&0x3f#service identifier
-	      G=(app_data>>12)&0x3#gap parameter
-	      activity_time=(app_data>>4)&0x3
-	      window_time=(app_data>>2)&0x3
-	      delay_time=(app_data>>0)&0x3
+	      self.RDS_data[PI]["AID_list"][AID]["SID"]=(app_data>>6)&0x3f#service identifier
+	      #timing parameters (used to switch away from TMC station without missing messages):
+	      self.RDS_data[PI]["AID_list"][AID]["G"]=(app_data>>12)&0x3#gap parameter
+	      self.RDS_data[PI]["AID_list"][AID]["activity_time"]=(app_data>>4)&0x3
+	      self.RDS_data[PI]["AID_list"][AID]["window_time"]=(app_data>>2)&0x3
+	      self.RDS_data[PI]["AID_list"][AID]["delay_time"]=(app_data>>0)&0x3
 	    elif self.debug:
 	      print("unknown variant %i in TMC 3A group"%variant)
 	elif (groupType == "4A"):#CT clock time
@@ -1139,6 +1179,9 @@ class rds_parser_table_qt(gr.sync_block):
 	      #rest is reserved
 	    if variant==14:#programme item number of ON
 	      PIN_ON=(array[4]<<8)|(array[5])
+	elif (groupType == "8A"):
+	  if self.debug:
+	    print("8A without 3A on PI:%s"%PI)
 	#else:#other group
 	if 1==1:
 	  #printdelay=50
@@ -1178,18 +1221,18 @@ class rds_parser_table_qt(gr.sync_block):
 	    else:
 	      #multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
 	      multi_str="%i:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
-	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event.name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
+	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
 	    self.TMC_data[tmc_hash]=tmc_msg
 	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':multi_str})
 	    #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
 	    #self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	   
-	    message_string="%s ,locname:%s, reflocs:%s"%(tmc_msg.event.name,tmc_msg.location,reflocs)
+	    message_string="%s ,locname:%s, reflocs:%s"%(str(tmc_msg.event),tmc_msg.location,reflocs)
 	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"),str(tmc_msg.debug_data))
 	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
 	    #self.signals.DataUpdateEvent.emit({'TMC_log_str':multi_str})
 	    if tmc_msg.location.has_koord:#show on map
-	      map_tag=tmc_msg.event.name+"; "+multi_str
+	      map_tag=str(tmc_msg.event)+"; "+multi_str
 	      #print to osm map (disabled because slow)
 	      #folium.Marker([tmc_msg.location.ykoord,tmc_msg.location.xkoord], popup=map_tag.decode("utf-8")).add_to(self.osm_map)
 
@@ -1367,9 +1410,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  reflocs=tmc_msg.location.reflocs
 	  reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
-	  event_cmp=unicode(tmc_msg.event.name, encoding="UTF-8").lower()
+	  event_cmp=unicode(str(tmc_msg.event), encoding="UTF-8").lower()
 	  if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
-	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(tmc_msg.event.name,tmc_msg.location.lcn,tmc_msg.location,reflocs,self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
+	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,tmc_msg.location,reflocs,self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
 	    self.logOutput.append(Qt.QString.fromUtf8(message_string))
 	    if event.has_key('multi_str'):
 	      self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))

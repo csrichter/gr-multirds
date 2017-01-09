@@ -24,12 +24,13 @@ description here (python/__init__.py).
 '''
 
 # import swig generated symbols into the crfa namespace
-try:
-	# this might fail if the module is python-only
-	from crfa_swig import *
-except ImportError:
-	pass
+#try:
+	## this might fail if the module is python-only
+	#from crfa_swig import *
+#except ImportError:
+	#pass
 
+from crfa.crfa_swig import *
 # import any pure python here
 from multi_rds_printer import multi_rds_printer
 from qtguitest import qtguitest
