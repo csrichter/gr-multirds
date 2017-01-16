@@ -12,7 +12,7 @@
 	#set $label = '"%s"'%$id
 #end if
 $(signals) = rds_parser_table_qt_Signals()
-self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir)
+self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir,$writeDB)
 $(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id))
 $(gui_hint()($win))</make>
   <callback>set_freq_tune($freq_tune);</callback>
@@ -78,7 +78,21 @@ $(gui_hint()($win))</make>
 			<key>False</key>
 		</option>
 	</param>
-
+	<param>
+		<name>write Database</name>
+		<key>writeDB</key>
+		<value>False</value>
+		<type>bool</type>
+		<!--<hide>part</hide>-->
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
   
 <!--
 check if pty list file exists

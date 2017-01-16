@@ -24,6 +24,7 @@ from gnuradio import gr
 import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,re,sys
 #old imports: folium
 from datetime import datetime
+from datetime import timedelta
 import crfa.chart as chart
 
 from PyQt4 import Qt, QtCore, QtGui
@@ -50,13 +51,13 @@ def ordinal(num):
         suffix = SUFFIXES.get(num % 10, 'th')
     return str(num) + suffix
 class tmc_event:
-  def __repr__(self):
-    return self.ecn
   def __init__(self,ecn,tableobj):
     self.tableobj=tableobj
     self.ecn=ecn
     self.text_raw="##Error##"
     self.name="##Error##"
+    self.length_str=None
+    self.speed_limit_str=None
     try:
       #Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
       event_array=self.tableobj.ecl_dict[ecn]
@@ -65,13 +66,15 @@ class tmc_event:
 	self.text_raw=event_array[1]
 	self.name=self.text_noQ
       else:
-	self.text_raw=event_array[0]
+	self.text_raw=event_array[0]#CEN-english
 	self.name=re.sub("\(([^()]+)\)","",self.text_raw)#removes everything between parentheses (assume no quantifier is used)
       self.text_singleQ=event_array[3]
       self.text_pluralQ=event_array[4]
-      self.length_str=None
-      self.speed_limit_str=None
       self.nature=event_array[5]#N:nature (blank): information, F:forecast, S:silent
+      if event_array[0]=="message cancelled":
+	self.is_cancellation = True
+      else:
+	self.is_cancellation = False
       self.quantifierType=event_array[6]#Q:quantifier type: (0..12) or blank (no quantifier)
       self.durationType=event_array[7]#T:duration type: D:dynamic, L:long lasting, in brackets or if time-of-day quantifier (no 7) is used in message -> no display, only for management
       self.direction=event_array[8]#D:direction: 1:unidirectional, 2:bidirectional
@@ -112,12 +115,15 @@ class tmc_event:
     elif self.quantifierType=="1":#numbers
       numbers=[1,2,3,4,10,20,30,40,50,60,70,80,90,100,150,200,250,300,350,400,450,500,550,600,650,700,750,800,850,900,950,1000]
       quantifier_string=str(numbers[Q-1])
-    elif self.quantifierType=="2":#z.b. für sichtweiten, e.g. for visibility #TODO translate
-      quantifier_string="%i Metern"
+    elif self.quantifierType=="2":#z.b. für sichtweiten, e.g. for visibility 
+      quantifier_string="%i m"%(Q*10)#TODO meter oder metern?
       self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
+      #quantifier_string="%i Metern"%Q*10
+      #self.name=self.text_pluralQ.replace("Q)",quantifier_string+")")
     elif self.quantifierType=="4":
       speed=Q*5#in kmh
-      quantifier_string="von bis zu %i km/h"%speed
+      #quantifier_string="von bis zu %i km/h"%speed
+      quantifier_string="%i km/h"%speed
     elif self.quantifierType=="7":
       hours=int((Q-1)/6)
       minutes=((Q-1)%6)*10
@@ -130,34 +136,48 @@ class tmc_event:
 	weight=10+0.5*(Q-100)
       quantifier_string="%it"%weight
       self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
-      #print(quantifier_string)
     elif self.quantifierType=="9":
       if Q<=100:
 	length=Q*0.1
       else:
 	length=10+0.5*(Q-100)
       quantifier_string="%.1fm"%length
-      #print(quantifier_string)
       self.name=self.text_pluralQ.replace("(Q)",quantifier_string)
-      #print(self.name)
-    self.name=self.text_raw+"; Q="+quantifier_string
-    #if not self.length_str == None:
-    #  self.name=self.name.replace("(L)",self.length_str)
-  def __repr__(self):
-    return self.text_raw
+    else:#other quantifier
+      self.name=self.text_raw+"; Q(%s)=%s"%(self.quantifierType,quantifier_string)
   def __str__(self):
-    retstr=self.name
-    if not self.length_str == None:
-      retstr=self.name.replace("(L)",self.length_str)
-    if not self.speed_limit_str == None:
-      if language=="de":
-	retstr+=" (geschw. begrenzt: %s)"%self.speed_limit_str
-      else:
-	retstr+=" (speed limit: %s)"%self.speed_limit_str
-    return retstr
-  def __add_tag(self,tag):
-    pass
+    if self.is_valid:
+      retstr=self.name
+      if not self.length_str == None:
+	retstr=self.name.replace("(L)",self.length_str)
+      if not self.speed_limit_str == None:
+	if language=="de":
+	  retstr+=" (geschw. begrenzt: %s)"%self.speed_limit_str
+	else:
+	  retstr+=" (speed limit: %s)"%self.speed_limit_str
+      return retstr
+    else:
+      return("invalid event, ecn:%i"%self.ecn)
+  def __repr__(self):
+    return "ecn:%i"%self.ecn
 class tmc_location:
+  #def get_extent_location(self,extent,direction):
+    #__recursion_get_extent_location(self,extent,direction)
+  #def __recursion_get_extent_location(self,loc,extent,direction): #direction: 0:pos, 1:neg
+  def get_extent_location(self,loc,extent,direction): #direction: 0:pos, 1:neg
+    #print(loc.lcn)
+    #print(extent)
+    #print(direction)
+    if extent==0 or not loc.is_valid:
+      return loc
+    else:
+      offset=loc.positive_offset if direction==0 else loc.negative_offset
+      if offset=="":
+	return loc
+      else:
+	offset_loc=tmc_location(int(offset),self.tableobj)
+	#return __recursion_get_extent_location(offset_loc,extent-1,direction)
+	return offset_loc.get_extent_location(offset_loc,extent-1,direction)
   def __ref_locs(self,lcn,name_string=""):
     #if not self.is_valid: #not used, since not called from outside
     #  return ""
@@ -172,6 +192,20 @@ class tmc_location:
 	#return(loc_name)
       except KeyError:
 	return(name_string)
+  def __str__(self):
+    if not self.is_valid:
+      return "invalid lcn:%i"%(self.lcn)
+    elif self.ltype=="P1" and self.subtype==1:#autobahnkreuz TODO:only add if name does not already contain "Kreuz"
+      name="Kreuz "+self.first_name
+    elif self.ltype=="P1" and self.subtype==2:#autobahndreieck TODO:only add if name does not already contain "Dreieck"
+      name="Dreieck "+self.first_name
+    elif not self.roadname=="":
+      name="STR:"+self.roadname#TODO remove debug
+    elif not self.first_name=="":
+      name=self.first_name
+    else:
+      name="NO NAME lcn:%i"%(self.lcn)
+    return "%s,%i:%s"%(self.ltype,self.subtype,name)#no geo 
   def __repr__(self):
     if not self.is_valid:
       return "invalid lcn:%i"%(self.lcn)
@@ -196,6 +230,8 @@ class tmc_location:
     self.reflocs=self.__ref_locs(lcn)
     self.lcn=lcn
     self.has_koord=False
+    self.linRef=None
+    self.is_valid=False
     try:
       loc_array=tableobj.lcl_dict[lcn]
       self.ltype=loc_array[0]
@@ -208,6 +244,10 @@ class tmc_location:
       self.roadname=loc_array[3]
       self.first_name=loc_array[4]
       self.second_name=loc_array[5]
+      if not loc_array[7]=="":
+	self.linRef=tmc_location(int(loc_array[7]),tableobj)
+      self.negative_offset=loc_array[8]
+      self.positive_offset=loc_array[9]
       try:
 	#koords stored in WGS84 format with decimal degrees multiplied with 10^5
 	self.xkoord=int(loc_array[27])/100000.0
@@ -225,7 +265,120 @@ class tmc_location:
       #print("location '%i' not found"%lcn)
       self.is_valid=False
     ##LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
+
+class tmc_dict:
+  "dict of tmc messages sorted by location (LCN) and update class, automatically deletes/updates invalid items"
+  marker_template="addMarker({{lat: {lat}, lng:  {lon}}},'{text}')"
+  def __init__(self):
+    self.messages=dict()
+  def add(self,message):
+    try:
+      lcn=message.location.lcn
+      updateClass=message.event.updateClass
+      if not self.messages.has_key(lcn):
+	self.messages[lcn]={}
+      if message.event.is_cancellation:
+	try:
+	  self.messages[lcn][updateClass].cancellation_time=message.getTime()#cancellation_time = rx time of cancellation message
+	except KeyError:#no message to cancel
+	  message.event.name="no message to cancel"
+	  self.messages[lcn][updateClass]=message
+      else:
+	self.messages[lcn][updateClass]=message
+      #print("added message: "+str(message))
+    except AttributeError:
+      print("ERROR, not adding: "+str(message))
+  def getMarkerString(self):
+    markerstring=""
+    for lcn in self.messages:
+      
+      
+     
+      loc=None
+      map_tag="<p>"
+      for updateClass in self.messages[lcn]:
+	message=self.messages[lcn][updateClass]
+	if message.cancellation_time==None:
+	  color="black"
+	else:
+	  color="gray"
+	if message.location.has_koord:
+	  loc=message.location
+	  #map_tag+=str(updateClass)+": "
+	  map_tag+='<div style="color: %s;">'%color
+	  map_tag+=message.map_string()
+	  map_tag+="<br />"
+	  map_tag+="</div>"
+      map_tag+="</p>"
+      if not loc==None:
+	markerstring+=tmc_dict.marker_template.format(lat=loc.ykoord,lon=loc.xkoord,text=map_tag)
+	markerstring+="\n"
+    return markerstring
+  
+  
 class tmc_message:
+  #Nature                Information or Silent                                Forecast
+#Duration Type         Dynamic        Longer lasting           Dynamic             Longer lasting
+        #0           (none)           (none)                   (none)              (none)
+        #1           for at least     for at least next        within the          within the next few
+                    #next 15 min      few hours                next 15 min         hours
+        #2           for at least     for the rest of the      within the          later today
+                    #next 30 min      day                      next 30 min
+        #3           for at least     until tomorrow           within the          tomorrow
+                    #next 1 h         evening                  next 1 h
+        #4           for at least     for the rest of the      within the          the day after tomorrow
+                    #next 2 h         week                     next 2 h
+        #5           for at least     until the end of         within the          this weekend
+                    #next 3 h         next week                next 3 h
+        #6           for at least     until the end of         within the          later this week
+                    #next 4 h         the month                next 4 h
+        #7           for the rest of  for a long period        within the of       next week
+                    #the day                                   the day
+  duration_dict={"Info_dyn":["","for at least next 15 min","for at least next 30 min","for at least next 1 h","for at least next 2 h","for at least next 3 h","for at least next 4 h","for the rest of the day"],
+		  "Info_long":["","for at least next few hours","for the rest of the day","until tomorrow evening","for the rest of the week","until the end of next week","until the end of the month","for a long period"],
+		  "Forecast_dyn":["","within the next 15 min","within the next 30 min","within the next 1 h","within the next 2 h","within the next 3 h","within the next 4 h","within the day"],
+		  "Forecast_long":["","within the next few hours","later today","tomorrow","the day after tomorrow","this weekend","later this week","next week"]}
+       #Nature             Information or Silent                                   Forecast
+#Duration Type    Dynamic           Longer lasting      Dynamic                 Longer lasting
+#0                15 min            1h                  15 min                  1h
+#1                15 min            2h                  15 min                  2h
+#2                30 min            until midnight      30 min                  until midnight
+#3                1h                until midnight      1h                      until midnight next day
+#                                   next day
+#4                2h                until midnight      2h                      until midnight next day
+#                                   next day
+#5                3h                until midnight      3h                      until midnight next day
+#                                   next day
+#6                4h                until midnight      4h                      until midnight next day
+#                                   next day
+#7                until midnight    until midnight      until midnight          until midnight next day
+#                                   next day
+  persistence_dict={"dyn":[0.25,0.25,0.5,1,2,3,4,"m"],
+		  "long":[1,2,"m","nm","nm","nm","nm","nm"]}
+		  #m=midnight, nm=midnight nex day, same for forecast and info/silent
+       #datetime.timedelta(hours=0.25)
+  def getDuration(self):#returns string
+    if "D" in self.event.durationType and not self.event.nature=="F":
+      return tmc_message.duration_dict["Info_dyn"][self.tmc_DP]
+    elif "L" in self.event.durationType and not self.event.nature=="F":
+      return tmc_message.duration_dict["Info_long"][self.tmc_DP]
+    elif "D" in self.event.durationType and self.event.nature=="F":
+      return tmc_message.duration_dict["Forecast_dyn"][self.tmc_DP]
+    elif "L" in self.event.durationType and self.event.nature=="F":
+      return tmc_message.duration_dict["Forecast_long"][self.tmc_DP]
+    else:
+      return ""
+    #self.event.durationType #D,(D),L,(L)
+    #self.event.nature# "",S,F
+  def getPersistance(self):#returns timedelta
+    persistence_dict=tmc_message.persistence_dict
+    try:
+      if "D" in self.event.durationType:
+	return timedelta(hours=persistence_dict["dyn"][self.tmc_DP])
+      if "L" in self.event.durationType:
+	return timedelta(hours=persistence_dict["long"][self.tmc_DP])
+    except TypeError:
+      print("ERROR: TODO line 354")
   def __copy__(self):#doesn't copy, tmc_messages dont change if complete
     return self
   def __deepcopy__(self,memo):#return self, because deep copy fails
@@ -235,20 +388,98 @@ class tmc_message:
       return self.tmc_hash
     else:
       return self.ci
+  def multi_str(self):
+    if self.is_single:
+      multi="[single]"
+    else:
+      try:
+	multi="%i:%s"%(self.length,str(self.mgm_list))
+	#multi+=";events:"
+	#for i,event in enumerate(self.events):
+	  #if not i==0:
+	    #multi+=str(event)+","
+      except AttributeError:
+	multi="[multi incomplete]"
+    if not self.cancellation_time==None:
+      if language=="de":
+	multi+=" (aufgehoben um %s)"%self.cancellation_time
+      else:
+	multi+=" (cancelled at %s)"%self.cancellation_time
+    multi+="; "+self.getDuration()
+    return str(multi)
+  def events_string(self):
+    str_list=[str(elem) for elem in self.events]
+    return str(", ".join(str_list))
+  def log_string(self):
+    #return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+str(self.location)+"; "+self.psn
+    #code above gives unicode-decode error with character Ä (probably in location)
+    #return "%s: %s: %s; %s; %s"%(str(self.event.updateClass),self.getTime(),self.events_string(),str(self.location),self.psn)
+    #return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+str(self.location)+"; "+self.psn
+    return str(self.event.updateClass)+": "+self.getTime()+": "+self.display_text()+"; "+self.psn
+  def db_string(self):
+    return str(self.location)+": "+str(self.event.updateClass)+": "+self.display_text()
+  def map_string(self):
+    return str(self.event.updateClass)+": "+self.getTime()+": "+self.display_text()+"; "+self.multi_str()+"; "+self.psn
+    #code above gives unicode-decode error with character Ä (probably in location)
+    #return "%s: %s: %s; %s; %s"%(str(self.event.updateClass),self.getTime(),self.events_string(),self.multi_str(),self.psn)
+    #return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+self.multi_str()+"; "+self.psn
+  def display_text(self):
+    text=self.events_string()+"; "+str(self.location)#use events_string if no display_text implemented
+    #TODO add "dreieck" for P1.2 -> done in tmc_message.__str__
+    if not self.location.linRef==None:#test
+      self.tmc_extent
+      self.tmc_dir
+      offset_loc=self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
+      if offset_loc.is_valid:
+	offset_loc_name=str(offset_loc)
+      else:
+	print(offset_loc)
+	offset_loc_name="###INVALID###"
+      templates={"de":"{A}, {B} in Richtung {C}, zwischen {D} und {E}, {F}"#codeing handbook: zwischen {D} und {E}, sprachdurchsagen: zwischen {E} und {D}
+		    ,"en":"{A}, {B} {C}, {F}, between {D} and {E}"}
+      text=templates[language].format(A=self.location.linRef.roadnumber, B=self.location.linRef.second_name,C=self.location.linRef.first_name,D=str(self.location),E=offset_loc_name,F=self.events_string())
+      
+      #LocCode: RefLine: RoadNr
+      #A
+      #LocCode:RefLine:Name2
+      #B
+      #LocCode:RefLine:Name1
+      #C
+      #LocCode:Name1
+      #D
+      #LocCode:Extent:OffsNeg:Name1
+      #E
+      #EventCode: EventText
+      #F   
+    return str(text)
+  def __str__(self):
+    return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+self.multi_str()
   def __repr__(self):
     #event_name=self.ecl_dict[self.tmc_event][1]
     #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,self.tmc_location,self.ref_locs(self.tmc_location,""),self.RDS_data[PI]["PSN"])
     return "single:%i,complete:%i,event:%i location:%s"%(self.is_single,self.is_complete,self.event.ecn,self.location)
-      
-  def __init__(self,PI,tmc_x,tmc_y,tmc_z,tableobj):#TODO handle out of sequence data
+  def getTime(self):#always returns string
+    if self.hastime:
+      return self.datetime_received.strftime("%H:%M")
+    else:
+      return "88:88"
+  def __init__(self,PI,tmc_x,tmc_y,tmc_z,datetime_received,tableobj):#TODO handle out of sequence data
+    #self.time_received=time_received
+    self.datetime_received=datetime_received
+    if self.datetime_received==None:
+      self.hastime=False
+    else:
+      self.hastime=True
     self.debug_data=""
     self.tableobj=tableobj
-    self.isCancelled=False
+    self.psn=tableobj.RDS_data[PI]["PSN"]
+    self.PI=PI
+    #self.isCancelled=False
+    self.cancellation_time=None
     self.tmc_hash=hash((PI,tmc_x,tmc_y,tmc_z))
     tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
     assert tmc_T==0, "this is tuning info and no alert_c message"
     Y15=int(tmc_y>>15)
-    self.PI=PI
     tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
     self.is_single=(tmc_F==1)
     self.is_multi=(tmc_F==0)
@@ -276,8 +507,12 @@ class tmc_message:
 	#self.event_name="##Error##"
       self.tmc_extent=int((tmc_y>>11)&0x7) #3 bits (Y13-Y11)
       self.tmc_dir=int((tmc_y>>14)&0x1) #+-direction bit (Y14)
+      if not self.event.is_valid:
+	print("invalid main event")
+	print(self)
     else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
       raise ValueError, "subsequent groups must be added to existing tmc message"
+    tableobj.tmc_messages.add(self)
   def add_group(self,tmc_y,tmc_z):
     sg=int((tmc_y>>14)&0x1)#=1 if second group Y14
     gsi=int((tmc_y>>12)&0x3)#group sequence indicator Y12..13 ,max length:5
@@ -310,6 +545,11 @@ class tmc_message:
 		self.tmc_DP=data.uint
 	      elif label==1 and data.uint==5:
 		self.tmc_D=1#set diversion bit
+	      elif label==1 and data.uint==6:
+		self.tmc_extent+=8#increase extent
+	      elif label==1 and data.uint==7:
+		self.tmc_extent+=16#increase extent
+				
 	      elif label==2:#length
 		last_event.add_length(data)
 	      elif label==3:#speed
@@ -320,6 +560,8 @@ class tmc_message:
 		last_event.add_quantifier(data,8)
 	      elif label==9:#additional event
 		last_event=tmc_event(data.uint,self.tableobj)
+		if not last_event.is_valid:
+		  print("invalid MGM event")
 		self.events.append(last_event)
 		
 		
@@ -433,16 +675,17 @@ class rds_parser_table_qt_Signals(QObject):
     DataUpdateEvent = QtCore.pyqtSignal(dict)
     def __init__(self, parent=None):
 	super(QtCore.QObject, self).__init__()   
-class rds_parser_table_qt(gr.sync_block):
+class rds_parser_table_qt(gr.sync_block):#START
     """
     docstring for block qtguitest
     """
     def goodbye(self):
       self.clean_data_and_commit_db()
       print("quitting rds parser table, closing db")
-      #self.db.commit()
-      self.db.close()
-    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir):
+      if self.writeDB:
+	#self.db.commit()
+	self.db.close()
+    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir,writeDB):
 	#QObject.__init__()
         gr.sync_block.__init__(self,
             name="RDS Table",
@@ -460,6 +703,7 @@ class rds_parser_table_qt(gr.sync_block):
 	self.message_port_register_out(pmt.intern('ctrl'))
 	self.log=log
 	self.debug=debug
+	self.writeDB=writeDB
 	self.signals=signals
 	self.RDS_data={}
 	self.change_freq_tune=slot
@@ -469,26 +713,33 @@ class rds_parser_table_qt(gr.sync_block):
         self.TMC_data={}
         self.IH_data={}
         self.decoder_frequencies={}
-        self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
+        #self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
+        self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','RT+']
         self.workdir=workdir
         self.PI_dict={}#contains PI:numpackets (string:integer)
+	self.tmc_messages=tmc_dict()
         
-        #create new DB file
-        self.db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db'
-        db=sqlite3.connect(self.db_name, check_same_thread=False)
-        
-        #create tables
-        db.execute('''CREATE TABLE stations
-             (PI text PRIMARY KEY UNIQUE,PSN text, freq real, PTY text,TP integer)''')
-        db.execute('''CREATE TABLE groups
-             (time text,PI text,PSN text, grouptype text,content blob)''')
-	db.execute('''CREATE TABLE data
-             (time text,PI text,PSN text, dataType text,data blob)''')
-	db.execute('''CREATE TABLE grouptypeCounts
-             (PI text,grouptype text,count integer,unique (PI, grouptype))''')
-	db.execute('''CREATE TABLE TMC
-             (hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)''')
-	db.commit()
+        if self.writeDB:
+	  #create new DB file
+	  db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'.db'
+	  db=sqlite3.connect(db_name, check_same_thread=False)
+	  self.db=db
+	  #create tables
+	  try:
+	    db.execute('''CREATE TABLE stations
+		(PI text PRIMARY KEY UNIQUE,PSN text, freq real, PTY text,TP integer)''')
+	    db.execute('''CREATE TABLE groups
+		(time text,PI text,PSN text, grouptype text,content blob)''')
+	    db.execute('''CREATE TABLE data
+		(time text,PI text,PSN text, dataType text,data blob)''')
+	    db.execute('''CREATE TABLE grouptypeCounts
+		(PI text,grouptype text,count integer,unique (PI, grouptype))''')
+	    db.execute('''CREATE TABLE TMC
+		(hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)''')
+	    db.commit()
+	    
+	  except sqlite3.OperationalError:
+	    print("ERROR: tables already exist")
 	"""
 	tmc_F=(tmc_x>>3)&0x1 #single/multiple group
 	    tmc_event=int(tmc_y&0x7ff) #Y10-Y0
@@ -497,9 +748,6 @@ class rds_parser_table_qt(gr.sync_block):
 	    tmc_extent=(tmc_y>>11)&0x7 #3 bits (Y13-Y11)
 	    tmc_D=tmc_y>>15 #diversion bit(Y15)
 	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)"""
-	    
-	self.db=db#TODO fix sqlite
-	
 	
 	#self.dbc.execute('''CREATE TABLE rtp
         #     (time text,PI text,rtp_string text)''')
@@ -558,14 +806,17 @@ class rds_parser_table_qt(gr.sync_block):
 	#self.osm_map = folium.Map(location=[48.7,9.2],zoom_start=10)#centered on stuttgart
 	#self.osm_map.save(self.workdir+'osm.html')
 	atexit.register(self.goodbye)
+	
     def clean_data_and_commit_db(self):
 	for PI in self.PI_dict:
 	  self.PI_dict[PI]-=1
 	#print(self.PI_dict)
-	self.db.commit()
+	if self.writeDB:
+	  self.db.commit()
 	#self.osm_map.save(self.workdir+'osm.html')
 	f=open(self.workdir+'google_maps_markers.js', 'w')
-	markerstring="\n".join(self.map_markers)
+	#markerstring="\n".join(self.map_markers)
+	markerstring=self.tmc_messages.getMarkerString()
 	markerstring+='\n console.log("loaded "+markers.length+" markers")'
 	markerstring+='\n document.getElementById("errorid").innerHTML = "loaded "+markers.length+" markers";'
 	f.write(markerstring)
@@ -610,14 +861,16 @@ class rds_parser_table_qt(gr.sync_block):
 	  self.RDS_data[PI]["TA"]=-1
 	  self.RDS_data[PI]["PTY"]=""
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":""}  
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":""}
+	  self.RDS_data[PI]["time"]={"timestring":"88:88","datestring":"00-00-0000","datetime":None}
     def handle_msg(self, msg, port):#port from 0 to 3
 	if time.time()-self.save_data_timer > 10:#every 10 seconds
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
 	#pr.enable()#disabled-internal-profiling
-	#db=sqlite3.connect(self.db_name)
-	db=self.db
+	if self.writeDB:
+	  #db=sqlite3.connect(self.db_name)
+	  db=self.db
 	
 	array=pmt.to_python(msg)[1]
 	groupNR=array[2]&0b11110000
@@ -626,6 +879,10 @@ class rds_parser_table_qt(gr.sync_block):
 		groupType=str(groupNR >> 4)+"A"
 	else:
 		groupType=str(groupNR >> 4)+"B"
+	#if self.debug:
+	  #PI=str(port)+"_%02X%02X" %(array[0],array[1])
+	#else:
+	  #PI="%02X%02X" %(array[0],array[1])
 	PI="%02X%02X" %(array[0],array[1])
 	TP=(array[2]>>2)&0x1
 	block2=(array[2]<<8)|(array[3]) #block2
@@ -661,10 +918,12 @@ class rds_parser_table_qt(gr.sync_block):
 	if self.RDS_data[PI]["blockcounts"]["any"]==5:
 	  self.RDS_data[PI]["blockcounts"]["any"]=0
 	  t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])#TODO only update DB every few seconds
-	  db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
+	  if self.writeDB:
+	    db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	dots="."*self.RDS_data[PI]["blockcounts"]["any"]
 	self.RDS_data[PI]["TP"]=TP
 	self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
+	
 	self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_blocks':wrong_blocks,'dots':dots})
 	#save block to sqlite (commit at end of handle_msg)
 	#(time text,PI text,PSN text, grouptype text,content blob)
@@ -682,7 +941,7 @@ class rds_parser_table_qt(gr.sync_block):
 	  adr=array[3]&0b00000011
 	  segment=self.decode_chars(chr(array[6])+chr(array[7]))
 	  d=(array[3]>>2)&0x1
-	  self.RDS_data[PI]["DI"][3-adr]=d
+	  self.RDS_data[PI]["DI"][3-adr]=d#decoder information
 	  #DI[0]=d0	0=Mono 			1=Stereo
 	  #d1 		Not artificial head 	Artificial head
 	  #d2		Not compressed		Compressed
@@ -690,8 +949,19 @@ class rds_parser_table_qt(gr.sync_block):
 	  TA=(array[3]>>4)&0x1
 	  MS=(array[3]>>3)&0x1
 	  self.RDS_data[PI]["TA"]=TA
-	  flag_string="TP:%i, TA:%i, MS:%i, DI:%s"%(TP,TA,MS,str(self.RDS_data[PI]["DI"]))
-	  self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'flags':flag_string})
+	  #style='font-family:Courier New;color:%s'
+	  flag_string="<span style=''>TP:%i, TA:%i, MS:%i, DI:%s</span>"%(TP,TA,MS,str(self.RDS_data[PI]["DI"]))
+	  pty_colored=self.RDS_data[PI]["PTY"]
+	  if TP==1:
+	    if TA==1:
+	      color="red"
+	    elif TA==0:
+	      color="green"
+	    else:
+	      color="yellow"
+	    pty_colored="<span style='color:%s'>%s</span>"%(color,self.RDS_data[PI]["PTY"])
+	  
+	  self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'flags':flag_string,'PTY':pty_colored})
 	  
 	  #224 1110 0000 = no AF
 	  #225 1110 0001 = 1AF
@@ -706,7 +976,8 @@ class rds_parser_table_qt(gr.sync_block):
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	      t=(PI,self.RDS_data[PI]["PSN"],float(freq),self.RDS_data[PI]["PTY"],int(self.RDS_data[PI]["TP"]))
-	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+	      if self.writeDB:
+		db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	    freq=self.decode_AF_freq(array[5])
 	    if freq==self.RDS_data[PI]["tuned_freq"]:
 	      self.RDS_data[PI]["AF"]["main"]=freq
@@ -715,7 +986,8 @@ class rds_parser_table_qt(gr.sync_block):
 	      freq_str="0A:%0.1fM"% (freq/1e6)
 	      self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	      t=(PI,self.RDS_data[PI]["PSN"],float(freq),self.RDS_data[PI]["PTY"],int(self.RDS_data[PI]["TP"]))
-	      db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+	      if self.writeDB:
+		db.execute("INSERT INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	  if self.RDS_data[PI].has_key("tuned_freq") :#TODO add secondary freqs
 	    freq=self.decode_AF_freq(array[4])
 	    diff=abs(freq-self.RDS_data[PI]["tuned_freq"])
@@ -768,9 +1040,11 @@ class rds_parser_table_qt(gr.sync_block):
 	   textcolor=""#use default color (white if background is black)
 	   if not self.RDS_data[PI]["internals"]["last_valid_psn"]==self.RDS_data[PI]["PSN"]:#ignore duplicates
 	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PSN_valid",self.RDS_data[PI]["PSN"])
-	    db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	    if self.writeDB:
+	      db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	    t=(self.RDS_data[PI]["PSN"],PI)
-	    db.execute("UPDATE OR IGNORE stations SET PSN=? WHERE PI IS ?",t)
+	    if self.writeDB:
+	      db.execute("UPDATE OR IGNORE stations SET PSN=? WHERE PI IS ?",t)
 	    self.RDS_data[PI]["internals"]["last_valid_psn"]=self.RDS_data[PI]["PSN"]
 	  else:
 	   textcolor="gray"	  
@@ -796,7 +1070,8 @@ class rds_parser_table_qt(gr.sync_block):
 	  #%02X%02X%02X%02X%02X
 	  
 	  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"PIN",data_string)
-	  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	  if self.writeDB:
+	    db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	  if self.debug and not variant==0:#print if not seen before
 	    print("PI:%s PSN:%s uses variant %i of 1A"%(PI,self.RDS_data[PI]["PSN"],variant))
 	  if variant==0:
@@ -865,11 +1140,13 @@ class rds_parser_table_qt(gr.sync_block):
 	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
 	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
 	      t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",rt)
-	      db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	      if self.writeDB:
+		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	      self.RDS_data[PI]["internals"]["last_valid_rt"]=rt
 	      try:#print rt+ if it exist
 		t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
-		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+		if self.writeDB:
+		  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	      except KeyError:
 		pass#no rt+ -> dont save
 	   else:
@@ -925,29 +1202,44 @@ class rds_parser_table_qt(gr.sync_block):
 	    elif self.debug:
 	      print("unknown variant %i in TMC 3A group"%variant)
 	elif (groupType == "4A"):#CT clock time
-	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)
-	  hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
-	  minutes=((array[6] &0x0F)<<2)|((array[7] >>6)&0x3)
-	  offsetdir=(array[7]>>5)&0x1
-	  local_time_offset=0.5*((array[7])&0x1F)
-	  if(offsetdir==1):
-	    local_time_offset*=-1
-	  year=int((datecode - 15078.2) / 365.25)	  
-	  month=int((datecode - 14956.1 - int(year * 365.25)) / 30.6001)
-	  day=datecode - 14956 - int(year * 365.25) - int(month * 30.6001)
-	  if(month == 14 or month == 15):#no idea why -> annex g of RDS spec
-	    year += 1;
-	    month -= 13
-	  year+=1900
-	  #month was off by one different rounding in c and python?
-	  month-=1
-	  #datestring="%02i.%02i.%4i, %02i:%02i (%+.1fh)" % (day,month,year,hours,minutes,local_time_offset)
-	  timestring="%02i:%02i (%+.1fh)" % (hours,minutes,local_time_offset)
-	  datestring="%02i.%02i.%4i" % (day,month,year)
-	  ctcol=self.colorder.index('time')
-	  self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
-	  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring)
-	  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)#modified julian date
+	  if datecode==0:
+	    #do not update!!
+	    if self.debug:
+	      print("station:%s sent empty 4A group"%self.RDS_data[PI]["PSN"])
+	  else:
+	    hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
+	    minutes=((array[6] &0x0F)<<2)|((array[7] >>6)&0x3)
+	    offsetdir=(array[7]>>5)&0x1
+	    local_time_offset=0.5*((array[7])&0x1F)
+	    if(offsetdir==1):
+	      local_time_offset*=-1
+	    #year=int((datecode - 15078.2) / 365.25)	  
+	    #month=int((datecode - 14956.1 - int(year * 365.25)) / 30.6001)
+	    #day=datecode - 14956 - int(year * 365.25) - int(month * 30.6001)
+	    #if(month == 14 or month == 15):#no idea why -> annex g of RDS spec
+	      #year += 1;
+	      #month -= 13
+	    #year+=1900
+	    #month was off by one different rounding in c and python?
+	      #month-=1# 13.1.2017, month now not off by one
+	      #maybe the use of unsigned ints?
+	    date=datetime(1858,11,17)+timedelta(days=int(datecode))#convert from MJD (modified julian date)
+	    
+	    #datestring="%02i.%02i.%4i, %02i:%02i (%+.1fh)" % (day,month,year,hours,minutes,local_time_offset)
+	    timestring="%02i:%02i (%+.1fh)" % (hours,minutes,local_time_offset)
+	    datestring="%02i.%02i.%4i" % (date.day,date.month,date.year)
+	    ctcol=self.colorder.index('time')
+	    self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
+	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring+"; datecode(MJD):"+str(datecode))
+	    self.RDS_data[PI]["time"]["timestring"]=timestring
+	    self.RDS_data[PI]["time"]["datestring"]=datestring
+	    try:
+	      self.RDS_data[PI]["time"]["datetime"]=datetime(date.year,date.month,date.day,hours,minutes)+timedelta(hours=local_time_offset)
+	    except ValueError:
+	      print("ERROR: could not interpret time or date:"+datestring+" "+timestring)
+	    if self.writeDB:
+	      db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	elif (groupType == "6A"):#IH inhouse data -> save for analysis
 	  """In House Data:
 {'130A': {'1E1077FFFF': {'count': 1,
@@ -975,13 +1267,15 @@ class rds_parser_table_qt(gr.sync_block):
 	  tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
 	  tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
 	  Y15=int(tmc_y>>15)
+	  #timestring=self.RDS_data[PI]["time"]["timestring"]
+	  datetime_received=self.RDS_data[PI]["time"]["datetime"]
 	  if tmc_T == 0:
 	    if tmc_F==1:#single group
-	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,self)
+	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,datetime_received,self)
 	      self.print_tmc_msg(tmc_msg)
 	    elif tmc_F==0 and Y15==1:#1st group of multigroup
 	      ci=int(tmc_x&0x7)
-	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,self)
+	      tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,datetime_received,self)
 	      #if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
 		#print("overwriting parital message")
 	      self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]={"msg":tmc_msg,"time":time.time()}
@@ -1045,7 +1339,8 @@ class rds_parser_table_qt(gr.sync_block):
 	  if not self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] == item_toggle_bit: #new item
 	    #self.RDS_data[PI]["RT+"]["history"][str(datetime.now())]=self.RDS_data[PI]["internals"]["last_rt_tooltip"]
 	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
-	    db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+	    if self.writeDB:
+	      db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	    self.RDS_data[PI]["RT+_history"][str(datetime.now())]=copy.deepcopy(self.RDS_data[PI]["RT+"])#save old item
 	    self.RDS_data[PI]["RT+"]["last_item_toggle_bit"] = item_toggle_bit
 	    rtcol=self.colorder.index('text')
@@ -1070,8 +1365,8 @@ class rds_parser_table_qt(gr.sync_block):
 	  
 	  
 	  tags="ir:%i,it:%i"%(item_running_bit,item_toggle_bit)
-	  afcol=self.colorder.index('AF')
-	  self.signals.DataUpdateEvent.emit({'col':afcol,'row':port,'PI':PI,'string':tags})
+	  rtpcol=self.colorder.index('RT+')
+	  self.signals.DataUpdateEvent.emit({'col':rtpcol,'row':port,'PI':PI,'string':tags})
 	  if(tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT")):#TODO remove duplicate code
 	    rt=self.RDS_data[PI]["RT"]
 	    rt_valid=self.RDS_data[PI]["RT_valid"]
@@ -1145,7 +1440,8 @@ class rds_parser_table_qt(gr.sync_block):
 	      self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PSN':formatted_text})
 	      try:
 		t=(PI_ON,self.RDS_data[PI_ON]["PSN"],float(self.RDS_data[PI_ON]["AF"]["main"]),self.RDS_data[PI_ON]["PTY"],int(self.RDS_data[PI_ON]["TP"]))
-		db.execute("INSERT OR REPLACE INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+		if self.writeDB:
+		  db.execute("INSERT OR REPLACE INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
 	      except KeyError:
 		#not all info present -> no db update
 		pass
@@ -1215,34 +1511,18 @@ class rds_parser_table_qt(gr.sync_block):
 	reflocs=tmc_msg.location.reflocs
 	if not self.TMC_data.has_key(tmc_hash):#if message new
 	  try:
-	    if tmc_msg.is_single:
-	      #multi_str="single"
-	      multi_str=""
-	    else:
-	      #multi_str="length:%i, list:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
-	      multi_str="%i:%s"%(tmc_msg.length,str(tmc_msg.mgm_list))
-	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
+	    #message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
+	    #message_string=tmc_msg.log_string()
 	    self.TMC_data[tmc_hash]=tmc_msg
-	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':multi_str})
+	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':tmc_msg.multi_str()})
 	    #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
 	    #self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
-	   
-	    message_string="%s ,locname:%s, reflocs:%s"%(str(tmc_msg.event),tmc_msg.location,reflocs)
-	    t=(tmc_hash,str(datetime.now()),PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),multi_str.decode("utf-8"),str(tmc_msg.debug_data))
-	    self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
-	    #self.signals.DataUpdateEvent.emit({'TMC_log_str':multi_str})
-	    if tmc_msg.location.has_koord:#show on map
-	      map_tag=str(tmc_msg.event)+"; "+multi_str
-	      #print to osm map (disabled because slow)
-	      #folium.Marker([tmc_msg.location.ykoord,tmc_msg.location.xkoord], popup=map_tag.decode("utf-8")).add_to(self.osm_map)
-
-	      #print to google map
-	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag,marker_id=len(self.map_markers))
-	      marker_string=self.marker_template.format(lat=tmc_msg.location.ykoord,lon=tmc_msg.location.xkoord,text=map_tag)#without ID
-	      self.map_markers.append(marker_string)
-
-	      
-	    
+	    timestring=self.RDS_data[PI]["time"]["timestring"]
+	    #message_string="%s ,locname:%s, reflocs:%s"%(str(tmc_msg.event),tmc_msg.location,reflocs)
+	    message_string=tmc_msg.db_string()
+	    t=(tmc_hash,timestring,PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),tmc_msg.multi_str().decode("utf-8"),str(tmc_msg.debug_data))
+	    if self.writeDB:
+	      self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
 	  except Exception as e:
 	    print(e)
 	    raise
@@ -1326,10 +1606,11 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.table=QtGui.QTableWidget(self)
         rowcount=0
         self.table.setRowCount(rowcount)
-        self.table.setColumnCount(9)
+        self.table.setColumnCount(10)
         self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #disallow editing
 
-        self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
+        #self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality']
+        self.colorder=tableobj.colorder
  ##button.clicked.connect(self.getDetails)
      
         layout.addWidget(self.table)
@@ -1395,11 +1676,27 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
     def insert_empty_row(self):
       rowPosition = self.table.rowCount()
       self.table.insertRow(rowPosition)
-      for col in range(self.table.columnCount()-1):#all labels except in last column -> buttons
+      #for col in range(self.table.columnCount()-1):#all labels except in last column -> buttons
+#	self.table.setCellWidget(rowPosition,col,QtGui.QLabel())
+      #initialize labels everywhere:
+      for col in range(self.table.columnCount()):
 	self.table.setCellWidget(rowPosition,col,QtGui.QLabel())
-      button=QtGui.QPushButton("getDetails")
-      self.table.setCellWidget(rowPosition,self.table.columnCount()-1,button)
-      button.clicked.connect(functools.partial(self.getDetails, row=rowPosition))
+      button_layout = Qt.QHBoxLayout()
+      details_button=QtGui.QPushButton("Detail")
+      details_button.clicked.connect(functools.partial(self.getDetails, row=rowPosition))
+      button_layout.addWidget(details_button)
+      left_button=QtGui.QPushButton("L")
+      left_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="left"))
+      button_layout.addWidget(left_button)
+      right_button=QtGui.QPushButton("R")
+      right_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="right"))
+      button_layout.addWidget(right_button)
+      #self.table.setCellWidget(rowPosition,self.table.columnCount()-1,button_layout)
+      cellWidget = QtGui.QWidget()
+      cellWidget.setLayout(button_layout)
+      #button_col=self.table.columnCount()-1
+      button_col=3
+      self.table.setCellWidget(rowPosition,button_col,cellWidget)
     def display_data(self, event):
 	#pp.pprint(event)
 	if type(event)==dict and event.has_key('decoder_frequencies'):
@@ -1412,7 +1709,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
 	  event_cmp=unicode(str(tmc_msg.event), encoding="UTF-8").lower()
 	  if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
-	    message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,tmc_msg.location,reflocs,self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
+	    message_string=tmc_msg.log_string()
+	    #message_string="TMC-message,event:%s lcn:%i,location:%s station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,str(tmc_msg.location),self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
 	    self.logOutput.append(Qt.QString.fromUtf8(message_string))
 	    if event.has_key('multi_str'):
 	      self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
@@ -1446,7 +1744,21 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item.setText(event['PTY'])
 	  if event.has_key('flags'):
 	    item=self.table.cellWidget(row,self.colorder.index('PTY'))
+	    #TODO set color if TA changed    
 	    item.setToolTip(Qt.QString(event['flags']))
+	    #TP=self.tableobj.RDS_data[PI]["TP"]
+	    #TA=self.tableobj.RDS_data[PI]["TA"]
+	    #if TP==1:
+	      #s=str(item.text())
+	      #if TA==1:
+		#color="red"
+	      #elif TA==0:
+		#color="green"
+	      #else:
+		#color="yellow"
+	      ##s=re.sub("style='.*'","style='color:green'",s)
+	      #s_colored="<span style='color:%s'>%s</span>"%(color,s)
+	      #item.setText(s_colored)
 	  if event.has_key('string'):
 	    item=self.table.cellWidget(row,event['col'])
 	    item.setText(event['string'])
@@ -1496,8 +1808,20 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	layout=Qt.QVBoxLayout()
 	layout.addWidget(l)
 	view.setLayout(layout)
-	
 	view.exec_()
+    def setAudio(self,row,audio_channel):
+	
+	PIcol=self.colorder.index('ID')
+	PI=str(self.table.cellWidget(row,PIcol).text()) 
+	freq=int(self.tableobj.RDS_data[PI]['AF']['main'])
+	#print("setaudio row:%i, chan:%s, PI:%s,freq:%i"%(row,audio_channel,PI,freq))
+	send_pmt = pmt.pmt_to_python.pmt_from_dict({"cmd":"set_audio_freq","chan":audio_channel,"freq":freq})
+	#send_pmt = pmt.pmt_to_python.pmt_from_dict({"cmd":"set_audio_freq","chan":"left","freq":freq})
+	self.tableobj.message_port_pub(pmt.intern('ctrl'), send_pmt)	
+	#catch:
+	#print("no freq, cant set decoder")#show notification? popup: too intrusive, log: maybe not visible, other possibility?
+	
+	#print("freq not in RX BW")#automatically shift freq-tune?
     def getDetails(self,row):
 	PIcol=self.colorder.index('ID')
 	PI=str(self.table.cellWidget(row,PIcol).text())
@@ -1528,8 +1852,13 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	l.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse |QtCore.Qt.TextSelectableByKeyboard)
 	l.setWordWrap(True)
 	#l=QtGui.QLabel("Data:")
-	view.layout().addWidget(l)
 	
+	#view.layout().addWidget(l)
+	
+	scrollArea = QtGui.QScrollArea(self)
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setWidget(l)
+	view.layout().addWidget(scrollArea)
 	view.exec_()
     def onCLick(self):
 	print("button clicked")	
@@ -1549,4 +1878,5 @@ if __name__ == "__main__":
     sys.exit(app.exec_())
 
     widget = None
+
 

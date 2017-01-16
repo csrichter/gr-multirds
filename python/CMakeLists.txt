@@ -37,7 +37,8 @@ GR_PYTHON_INSTALL(
     rds_parser_table_qt.py
     max_freq.py
     smooth_vectors.py
-    chart.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    chart.py
+    stream_selector.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################

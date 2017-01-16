@@ -23,5 +23,6 @@ install(FILES
     crfa_rds_parser_table_qt.xml
     crfa_rds_decoder.xml
     crfa_max_freq.xml
-    crfa_smooth_vectors.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_smooth_vectors.xml
+    crfa_stream_selector.xml DESTINATION share/gnuradio/grc/blocks
 )

@@ -44,18 +44,46 @@ class max_freq(gr.sync_block):
 	self.message_port_register_in(pmt.intern('ctrl'))
 	self.set_msg_handler(pmt.intern('ctrl'), self.handle_ctrl_msg)
 	self.searchMode=True
+	self.index_fixed=[False]*self.num_decoders
+    def freq_to_index(self,freq):
+      startfreq=self.center_freq-self.samp_rate/2
+      #freq=self.samp_rate*index/self.fft_len+startfreq
+      #(freq-startfreq)*self.fft_len/self.samp_rate=index
+      index=(freq-startfreq)*self.fft_len/self.samp_rate
+      return index
     def handle_ctrl_msg(self,msg):
       m = pmt.pmt_to_python.pmt_to_dict(msg)
-      #print(m)
+      if m.has_key("cmd") and m["cmd"]=="set_audio_freq":
+	#print(m)
+	#print(self.last_station_indices)
+	freq_index=self.freq_to_index(m["freq"])
+	if m["chan"]=="left" and freq_index<self.fft_len-5:
+	  if self.last_station_indices[0]==freq_index:
+	    self.index_fixed[0]=False
+	    print("decoder 0 free")
+	  else:
+	    self.last_station_indices[0]=freq_index
+	    self.index_fixed[0]=True
+	    print("decoder 0 fixed to %i"%m["freq"])
+	if m["chan"]=="right" and freq_index<self.fft_len-5:
+	  if self.last_station_indices[1]==freq_index:
+	    self.index_fixed[1]=False
+	    print("decoder 1 free")
+	  else:
+	    self.last_station_indices[1]=freq_index
+	    self.index_fixed[1]=True
+	    print("decoder 1 fixed to %i"%m["freq"])
+	#print(self.last_station_indices)
       if m.has_key("cmd") and m["cmd"]=="switch mode":
 	self.searchMode=not self.searchMode
 	print("searchMode: %s"%self.searchMode)
     def set_center_freq(self, freq=None):
-		if freq is not None:
-			if isinstance(freq, float) or isinstance(freq, int):
-				self.center_freq=freq
-			else:
-				self.center_freq = int(freq)
+      self.index_fixed=[False]*self.num_decoders#free all decoders (freq wouldn't match anyways)
+      if freq is not None:
+	      if isinstance(freq, float) or isinstance(freq, int):
+		      self.center_freq=freq
+	      else:
+		      self.center_freq = int(freq)
     def work(self, input_items, output_items):
       if self.counter<5:
 	self.counter+=1
@@ -117,6 +145,11 @@ class max_freq(gr.sync_block):
         station_indices_tune=[0]*self.num_decoders
         same_station_threshold=3
         new_stations=[]
+        #add fixed stations:
+        for i,old_freq in enumerate(self.last_station_indices):
+	  if self.index_fixed[i]:
+	    station_indices_tune[i]=old_freq
+        #change existing/add new:
         for new_freq in station_indices_trunc:
 	  added=False
 	  for i,old_freq in enumerate(self.last_station_indices):

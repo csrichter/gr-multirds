@@ -175,9 +175,9 @@ int rds_decoder_impl::work (int noutput_items,
 				if (block_bit_counter<25) block_bit_counter++;
 				else {
 					good_block=false;
-					dataword=(reg>>10) & 0xffff;
+					dataword=(reg>>10) & 0xffff;//data part of received block (upper 16 bits)
 					block_calculated_crc=calc_syndrome(dataword,16);
-					checkword=reg & 0x3ff;
+					checkword=reg & 0x3ff;//checkword part of received block (lower 10 bits)
 /* manage special case of C or C' offset word */
 					if (block_number==2) {
 						block_received_crc=checkword^offset_word[block_number];
