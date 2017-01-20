@@ -77,7 +77,9 @@ class tmc_event:
 	self.is_cancellation = False
       self.quantifierType=event_array[6]#Q:quantifier type: (0..12) or blank (no quantifier)
       self.durationType=event_array[7]#T:duration type: D:dynamic, L:long lasting, in brackets or if time-of-day quantifier (no 7) is used in message -> no display, only for management
-      self.direction=event_array[8]#D:direction: 1:unidirectional, 2:bidirectional
+      directionality=event_array[8]#D:directionality: 1:unidirectional, 2:bidirectional, cancellation messages dont have directionality
+      self.is_unidirectional=True if directionality=="1" else False
+      self.is_bidirectional=True if directionality=="2" else False
       self.urgency=event_array[9]#U:urgency: blank: normal, X:extremely urgent, U:urgent
       self.updateClass=int(event_array[10])#C: update class:
       self.updateClassName=self.tableobj.tmc_update_class_names[self.updateClass]
@@ -89,6 +91,9 @@ class tmc_event:
     except KeyError:
       print("event '%i' not found"%ecn)
       self.is_valid=False
+  def change_directionality(self):
+    self.is_unidirectional=not self.is_unidirectional
+    self.is_bidirectional=not self.is_bidirectional
   def add_length(self,data):#from label2
     self.length_str="%i km"%mgm_tag.length_to_km(data.uint)
     #self.name=self.name.replace("(L)",self.length_str)
@@ -253,7 +258,7 @@ class tmc_location:
 	self.xkoord=int(loc_array[27])/100000.0
 	self.ykoord=int(loc_array[28])/100000.0
 	self.koord_str="%f,%f"%(self.ykoord,self.xkoord)
-	#self.koord_str="%f° N, %f° E"%(self.ykoord,self.xkoord)
+	self.koord_str_google="{lat: %f, lng:  %f}"%(self.ykoord,self.xkoord)
 	self.google_maps_link="https://www.google.de/maps/place/%f,%f"%(self.ykoord,self.xkoord)
 	self.has_koord=True
       except ValueError:
@@ -267,8 +272,8 @@ class tmc_location:
     ##LOCATIONCODE;TYPE;SUBTYPE;ROADNUMBER;ROADNAME;FIRST_NAME;SECOND_NAME;AREA_REFERENCE;LINEAR_REFERENCE;NEGATIVE_OFFSET;POSITIVE_OFFSET;URBAN;INTERSECTIONCODE;INTERRUPTS_ROAD;IN_POSITIVE;OUT_POSITIVE;IN_NEGATIVE;OUT_NEGATIVE;PRESENT_POSITIVE;PRESENT_NEGATIVE;EXIT_NUMBER;DIVERSION_POSITIVE;DIVERSION_NEGATIVE;VERÄNDERT;TERN;NETZKNOTEN_NR;NETZKNOTEN2_NR;STATION;X_KOORD;Y_KOORD;POLDIR;ADMIN_County;ACTUALITY;ACTIVATED;TESTED;SPECIAL1;SPECIAL2;SPECIAL3;SPECIAL4;SPECIAL5;SPECIAL6;SPECIAL7;SPECIAL8;SPECIAL9;SPECIAL10
 
 class tmc_dict:
-  "dict of tmc messages sorted by location (LCN) and update class, automatically deletes/updates invalid items"
-  marker_template="addMarker({{lat: {lat}, lng:  {lon}}},'{text}')"
+  "dict of tmc messages sorted by location (LCN) and update class, automatically deletes/updates invalid(ated) items"
+  marker_template="addMarker({loc},'{text}',{endloc})"
   def __init__(self):
     self.messages=dict()
   def add(self,message):
@@ -291,11 +296,9 @@ class tmc_dict:
   def getMarkerString(self):
     markerstring=""
     for lcn in self.messages:
-      
-      
-     
       loc=None
-      map_tag="<p>"
+      endloc=None
+      map_tag='<p>'
       for updateClass in self.messages[lcn]:
 	message=self.messages[lcn][updateClass]
 	if message.cancellation_time==None:
@@ -303,15 +306,22 @@ class tmc_dict:
 	else:
 	  color="gray"
 	if message.location.has_koord:
+	  if loc==None:#first message at this location
+	    map_tag+='<h3 style="padding: 0px;margin: 0px;">'
+	    map_tag+=message.location_text()
+	    map_tag+='</h3>'
+	    if message.cancellation_time==None:
+	      endloc=message.end_loc()#line displays length of 1st message (lowest class), that is not cancelled
 	  loc=message.location
-	  #map_tag+=str(updateClass)+": "
 	  map_tag+='<div style="color: %s;">'%color
 	  map_tag+=message.map_string()
-	  map_tag+="<br />"
-	  map_tag+="</div>"
-      map_tag+="</p>"
+	  map_tag+='<br />'
+	  map_tag+='</div>'
+      map_tag+='</p>'
       if not loc==None:
-	markerstring+=tmc_dict.marker_template.format(lat=loc.ykoord,lon=loc.xkoord,text=map_tag)
+	if endloc==None or not endloc.is_valid:
+	  endloc=loc#creates line of 0 length (dot)
+	markerstring+=tmc_dict.marker_template.format(loc=loc.koord_str_google,text=map_tag,endloc=endloc.koord_str_google)
 	markerstring+="\n"
     return markerstring
   
@@ -411,34 +421,38 @@ class tmc_message:
     str_list=[str(elem) for elem in self.events]
     return str(", ".join(str_list))
   def log_string(self):
-    #return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+str(self.location)+"; "+self.psn
-    #code above gives unicode-decode error with character Ä (probably in location)
-    #return "%s: %s: %s; %s; %s"%(str(self.event.updateClass),self.getTime(),self.events_string(),str(self.location),self.psn)
-    #return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+str(self.location)+"; "+self.psn
-    return str(self.event.updateClass)+": "+self.getTime()+": "+self.display_text()+"; "+self.psn
+    return str(self.event.updateClass)+": "+self.getTime()+": "+self.location_text()+": "+self.events_string()+"; "+self.psn
   def db_string(self):
-    return str(self.location)+": "+str(self.event.updateClass)+": "+self.display_text()
+    return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()
   def map_string(self):
-    return str(self.event.updateClass)+": "+self.getTime()+": "+self.display_text()+"; "+self.multi_str()+"; "+self.psn
-    #code above gives unicode-decode error with character Ä (probably in location)
-    #return "%s: %s: %s; %s; %s"%(str(self.event.updateClass),self.getTime(),self.events_string(),self.multi_str(),self.psn)
-    #return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+self.multi_str()+"; "+self.psn
-  def display_text(self):
-    text=self.events_string()+"; "+str(self.location)#use events_string if no display_text implemented
+    return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+self.multi_str()+"; "+self.psn
+  def end_loc(self):
+    return self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
+  def location_text(self):
+    text=str(self.location)#use __str__ of location if no location_text implemented
     #TODO add "dreieck" for P1.2 -> done in tmc_message.__str__
     if not self.location.linRef==None:#test
-      self.tmc_extent
-      self.tmc_dir
-      offset_loc=self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
+      #self.tmc_extent and self.tmc_dir are ints
+      #offset_loc=self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
+      offset_loc=self.end_loc()
       if offset_loc.is_valid:
-	offset_loc_name=str(offset_loc)
+	#offset_loc_name=str(offset_loc)
+	offset_loc_name=offset_loc.first_name
       else:
 	print(offset_loc)
 	offset_loc_name="###INVALID###"
-      templates={"de":"{A}, {B} in Richtung {C}, zwischen {D} und {E}, {F}"#codeing handbook: zwischen {D} und {E}, sprachdurchsagen: zwischen {E} und {D}
-		    ,"en":"{A}, {B} {C}, {F}, between {D} and {E}"}
-      text=templates[language].format(A=self.location.linRef.roadnumber, B=self.location.linRef.second_name,C=self.location.linRef.first_name,D=str(self.location),E=offset_loc_name,F=self.events_string())
-      
+      templates={"de_1":"{A}, {B} in Richtung {C}"#codeing handbook: zwischen {D} und {E}, sprachdurchsagen: zwischen {E} und {D}
+		    ,"de_2a":", zwischen {D} und {E}"
+		    ,"de_2b":", bei {D}"#extent==0
+		    ,"en_1":"{A}, {B} {C}"
+		    ,"en_2a":", between {D} and {E}"
+		    ,"en_2b":", at {D}"}#extent==0
+      text=templates[language+"_1"].format(A=self.location.linRef.roadnumber, B=self.location.linRef.second_name,C=self.location.linRef.first_name)
+      if self.location.first_name==offset_loc_name:#similar to self.tmc_extent==0 (but some similar location have same same name)
+	text+=templates[language+"_2b"].format(D=self.location.first_name)
+      else:
+	text+=templates[language+"_2a"].format(D=self.location.first_name,E=offset_loc_name)
+ 
       #LocCode: RefLine: RoadNr
       #A
       #LocCode:RefLine:Name2
@@ -492,7 +506,7 @@ class tmc_message:
 	self.is_complete=False
 	self._second_group_received=False
 	self.tmc_D=0
-	self.tmc_DP=0
+	self.tmc_DP=0#default to duration of 0, can be changed with MGM
 	self.ci=int(tmc_x&0x7) #continuity index
 	self.data_arr=BitArray()
 	self.mgm_list=[]
@@ -541,8 +555,11 @@ class tmc_message:
 	    del self.data_arr[0:fieldlen]
 	    if not (label==0 and data.uint ==0):#ignore trailing zeros
 	      self.mgm_list.append(mgm_tag(label,data,self.tableobj))
-	      if label==0:
+	      if label==0:#duration/persistence
 		self.tmc_DP=data.uint
+	    #label==1: control codes
+	      elif label==1 and data.uint==2:
+		last_event.change_directionality#change directionality
 	      elif label==1 and data.uint==5:
 		self.tmc_D=1#set diversion bit
 	      elif label==1 and data.uint==6:
@@ -861,7 +878,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  self.RDS_data[PI]["TA"]=-1
 	  self.RDS_data[PI]["PTY"]=""
 	  self.RDS_data[PI]["DI"]=[2,2,2,2]
-	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":""}
+	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":"","RT_history":[]}
 	  self.RDS_data[PI]["time"]={"timestring":"88:88","datestring":"00-00-0000","datetime":None}
     def handle_msg(self, msg, port):#port from 0 to 3
 	if time.time()-self.save_data_timer > 10:#every 10 seconds
@@ -1111,7 +1128,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	   except ValueError:
 	     text_end=64 #assume whole string is important
 	     pass
-
+	   predicted=False
 	   if (text_list[adr*4:adr*4+4]==list(segment)):#segment already there
 	     segmentcolor="green"
 	   elif (text_list[adr*4:adr*4+4]==['_']*4):#segment new
@@ -1124,9 +1141,15 @@ class rds_parser_table_qt(gr.sync_block):#START
 	     #reset stored text:
 	     self.RDS_data[PI]["RT"]="_"*64
 	     self.RDS_data[PI]["RT_valid"]=[False]*64
+	     #predict RT from last texts:
+	     for rt in self.RDS_data[PI]["internals"]["RT_history"]:
+	       if rt[adr*4:adr*4+4]==list(segment):
+		 self.RDS_data[PI]["RT"]="".join(rt)
+		 predicted=True
 	  
 	   self.RDS_data[PI]["RT_valid"][adr*4:adr*4+4]=[True] *4
-	   self.RDS_data[PI]["RT"]="".join(text_list)
+	   if not predicted:
+	    self.RDS_data[PI]["RT"]="".join(text_list)
 	   
 	   #determine if (new) text is valid
 	   self.RDS_data[PI]["RT_all_valid"]=True
@@ -1139,22 +1162,22 @@ class rds_parser_table_qt(gr.sync_block):#START
 	     l=list(self.RDS_data[PI]["RT"])
 	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
 	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
+	      self.RDS_data[PI]["internals"]["RT_history"].append(l)
+	      if len(self.RDS_data[PI]["internals"]["RT_history"])>10:#only store last 10 RTs
+		self.RDS_data[PI]["internals"]["RT_history"].pop(0)
 	      t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",rt)
 	      if self.writeDB:
 		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	      self.RDS_data[PI]["internals"]["last_valid_rt"]=rt
-	      try:#print rt+ if it exist
-		t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
+	      try:#save rt+ if it exist
 		if self.writeDB:
+		  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
 		  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	      except KeyError:
 		pass#no rt+ -> dont save
 	   else:
 	     textcolor="gray"
-	   #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,self.RDS_data[PI]["RT"][:adr*4],segmentcolor,self.RDS_data[PI]["RT"][adr*4:adr*4+4],textcolor,self.RDS_data[PI]["RT"][adr*4+4:])
 	   formatted_text=self.color_text(self.RDS_data[PI]["RT"],adr*4,adr*4+4,textcolor,segmentcolor)
-	   #print(self.RDS_data[PI]["RT"]+" valid:"+str(valid)+"valarr:"+str(self.RDS_data[PI]["RT_valid"]))
-
 	   rtcol=self.colorder.index('text')
 	   self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'string':formatted_text})
 	   
@@ -1214,21 +1237,12 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    local_time_offset=0.5*((array[7])&0x1F)
 	    if(offsetdir==1):
 	      local_time_offset*=-1
-	    #year=int((datecode - 15078.2) / 365.25)	  
-	    #month=int((datecode - 14956.1 - int(year * 365.25)) / 30.6001)
-	    #day=datecode - 14956 - int(year * 365.25) - int(month * 30.6001)
-	    #if(month == 14 or month == 15):#no idea why -> annex g of RDS spec
-	      #year += 1;
-	      #month -= 13
-	    #year+=1900
-	    #month was off by one different rounding in c and python?
-	      #month-=1# 13.1.2017, month now not off by one
-	      #maybe the use of unsigned ints?
+
 	    date=datetime(1858,11,17)+timedelta(days=int(datecode))#convert from MJD (modified julian date)
 	    
-	    #datestring="%02i.%02i.%4i, %02i:%02i (%+.1fh)" % (day,month,year,hours,minutes,local_time_offset)
 	    timestring="%02i:%02i (%+.1fh)" % (hours,minutes,local_time_offset)
-	    datestring="%02i.%02i.%4i" % (date.day,date.month,date.year)
+	    #datestring="%02i.%02i.%4i" % (date.day,date.month,date.year)
+	    datestring=date.strftime("%d.%m.%Y")
 	    ctcol=self.colorder.index('time')
 	    self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
 	    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring+"; datecode(MJD):"+str(datecode))
