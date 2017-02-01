@@ -39,4 +39,5 @@ from max_freq import max_freq
 from smooth_vectors import smooth_vectors
 from chart import Chart
 from stream_selector import stream_selector
+from vector_cutter import vector_cutter
 #

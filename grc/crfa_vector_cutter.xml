@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<block>
+  <name>vector_cutter</name>
+  <key>crfa_vector_cutter</key>
+  <category>[crfa]</category>
+  <import>import crfa</import>
+  <make>crfa.vector_cutter($insize, $outsize, $cutpoint)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <callback>set_cutpoint($cutpoint);</callback>
+  <param>
+    <name>insize</name>
+    <key>insize</key>
+    <value>2048</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>outsize</name>
+    <key>outsize</key>
+    <value>1024</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>cutpoint</name>
+    <key>cutpoint</key>
+    <value>512</value>
+    <type>int</type>
+  </param>
+
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+    <vlen>$insize</vlen>
+  </sink>
+
+  <source>
+    <name>out</name>
+    <type>complex</type>
+    <vlen>$outsize</vlen>
+  </source>
+</block>

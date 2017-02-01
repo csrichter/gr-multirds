@@ -38,7 +38,8 @@ GR_PYTHON_INSTALL(
     max_freq.py
     smooth_vectors.py
     chart.py
-    stream_selector.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    stream_selector.py
+    vector_cutter.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################
