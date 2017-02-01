@@ -140,7 +140,7 @@ class max_freq(gr.sync_block):
         
         #prevents back and forth switching if two station have similar signal strength
         station_indices_trunc=list(station_indices_sorted)#copy list
-        del station_indices_trunc[self.num_decoders:]#remove non decodable incidices
+        del station_indices_trunc[self.num_decoders:]#remove non decodable (too quiet) incidices
         
         station_indices_tune=[0]*self.num_decoders
         same_station_threshold=3

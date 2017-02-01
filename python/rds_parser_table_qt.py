@@ -30,8 +30,8 @@ import crfa.chart as chart
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code,pickle#for easier testing
 pp = pprint.PrettyPrinter()
-#import cProfile, pstats, StringIO #for profiling
-#pr = cProfile.Profile()#disabled-internal-profiling
+import cProfile, pstats, StringIO #for profiling
+pr = cProfile.Profile()#disabled-internal-profiling
 
 #from threading import Timer#to periodically save DB
 
@@ -275,8 +275,10 @@ class tmc_dict:
   "dict of tmc messages sorted by location (LCN) and update class, automatically deletes/updates invalid(ated) items"
   marker_template="addMarker({loc},'{text}',{endloc})"
   def __init__(self):
-    self.messages=dict()
+    self.messages={}
+    self.message_list=[]
   def add(self,message):
+    self.message_list.append(message)
     try:
       lcn=message.location.lcn
       updateClass=message.event.updateClass
@@ -293,6 +295,29 @@ class tmc_dict:
       #print("added message: "+str(message))
     except AttributeError:
       print("ERROR, not adding: "+str(message))
+  def matchFilter(self,msg,filters):
+    if not msg.location.is_valid:
+      return True#always show invalid messages
+    loc_str=str(msg.location)+str(msg.location.reflocs)+str(msg.location.roadnumber)
+    
+    
+    for f in filters:#filters is list of dicts {"type":"event","str":"Stau"}
+      stringlist=f["str"].lower().split(";")
+      for string in stringlist:
+	if f["type"]=="event" and unicode(str(msg.event), encoding="UTF-8").lower().find(string)==-1:#if event filter does not match
+	  return False
+	elif f["type"]=="location" and unicode(loc_str, encoding="UTF-8").lower().find(string)==-1:#if location filter does not match
+	  return False
+    return True
+  def getLogString(self,filters):
+    retStr=""
+    for message in self.message_list:
+      if self.matchFilter(message,filters):
+	retStr+=message.log_string()
+	retStr+="\n"
+	retStr+=message.multi_str()
+	retStr+="\n"
+    return retStr
   def getMarkerString(self):
     markerstring=""
     for lcn in self.messages:
@@ -478,6 +503,15 @@ class tmc_message:
     else:
       return "88:88"
   def __init__(self,PI,tmc_x,tmc_y,tmc_z,datetime_received,tableobj):#TODO handle out of sequence data
+    #check LTN
+    try:
+      msg_ltn=tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
+      table_ltn=1#german table
+      if msg_ltn != table_ltn  and tableobj.debug:
+	print("msg_ltn:%i does not match given table (1)"%msg_ltn)
+    except KeyError:
+      if tableobj.debug:
+	print("no LTN found")
     #self.time_received=time_received
     self.datetime_received=datetime_received
     if self.datetime_received==None:
@@ -757,19 +791,9 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    
 	  except sqlite3.OperationalError:
 	    print("ERROR: tables already exist")
-	"""
-	tmc_F=(tmc_x>>3)&0x1 #single/multiple group
-	    tmc_event=int(tmc_y&0x7ff) #Y10-Y0
-	    tmc_location=tmc_z
-	    tmc_DP=tmc_x&0x7 #duration and persistence 3 bits
-	    tmc_extent=(tmc_y>>11)&0x7 #3 bits (Y13-Y11)
-	    tmc_D=tmc_y>>15 #diversion bit(Y15)
-	    tmc_dir=(tmc_y>>14)&0x1 #+-direction bit (Y14)"""
 	
 	#self.dbc.execute('''CREATE TABLE rtp
         #     (time text,PI text,rtp_string text)''')
-        #workdir="/user/wire2/richter/hackrf_prototypes/"
-        #workdir="/media/clemens/intdaten/uni_bulk/forschungsarbeit/hackrf_prototypes/"
 	reader = csv.reader(open(self.workdir+'RDS_ODA-AIDs_names_only.csv'), delimiter=',', quotechar='"')
 	reader.next()#skip header
 	for row in reader:
@@ -815,13 +839,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
 
-	#with open(workdir+'google_maps_template.html', 'r') as myfile:
-	#  self.gmaps_html_template=myfile.read()
-	self.map_markers=[]
 	self.save_data_timer=time.time()
-	self.marker_template="addMarker({{lat: {lat}, lng:  {lon}}},'{text}')"
-	#self.osm_map = folium.Map(location=[48.7,9.2],zoom_start=10)#centered on stuttgart
-	#self.osm_map.save(self.workdir+'osm.html')
 	atexit.register(self.goodbye)
 	
     def clean_data_and_commit_db(self):
@@ -830,9 +848,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	#print(self.PI_dict)
 	if self.writeDB:
 	  self.db.commit()
-	#self.osm_map.save(self.workdir+'osm.html')
 	f=open(self.workdir+'google_maps_markers.js', 'w')
-	#markerstring="\n".join(self.map_markers)
 	markerstring=self.tmc_messages.getMarkerString()
 	markerstring+='\n console.log("loaded "+markers.length+" markers")'
 	markerstring+='\n document.getElementById("errorid").innerHTML = "loaded "+markers.length+" markers";'
@@ -884,7 +900,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	if time.time()-self.save_data_timer > 10:#every 10 seconds
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
-	#pr.enable()#disabled-internal-profiling
+	pr.enable()#disabled-internal-profiling
 	if self.writeDB:
 	  #db=sqlite3.connect(self.db_name)
 	  db=self.db
@@ -942,18 +958,14 @@ class rds_parser_table_qt(gr.sync_block):#START
 	self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
 	
 	self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_blocks':wrong_blocks,'dots':dots})
-	#save block to sqlite (commit at end of handle_msg)
-	#(time text,PI text,PSN text, grouptype text,content blob)
-	content="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
+
 	
+	
+	#add any received groups to DB (slow)
+	#content="%02X%02X%02X%02X%02X" %(array[3]&0x1f,array[4],array[5],array[6],array[7])
 	#t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],groupType,content)
 	#db.execute("INSERT INTO groups  VALUES (?,?,?,?,?)",t)
 	
-	#error 161213: 
-	  # db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
-	  #InterfaceError: Error binding parameter 0 - probably unsupported type.
-	  #fix?: added str() to PI, but it should already be a string
-
 	if (groupType == "0A"):#AF PSN
 	  adr=array[3]&0b00000011
 	  segment=self.decode_chars(chr(array[6])+chr(array[7]))
@@ -1116,8 +1128,15 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    self.RDS_data[PI]["RT"]="_"*64
 	    self.RDS_data[PI]["RT_valid"]=[False]*64
 	    self.RDS_data[PI]["RT_all_valid"]=False
+	    self.RDS_data[PI]["RT_last_ab_flag"]=2
 	   
-	   adr=array[3]&0b00001111
+	   adr=    array[3]&0b00001111
+	   ab_flag=(array[3]&0b00010000)>>4
+	   #print("PI:%s, AB:%i"%(PI,ab_flag))
+	   if self.RDS_data[PI]["RT_last_ab_flag"] !=ab_flag:#AB flag changed -> clear text
+	     self.RDS_data[PI]["RT"]="_"*64
+	     self.RDS_data[PI]["RT_valid"]=[False]*64     
+	     self.RDS_data[PI]["RT_last_ab_flag"] =ab_flag
 	   segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
 	   #print("RT:adress: %d, segment:%s"%(adr,segment))
 	   #self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'groupType':groupType,'adress':adr,'segment':segment})
@@ -1225,23 +1244,25 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    elif self.debug:
 	      print("unknown variant %i in TMC 3A group"%variant)
 	elif (groupType == "4A"):#CT clock time
-	  datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)#modified julian date
+	  bits=BitArray('uint:8=%i,uint:8=%i,uint:8=%i,uint:8=%i,uint:8=%i'%tuple(array[3:8]))
+	  spare,datecode,hours,minutes,offsetdir,local_time_offset = bits.unpack("uint:6,uint:17,uint:5,uint:6,uint:1,uint:5")
+	  local_time_offset*=0.5
+	  #datecode=((array[3] & 0x03) << 15) | (array[4] <<7)|((array[5] >> 1) & 0x7f)#modified julian date
 	  if datecode==0:
 	    #do not update!!
 	    if self.debug:
 	      print("station:%s sent empty 4A group"%self.RDS_data[PI]["PSN"])
 	  else:
-	    hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
-	    minutes=((array[6] &0x0F)<<2)|((array[7] >>6)&0x3)
-	    offsetdir=(array[7]>>5)&0x1
-	    local_time_offset=0.5*((array[7])&0x1F)
+	    #hours=((array[5] & 0x1) << 4) | ((array[6] >> 4) & 0x0f)
+	    #minutes=((array[6] &0x0F)<<2)|((array[7] >>6)&0x3)
+	    #offsetdir=(array[7]>>5)&0x1
+	    #local_time_offset=0.5*((array[7])&0x1F)
 	    if(offsetdir==1):
 	      local_time_offset*=-1
 
 	    date=datetime(1858,11,17)+timedelta(days=int(datecode))#convert from MJD (modified julian date)
 	    
 	    timestring="%02i:%02i (%+.1fh)" % (hours,minutes,local_time_offset)
-	    #datestring="%02i.%02i.%4i" % (date.day,date.month,date.year)
 	    datestring=date.strftime("%d.%m.%Y")
 	    ctcol=self.colorder.index('time')
 	    self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
@@ -1315,6 +1336,9 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    if  4 <= adr and adr <= 9:
 	      #seen variants 4569, 6 most often
 	      #print("TMC-info variant:%i"%adr)
+	      if adr==4 or adr==5:#service provider name
+		segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
+		print("adr:%i, segment:%s"%(adr,segment))
 	      if adr== 7:#freq of tuned an mapped station (not seen yet)
 		freq_TN=tmc_y>>8
 		freq_ON=tmc_y&0xff#mapped frequency
@@ -1322,7 +1346,6 @@ class rds_parser_table_qt(gr.sync_block):#START
 		  print("TMC-info: TN:%i"%freq_TN)
 		self.RDS_data[PI]["TMC_TN"]=freq_TN
 	    else:
-	      a=0
 	      if self.debug:
 		print("alert plus")#(not seen yet)
 	    
@@ -1512,9 +1535,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    self.printcounter=0
 	    #print("group of type %s not decoded on station %s"% (groupType,PI))
 	    
-	#db.commit()
-	#db.close()
-	#pr.disable() #disabled-internal-profiling
+	pr.disable() #disabled-internal-profiling
 	#end of handle_msg
     def print_tmc_msg(self,tmc_msg):
       try:
@@ -1654,6 +1675,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
+        #self.location_filter=QtGui.QLineEdit(u"")
+        self.event_filter.returnPressed.connect(self.filterChanged)
+	self.location_filter.returnPressed.connect(self.filterChanged)
+        
         filter_layout = Qt.QHBoxLayout()
         filter_layout.addWidget(QtGui.QLabel("event filter:"))
         filter_layout.addWidget(self.event_filter)
@@ -1674,8 +1699,17 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.clip = QtGui.QApplication.clipboard()
 	#self.cb.clear(mode=cb.Clipboard )	
 	#self.cb.setText("Clipboard Text", mode=cb.Clipboard)
+    def filterChanged(self):
+      print("filter changed")
+      ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
+      lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
+      self.logOutput.clear()
+      #filters=[{"type":"location", "str":u"Baden-Württemberg"}]
+      filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
+      self.logOutput.append(Qt.QString.fromUtf8(self.tableobj.tmc_messages.getLogString(filters)))
+      #self.logOutput.append(Qt.QString.fromUtf8(self.tableobj.tmc_messages.getLogString([])))
     def keyPressEvent(self, e):
-      if (e.modifiers() & QtCore.Qt.ControlModifier):
+      if (e.modifiers() & QtCore.Qt.ControlModifier) and len(self.table.selectedRanges())>0:
 	  selected = self.table.selectedRanges().pop()
 	  selected.leftColumn()
 	  selected.topRow()
@@ -1719,24 +1753,28 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  tmc_msg=event['TMC_log']
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
-	  reflocs=tmc_msg.location.reflocs
-	  reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
-	  event_cmp=unicode(str(tmc_msg.event), encoding="UTF-8").lower()
-	  if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
-	    message_string=tmc_msg.log_string()
-	    #message_string="TMC-message,event:%s lcn:%i,location:%s station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,str(tmc_msg.location),self.tableobj.RDS_data[tmc_msg.PI]["PSN"])
-	    self.logOutput.append(Qt.QString.fromUtf8(message_string))
-	    if event.has_key('multi_str'):
-	      self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
+	  filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
+	  if self.tableobj.tmc_messages.matchFilter(tmc_msg,filters):
+	    self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.log_string()))
+	    self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.multi_str()))
+	  #ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
+	  #lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
+	  #reflocs=tmc_msg.location.reflocs
+	  #reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
+	  #event_cmp=unicode(str(tmc_msg.event), encoding="UTF-8").lower()
+	  
+	  #if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
+	    #message_string=tmc_msg.log_string()
+	    #self.logOutput.append(Qt.QString.fromUtf8(message_string))
+	    #if event.has_key('multi_str'):
+	      #self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
 	if type(event)==dict and event.has_key('TMC_log_str'):
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  text=unicode(event['TMC_log_str'], encoding="UTF-8").lower()
 	  if not text.find(lf)==-1 and not text.find(ef)==-1:
 	    self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log_str']))
-	#if type(event)==dict and event.has_key('row'): 
 	if type(event)==dict and event.has_key('PI'): 
-	  #row=event['row']
 	  PI=event['PI']
 	  if not self.PI_to_row.has_key(PI):
 	    self.PI_to_row[PI]=len(self.PI_to_row)#zero for first PI seen, then count up
@@ -1757,22 +1795,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item=self.table.cellWidget(row,self.colorder.index('PTY'))
 	    item.setText(event['PTY'])
 	  if event.has_key('flags'):
-	    item=self.table.cellWidget(row,self.colorder.index('PTY'))
-	    #TODO set color if TA changed    
+	    item=self.table.cellWidget(row,self.colorder.index('PTY'))   
 	    item.setToolTip(Qt.QString(event['flags']))
-	    #TP=self.tableobj.RDS_data[PI]["TP"]
-	    #TA=self.tableobj.RDS_data[PI]["TA"]
-	    #if TP==1:
-	      #s=str(item.text())
-	      #if TA==1:
-		#color="red"
-	      #elif TA==0:
-		#color="green"
-	      #else:
-		#color="yellow"
-	      ##s=re.sub("style='.*'","style='color:green'",s)
-	      #s_colored="<span style='color:%s'>%s</span>"%(color,s)
-	      #item.setText(s_colored)
 	  if event.has_key('string'):
 	    item=self.table.cellWidget(row,event['col'])
 	    item.setText(event['string'])
