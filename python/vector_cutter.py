@@ -27,7 +27,7 @@ class vector_cutter(gr.sync_block):
     """
     docstring for block vector_cutter
     """
-    def __init__(self, insize=2048,outsize=1024,cutpoint=512,pad_out=False):
+    def __init__(self, insize=2048,outsize=1024,cutpoint=512,pad_out=False,zero_len=0):
 	if pad_out:
 	  gr.sync_block.__init__(self,
             name="vector_cutter",
@@ -41,9 +41,17 @@ class vector_cutter(gr.sync_block):
 	self.cutpoint=cutpoint
 	self.insize=insize
 	self.outsize=outsize
-	print(pad_out)
+	#print(pad_out)
 	self.pad_out=pad_out
-
+	self.zero_len=zero_len
+	self.mask=np.concatenate((np.zeros(zero_len),np.ones(outsize-zero_len*2),np.zeros(zero_len)))
+    def set_zero_len(self,zero_len=None):
+       if zero_len is not None:
+	      if isinstance(zero_len, float) or isinstance(zero_len, int):
+		      self.zero_len=zero_len
+	      else:
+		      self.zero_len = int(zero_len)     
+	      self.mask=np.concatenate((np.zeros(self.zero_len),np.ones(self.outsize-self.zero_len*2),np.zeros(self.zero_len)))
     def set_cutpoint(self, cutpoint=None):
      #print("cutpoint set to  %i"%cutpoint)
       if cutpoint is not None:
@@ -62,14 +70,20 @@ class vector_cutter(gr.sync_block):
         attenuation=1e-2#40db (power)
 	for i,in_vec in enumerate(in0):
 	  if 0<=cutpoint<self.insize-self.outsize:
-	    out[i]=in_vec[cutpoint:cutpoint+self.outsize]
+	    out_cut=in_vec[cutpoint:cutpoint+self.outsize]
 	    if self.pad_out:
 	      out_padded[i]=in_vec*np.concatenate((attenuation*np.ones(cutpoint),np.ones(self.outsize),attenuation*np.ones(self.insize-self.outsize-cutpoint)))
 	  elif cutpoint <=self.insize:
-	    out[i]=np.append(in_vec[cutpoint:self.insize],in_vec[0:self.outsize-self.insize+cutpoint])
+	    out_cut=np.append(in_vec[cutpoint:self.insize],in_vec[0:self.outsize-self.insize+cutpoint])
 	    if self.pad_out:
 	      out_padded[i]=in_vec*np.concatenate((np.ones(cutpoint+self.outsize-self.insize),attenuation*np.ones(self.insize-self.outsize),np.ones(self.insize-cutpoint)))
+	  else:
+	    out_cut=in_vec[0:self.outsize]#dummy values
 	  #out[i]=np.append(out_cut[self.outsize/2:self.outsize],out_cut[0:self.outsize/2])
+	  if self.zero_len==0:
+	    out[i]=out_cut
+	  else:
+	    out[i]=out_cut*self.mask
 	#out = in0[512:1536]
         #code.interact(local=locals())
         #out[0] = in0[0][512:1536]

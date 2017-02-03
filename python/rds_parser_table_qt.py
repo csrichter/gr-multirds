@@ -503,12 +503,13 @@ class tmc_message:
     else:
       return "88:88"
   def __init__(self,PI,tmc_x,tmc_y,tmc_z,datetime_received,tableobj):#TODO handle out of sequence data
+    self.psn=tableobj.RDS_data[PI]["PSN"]
     #check LTN
     try:
       msg_ltn=tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
       table_ltn=1#german table
       if msg_ltn != table_ltn  and tableobj.debug:
-	print("msg_ltn:%i does not match given table (1)"%msg_ltn)
+	print("msg_ltn:%i does not match given table (1) on station: %s"%(msg_ltn,self.psn))
     except KeyError:
       if tableobj.debug:
 	print("no LTN found")
@@ -520,7 +521,6 @@ class tmc_message:
       self.hastime=True
     self.debug_data=""
     self.tableobj=tableobj
-    self.psn=tableobj.RDS_data[PI]["PSN"]
     self.PI=PI
     #self.isCancelled=False
     self.cancellation_time=None
@@ -749,6 +749,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  for i in range(0,nPorts):
 	    self.message_port_register_in(pmt.intern('in%d'%i))
 	    self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
+	self.nPorts=nPorts
 	self.message_port_register_in(pmt.intern('freq'))
 	self.set_msg_handler(pmt.intern('freq'), self.set_freq)
 	self.message_port_register_out(pmt.intern('ctrl'))
@@ -838,8 +839,10 @@ class rds_parser_table_qt(gr.sync_block):#START
 	reader.next()#skip header
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
-
+	self.minute_count=0
+	self.minute_count_timer=time.time()
 	self.save_data_timer=time.time()
+	
 	atexit.register(self.goodbye)
 	
     def clean_data_and_commit_db(self):
@@ -900,7 +903,13 @@ class rds_parser_table_qt(gr.sync_block):#START
 	if time.time()-self.save_data_timer > 10:#every 10 seconds
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
+	  
+	if time.time()-self.minute_count_timer > 3:#every 3 second
+	  self.minute_count=0
+	  self.minute_count_timer=time.time()
 	pr.enable()#disabled-internal-profiling
+	self.minute_count+=1
+	self.signals.DataUpdateEvent.emit({'group_count':self.minute_count})
 	if self.writeDB:
 	  #db=sqlite3.connect(self.db_name)
 	  db=self.db
@@ -1338,7 +1347,8 @@ class rds_parser_table_qt(gr.sync_block):#START
 	      #print("TMC-info variant:%i"%adr)
 	      if adr==4 or adr==5:#service provider name
 		segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
-		print("adr:%i, segment:%s"%(adr,segment))
+		if self.debug:
+		  print("TMC-info adr:%i (provider name), segment:%s"%(adr,segment))
 	      if adr== 7:#freq of tuned an mapped station (not seen yet)
 		freq_TN=tmc_y>>8
 		freq_ON=tmc_y&0xff#mapped frequency
@@ -1624,10 +1634,11 @@ class rds_parser_table_qt(gr.sync_block):#START
       formatted_text=("<span style='font-family:Courier New;color:%s'>%s</span>"*3)% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
       return formatted_text
 class rds_parser_table_qt_Widget(QtGui.QWidget):
-    def __init__(self, signals,label,tableobj):
+    def __init__(self, signals,label,tableobj,showTMC):
 	#print("gui initializing")self.tableobj.RDS_data["D3A2"]
 	self.signals = signals
 	self.tableobj=tableobj
+	self.showTMC=showTMC
 	self.signals.DataUpdateEvent.connect(self.display_data)
         """ Creates the QT Range widget """
         QtGui.QWidget.__init__(self)
@@ -1669,33 +1680,39 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         mode_button.clicked.connect(self.switchMode)
         button_layout.addWidget(mode_button)
         layout.addLayout(button_layout)
-        
-        self.freq_label=QtGui.QLabel("decoder frequencies:")
-        layout.addWidget(self.freq_label)     
-        self.tmc_message_label=QtGui.QLabel("TMC messages:")
-        self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
-        self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
-        #self.location_filter=QtGui.QLineEdit(u"")
-        self.event_filter.returnPressed.connect(self.filterChanged)
-	self.location_filter.returnPressed.connect(self.filterChanged)
-        
-        filter_layout = Qt.QHBoxLayout()
-        filter_layout.addWidget(QtGui.QLabel("event filter:"))
-        filter_layout.addWidget(self.event_filter)
-        filter_layout.addWidget(QtGui.QLabel("location filter:"))
-        filter_layout.addWidget(self.location_filter)
-        
-        layout.addLayout(filter_layout)
-        layout.addWidget(self.tmc_message_label)
-        self.logOutput = Qt.QTextEdit()
-        self.logOutput.setReadOnly(True)
-        self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
-        self.logOutput.setMaximumHeight(150)
-        font = self.logOutput.font()
-        font.setFamily("Courier")
-        font.setPointSize(10)
+        label_layout = Qt.QHBoxLayout()
+	self.freq_label=QtGui.QLabel("decoder frequencies:")
+	self.count_label=QtGui.QLabel("count:")
+        label_layout.addWidget(self.freq_label)  
+        label_layout.addWidget(self.count_label)  
+        layout.addLayout(label_layout)
+        #TODO set different minsize if TMC is shown
+        self.setMinimumSize(Qt.QSize(500,50*self.tableobj.nPorts))
+        if self.showTMC:
+	  self.tmc_message_label=QtGui.QLabel("TMC messages:")
+	  self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
+	  self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
+	  #self.location_filter=QtGui.QLineEdit(u"")
+	  self.event_filter.returnPressed.connect(self.filterChanged)
+	  self.location_filter.returnPressed.connect(self.filterChanged)
+	  
+	  filter_layout = Qt.QHBoxLayout()
+	  filter_layout.addWidget(QtGui.QLabel("event filter:"))
+	  filter_layout.addWidget(self.event_filter)
+	  filter_layout.addWidget(QtGui.QLabel("location filter:"))
+	  filter_layout.addWidget(self.location_filter)
+	  
+	  layout.addLayout(filter_layout)
+	  layout.addWidget(self.tmc_message_label)
+	  self.logOutput = Qt.QTextEdit()
+	  self.logOutput.setReadOnly(True)
+	  self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
+	  self.logOutput.setMaximumHeight(150)
+	  font = self.logOutput.font()
+	  font.setFamily("Courier")
+	  font.setPointSize(10)
+	  layout.addWidget(self.logOutput)
         self.lastResizeTime=0
-        layout.addWidget(self.logOutput)
         self.clip = QtGui.QApplication.clipboard()
 	#self.cb.clear(mode=cb.Clipboard )	
 	#self.cb.setText("Clipboard Text", mode=cb.Clipboard)
@@ -1747,9 +1764,11 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
       self.table.setCellWidget(rowPosition,button_col,cellWidget)
     def display_data(self, event):
 	#pp.pprint(event)
+	if type(event)==dict and event.has_key('group_count'):
+	  self.count_label.setText("count:%i"%event['group_count'])
 	if type(event)==dict and event.has_key('decoder_frequencies'):
 	  self.freq_label.setText(event['decoder_frequencies'])
-	if type(event)==dict and event.has_key('TMC_log'):
+	if type(event)==dict and event.has_key('TMC_log') and self.showTMC:
 	  tmc_msg=event['TMC_log']
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
@@ -1768,7 +1787,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    #self.logOutput.append(Qt.QString.fromUtf8(message_string))
 	    #if event.has_key('multi_str'):
 	      #self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
-	if type(event)==dict and event.has_key('TMC_log_str'):
+	if type(event)==dict and event.has_key('TMC_log_str')and self.showTMC:
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  text=unicode(event['TMC_log_str'], encoding="UTF-8").lower()

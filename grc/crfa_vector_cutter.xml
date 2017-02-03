@@ -4,13 +4,14 @@
   <key>crfa_vector_cutter</key>
   <category>[crfa]</category>
   <import>import crfa</import>
-  <make>crfa.vector_cutter($insize, $outsize, $cutpoint,$pad_out)</make>
+  <make>crfa.vector_cutter($insize, $outsize, $cutpoint,$pad_out,$zero_len)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name
        * key (makes the value accessible as $keyname, e.g. in the make node)
        * type -->
   <callback>set_cutpoint($cutpoint);</callback>
+  <callback>set_zero_len($zero_len);</callback>
 <!--  <param>
     <name>padded output</name>
     <key>pad_out</key>
@@ -39,6 +40,12 @@
       <name>No</name>
       <key>False</key>
     </option>
+  </param>
+  <param>
+    <name>num-zeros</name>
+    <key>zero_len</key>
+    <value>0</value>
+    <type>int</type>
   </param>
   <param>
     <name>insize</name>
