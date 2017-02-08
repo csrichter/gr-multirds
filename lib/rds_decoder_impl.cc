@@ -64,11 +64,21 @@ namespace gr {
 ////////////////////////// HELPER FUNTIONS /////////////////////////
 
 void rds_decoder_impl::enter_no_sync() {
+  	pmt::pmt_t data(pmt::PMT_F);
+	//pmt::pmt_t meta(pmt::PMT_NIL);
+	pmt::pmt_t meta(pmt::from_long(1));
+	pmt::pmt_t pdu(pmt::cons(meta, data));  // make PDU: (metadata, data) pair
+	message_port_pub(pmt::mp("out"), pdu);
 	presync = false;
 	d_state = NO_SYNC;
 }
 
 void rds_decoder_impl::enter_sync(unsigned int sync_block_number) {
+  	pmt::pmt_t data(pmt::PMT_T);
+	//pmt::pmt_t meta(pmt::PMT_NIL);
+	pmt::pmt_t meta(pmt::from_long(1));
+	pmt::pmt_t pdu(pmt::cons(meta, data));  // make PDU: (metadata, data) pair
+	message_port_pub(pmt::mp("out"), pdu);
 	last_wrong_blocks_counter = 0;
 	wrong_blocks_counter   = 0;
 	blocks_counter         = 0;
@@ -119,8 +129,8 @@ void rds_decoder_impl::decode_group(unsigned int *group) {
 	bytes[11] = offset_chars[3];
 	bytes[12]=last_wrong_blocks_counter;
 	pmt::pmt_t data(pmt::make_blob(bytes, 13));
-	pmt::pmt_t meta(pmt::PMT_NIL);
-
+	//pmt::pmt_t meta(pmt::PMT_NIL);
+	pmt::pmt_t meta(pmt::from_long(0));
 	pmt::pmt_t pdu(pmt::cons(meta, data));  // make PDU: (metadata, data) pair
 	message_port_pub(pmt::mp("out"), pdu);
 }

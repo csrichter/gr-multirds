@@ -746,7 +746,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  self.message_port_register_in(pmt.intern('in'))
 	  self.set_msg_handler(pmt.intern('in'), functools.partial(self.handle_msg, port=0))
 	else:
-	  for i in range(0,nPorts):
+	  for i in range(nPorts):
 	    self.message_port_register_in(pmt.intern('in%d'%i))
 	    self.set_msg_handler(pmt.intern('in%d'%i), functools.partial(self.handle_msg, port=i))
 	self.nPorts=nPorts
@@ -765,6 +765,10 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.TMC_data={}
         self.IH_data={}
         self.decoder_frequencies={}
+        self.decoders=[]
+        for i in range(nPorts):
+          self.decoders.append({'synced':False,'freq':None})
+        #self.decoder_synced={}
         #self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
         self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','RT+']
         self.workdir=workdir
@@ -840,6 +844,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
 	f.close()
 	self.minute_count=0
+	self.minute_count_max=0
 	self.minute_count_timer=time.time()
 	self.save_data_timer=time.time()
 	
@@ -857,14 +862,25 @@ class rds_parser_table_qt(gr.sync_block):#START
 	markerstring+='\n document.getElementById("errorid").innerHTML = "loaded "+markers.length+" markers";'
 	f.write(markerstring)
 	f.close()
+    def update_freq(self):
+        #  "&#9;" is a tab character
+	message_string="decoder frequencies:"
+	for num in self.decoder_frequencies:
+	  freq=self.decoder_frequencies[num]
+	  if self.decoders[num]['synced']:
+            message_string+="<span style='color:green'>&emsp; %i:%0.1fM</span>"% (num,freq/1e6)
+            #print("'color:green'>%i:%0.1fM</span>"% (num,freq/1e6))
+	  else:#elif self.decoders[num]['synced']==False:
+            #print("'color:red'>%i:%0.1fM</span>"% (num,freq/1e6))
+            message_string+="<span style='color:red'>&emsp; %i:%0.1fM</span>"% (num,freq/1e6)
+	message_string+="&emsp; tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
+	self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
+	#print(message_string)
+	#self.signals.DataUpdateEvent.emit({'row':decoder_num,'freq':freq_str})
+	#print("nr:%i freq:%s"%(tgtnum,freq_str))
     def set_freq_tune(self,freq):
       self.tuning_frequency=int(freq)
-      message_string="decoder frequencies:"
-      for num in self.decoder_frequencies:
-	freq=self.decoder_frequencies[num]
-	message_string+="\t %i:%0.1fM"% (num,freq/1e6)
-      message_string+="\t tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
-      self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
+      self.update_freq()
     def set_freq(self,msg):
 	m = pmt.symbol_to_string(msg)
 	decoder_num=int(m.split()[0])-1#msgs are 1-indexed, decoder_num is 0-indexed
@@ -875,14 +891,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  freq_str="%i:%0.1fM"% (decoder_num,freq/1e6)
 	except ValueError:
 	  pass#leave string as is
-	message_string="decoder frequencies:"
-	for num in self.decoder_frequencies:
-	  freq=self.decoder_frequencies[num]
-	  message_string+="\t %i:%0.1fM"% (num,freq/1e6)
-	message_string+="\t tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
-	self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
-	#self.signals.DataUpdateEvent.emit({'row':decoder_num,'freq':freq_str})
-	#print("nr:%i freq:%s"%(tgtnum,freq_str))
+	self.update_freq()
     def init_data_for_PI(self,PI):
 	  self.RDS_data[PI]={}
 	  #self.RDS_data[PI]["blockcounts"]={}# no defaults (works aswell)
@@ -900,21 +909,30 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":"","RT_history":[]}
 	  self.RDS_data[PI]["time"]={"timestring":"88:88","datestring":"00-00-0000","datetime":None}
     def handle_msg(self, msg, port):#port from 0 to 3
+      if pmt.to_long(pmt.car(msg))==1L:
+	data=pmt.to_python(pmt.cdr(msg))
+	#print("port:%i, data: %s"%(port,data))
+	self.decoders[port]['synced']=data
+	self.update_freq()
+      else: #elif pmt.to_long(pmt.car(msg))==0L
+	array=pmt.to_python(msg)[1]
+	
 	if time.time()-self.save_data_timer > 10:#every 10 seconds
 	  self.save_data_timer=time.time()
 	  self.clean_data_and_commit_db()
 	  
 	if time.time()-self.minute_count_timer > 3:#every 3 second
+	  self.minute_count_max=self.minute_count
 	  self.minute_count=0
 	  self.minute_count_timer=time.time()
 	pr.enable()#disabled-internal-profiling
 	self.minute_count+=1
-	self.signals.DataUpdateEvent.emit({'group_count':self.minute_count})
+	self.signals.DataUpdateEvent.emit({'group_count':self.minute_count,'group_count_max':self.minute_count_max})
 	if self.writeDB:
 	  #db=sqlite3.connect(self.db_name)
 	  db=self.db
 	
-	array=pmt.to_python(msg)[1]
+	
 	groupNR=array[2]&0b11110000
 	groupVar=array[2]&0b00001000
 	if (groupVar == 0):
@@ -1133,23 +1151,29 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    ESW_channel_identification=SLC
 	  #end of 1A decode
 	elif (groupType == "2A"):#RT radiotext
-	   if(not self.RDS_data[PI].has_key("RT")):#initialize variables
-	    self.RDS_data[PI]["RT"]="_"*64
-	    self.RDS_data[PI]["RT_valid"]=[False]*64
-	    self.RDS_data[PI]["RT_all_valid"]=False
+	   if(not self.RDS_data[PI].has_key("RT_0")):#initialize variables
+	    self.RDS_data[PI]["RT_0"]={"RT":"_"*64,"RT_valid":[False]*64,"RT_all_valid":False}
+	    self.RDS_data[PI]["RT_1"]={"RT":"_"*64,"RT_valid":[False]*64,"RT_all_valid":False}
+	    #self.RDS_data[PI]["RT"]="_"*64
+	    #self.RDS_data[PI]["RT_valid"]=[False]*64
+	    #self.RDS_data[PI]["RT_all_valid"]=False
 	    self.RDS_data[PI]["RT_last_ab_flag"]=2
 	   
 	   adr=    array[3]&0b00001111
 	   ab_flag=(array[3]&0b00010000)>>4
 	   #print("PI:%s, AB:%i"%(PI,ab_flag))
-	   if self.RDS_data[PI]["RT_last_ab_flag"] !=ab_flag:#AB flag changed -> clear text
-	     self.RDS_data[PI]["RT"]="_"*64
-	     self.RDS_data[PI]["RT_valid"]=[False]*64     
-	     self.RDS_data[PI]["RT_last_ab_flag"] =ab_flag
+	   
+	   
+	   #if self.RDS_data[PI]["RT_last_ab_flag"] !=ab_flag:#AB flag changed -> clear text
+	   #  self.RDS_data[PI]["RT"]="_"*64
+	   #  self.RDS_data[PI]["RT_valid"]=[False]*64     
+	   #  self.RDS_data[PI]["RT_last_ab_flag"] =ab_flag  
+	   self.RDS_data[PI]["RT_last_ab_flag"] =ab_flag
+	   
 	   segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
 	   #print("RT:adress: %d, segment:%s"%(adr,segment))
 	   #self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'groupType':groupType,'adress':adr,'segment':segment})
-	   text_list=list(self.RDS_data[PI]["RT"])
+	   text_list=list(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"])
 	   #determine text length:
 	   try:
 	     text_end=text_list.index('\r')
@@ -1167,27 +1191,27 @@ class rds_parser_table_qt(gr.sync_block):#START
 	     text_list=['_']*64 #clear text
 	     text_list[adr*4:adr*4+4]=segment
 	     #reset stored text:
-	     self.RDS_data[PI]["RT"]="_"*64
-	     self.RDS_data[PI]["RT_valid"]=[False]*64
+	     self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"]="_"*64
+	     self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_valid"]=[False]*64
 	     #predict RT from last texts:
 	     for rt in self.RDS_data[PI]["internals"]["RT_history"]:
 	       if rt[adr*4:adr*4+4]==list(segment):
-		 self.RDS_data[PI]["RT"]="".join(rt)
+		 self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"]="".join(rt)
 		 predicted=True
 	  
-	   self.RDS_data[PI]["RT_valid"][adr*4:adr*4+4]=[True] *4
+	   self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_valid"][adr*4:adr*4+4]=[True] *4
 	   if not predicted:
-	    self.RDS_data[PI]["RT"]="".join(text_list)
+	    self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"]="".join(text_list)
 	   
 	   #determine if (new) text is valid
-	   self.RDS_data[PI]["RT_all_valid"]=True
+	   self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_all_valid"]=True
 	   for i in range(0,text_end):
-	     if (not self.RDS_data[PI]["RT_valid"][i]):
-	      self.RDS_data[PI]["RT_all_valid"] = False
-	   if(self.RDS_data[PI]["RT_all_valid"]):
+	     if (not self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_valid"][i]):
+	      self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_all_valid"] = False
+	   if(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_all_valid"]):
 	     #textcolor="black"
 	     textcolor=""#use default color (white if background is black)
-	     l=list(self.RDS_data[PI]["RT"])
+	     l=list(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"])
 	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
 	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
 	      self.RDS_data[PI]["internals"]["RT_history"].append(l)
@@ -1205,7 +1229,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 		pass#no rt+ -> dont save
 	   else:
 	     textcolor="gray"
-	   formatted_text=self.color_text(self.RDS_data[PI]["RT"],adr*4,adr*4+4,textcolor,segmentcolor)
+	   formatted_text=self.color_text(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"],adr*4,adr*4+4,textcolor,segmentcolor)
 	   rtcol=self.colorder.index('text')
 	   self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'string':formatted_text})
 	   
@@ -1394,9 +1418,10 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    if self.debug:
 	      print("toggle bit changed on PI:%s, cleared RT-tt"%PI)
 	    self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'tooltip':""})
-	  if self.RDS_data[PI].has_key("RT"):
-	    rt=self.RDS_data[PI]["RT"]
-	    rt_valid=self.RDS_data[PI]["RT_valid"]
+	  if self.RDS_data[PI].has_key("RT_0"):
+	    ab_flag=self.RDS_data[PI]["RT_last_ab_flag"]
+	    rt=self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"]
+	    rt_valid=self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_valid"]
 	    if not tag1_type=="DUMMY_CLASS" and all(rt_valid[tag1_start:tag1_start+tag1_len+1]):
 	      self.RDS_data[PI]["RT+"][tag1_type]=rt[tag1_start:tag1_start+tag1_len+1]
 	      self.RDS_data[PI]["internals"]["RT+_times"][tag1_type]=time.time()
@@ -1414,9 +1439,10 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  tags="ir:%i,it:%i"%(item_running_bit,item_toggle_bit)
 	  rtpcol=self.colorder.index('RT+')
 	  self.signals.DataUpdateEvent.emit({'col':rtpcol,'row':port,'PI':PI,'string':tags})
-	  if(tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT")):#TODO remove duplicate code
-	    rt=self.RDS_data[PI]["RT"]
-	    rt_valid=self.RDS_data[PI]["RT_valid"]
+	  if(tag2_type=="ITEM.TITLE" and self.RDS_data[PI].has_key("RT_0")):#TODO remove duplicate code
+	    ab_flag=self.RDS_data[PI]["RT_last_ab_flag"]
+	    rt=self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"]
+	    rt_valid=self.RDS_data[PI]["RT_"+str(ab_flag)]["RT_valid"]
 	    artist="?"
 	    song="?"
 	    if all(rt_valid[tag1_start:tag1_start+tag1_len+1]):
@@ -1662,12 +1688,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         layout.addWidget(self.table)
         self.table.setHorizontalHeaderLabels(self.colorder) 
         #self.table.setMaximumHeight(300)#TODO use dynamic value
-	
-	button_layout = Qt.QHBoxLayout()
+        
+        button_layout = Qt.QHBoxLayout()
         codebutton = QtGui.QPushButton("code.interact")
         codebutton.clicked.connect(self.onCLick)
         button_layout.addWidget(codebutton)
-	ih_button = QtGui.QPushButton("show IH data")
+        ih_button = QtGui.QPushButton("show IH data")
         ih_button.clicked.connect(self.showIHdata)
         button_layout.addWidget(ih_button)
         save_button = QtGui.QPushButton("save")
@@ -1681,8 +1707,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         button_layout.addWidget(mode_button)
         layout.addLayout(button_layout)
         label_layout = Qt.QHBoxLayout()
-	self.freq_label=QtGui.QLabel("decoder frequencies:")
-	self.count_label=QtGui.QLabel("count:")
+        self.freq_label=QtGui.QLabel("decoder frequencies:")
+        #self.freq_label.setTextFormat(QtCore.Qt.RichText)
+        #self.freq_label.setTextFormat(QtCore.Qt.PlainText)
+        self.count_label=QtGui.QLabel("count:")
         label_layout.addWidget(self.freq_label)  
         label_layout.addWidget(self.count_label)  
         layout.addLayout(label_layout)
@@ -1765,7 +1793,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
     def display_data(self, event):
 	#pp.pprint(event)
 	if type(event)==dict and event.has_key('group_count'):
-	  self.count_label.setText("count:%i"%event['group_count'])
+	  self.count_label.setText("count:%02i, max:%i"%(event['group_count'],event['group_count_max']))
 	if type(event)==dict and event.has_key('decoder_frequencies'):
 	  self.freq_label.setText(event['decoder_frequencies'])
 	if type(event)==dict and event.has_key('TMC_log') and self.showTMC:
@@ -1776,17 +1804,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	  if self.tableobj.tmc_messages.matchFilter(tmc_msg,filters):
 	    self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.log_string()))
 	    self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.multi_str()))
-	  #ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
-	  #lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
-	  #reflocs=tmc_msg.location.reflocs
-	  #reflocs_cmp=unicode(reflocs, encoding="UTF-8").lower()
-	  #event_cmp=unicode(str(tmc_msg.event), encoding="UTF-8").lower()
-	  
-	  #if not reflocs_cmp.find(lf)==-1 and not event_cmp.find(ef)==-1:
-	    #message_string=tmc_msg.log_string()
-	    #self.logOutput.append(Qt.QString.fromUtf8(message_string))
-	    #if event.has_key('multi_str'):
-	      #self.logOutput.append(Qt.QString.fromUtf8(event['multi_str']))
 	if type(event)==dict and event.has_key('TMC_log_str')and self.showTMC:
 	  ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
 	  lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
@@ -1873,11 +1890,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	freq=int(self.tableobj.RDS_data[PI]['AF']['main'])
 	#print("setaudio row:%i, chan:%s, PI:%s,freq:%i"%(row,audio_channel,PI,freq))
 	send_pmt = pmt.pmt_to_python.pmt_from_dict({"cmd":"set_audio_freq","chan":audio_channel,"freq":freq})
-	#send_pmt = pmt.pmt_to_python.pmt_from_dict({"cmd":"set_audio_freq","chan":"left","freq":freq})
 	self.tableobj.message_port_pub(pmt.intern('ctrl'), send_pmt)	
 	#catch:
 	#print("no freq, cant set decoder")#show notification? popup: too intrusive, log: maybe not visible, other possibility?
-	
 	#print("freq not in RX BW")#automatically shift freq-tune?
     def getDetails(self,row):
 	PIcol=self.colorder.index('ID')
@@ -1901,8 +1916,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	try:
 	  del rds_data['blockcounts']
 	  del rds_data['PSN_valid']
-	  del rds_data['RT_valid']
-	  del rds_data['RT_valid']
+	  del rds_data["RT_0"]['RT_valid']
+	  del rds_data["RT_1"]['RT_valid']	  
+	  rds_data['internals']['RT_history']=["".join(rt) for rt in rds_data['internals']['RT_history']]#combine char lists into strings (more compact)
 	except KeyError:
 	  pass
 	l=QtGui.QLabel("Data:%s"%pp.pformat(rds_data))
