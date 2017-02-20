@@ -71,7 +71,6 @@
     <type>complex</type>
     <vlen>$insize</vlen>
   </sink>
-
   <source>
     <name>out</name>
     <type>complex</type>

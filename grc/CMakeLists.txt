@@ -25,5 +25,6 @@ install(FILES
     crfa_max_freq.xml
     crfa_smooth_vectors.xml
     crfa_stream_selector.xml
-    crfa_vector_cutter.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_vector_cutter.xml
+    crfa_decoder_compare.xml DESTINATION share/gnuradio/grc/blocks
 )

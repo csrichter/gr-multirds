@@ -39,7 +39,8 @@ GR_PYTHON_INSTALL(
     smooth_vectors.py
     chart.py
     stream_selector.py
-    vector_cutter.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    vector_cutter.py
+    decoder_compare.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################

@@ -125,7 +125,7 @@ check if pty list file exists
     <nports>$nPorts</nports>
 <!--     <optional>1</optional> -->
   </sink>
-    <sink>
+  <sink>
     <name>freq</name>
     <type>message</type>
     <optional>1</optional>

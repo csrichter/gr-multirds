@@ -1024,6 +1024,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  #249 1111 1001 = 25AF
 	  fillercode=205#1100 1101
 	  if not self.RDS_data[PI]["AF"].has_key("main") and self.RDS_data[PI].has_key("tuned_freq"):
+	  #if self.RDS_data[PI].has_key("tuned_freq"):#update main freq even if one exists -> DB problem
 	    freq=self.decode_AF_freq(array[4])
 	    if freq==self.RDS_data[PI]["tuned_freq"]:
 	      self.RDS_data[PI]["AF"]["main"]=freq

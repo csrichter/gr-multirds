@@ -21,7 +21,7 @@
 
 import numpy as np
 from gnuradio import gr
-import code,math,pmt
+import code,math,pmt,time
 
 class max_freq(gr.sync_block):
     """
@@ -40,10 +40,10 @@ class max_freq(gr.sync_block):
         self.debug=debug
         self.last_station_indices=[0]*self.num_decoders
 	self.message_port_register_out(pmt.intern('out'))
-	self.counter=0
+	self.timer=time.time()
 	self.message_port_register_in(pmt.intern('ctrl'))
 	self.set_msg_handler(pmt.intern('ctrl'), self.handle_ctrl_msg)
-	self.searchMode=True
+	self.searchMode=False
 	self.index_fixed=[False]*self.num_decoders
     def freq_to_index(self,freq):
       startfreq=self.center_freq-self.samp_rate/2
@@ -85,11 +85,9 @@ class max_freq(gr.sync_block):
 	      else:
 		      self.center_freq = int(freq)
     def work(self, input_items, output_items):
-      if self.counter<5:
-	self.counter+=1
+      if time.time()-self.timer<1:#every 1 seconds
 	return len(input_items[0])
       elif self.searchMode:
-	self.counter=0
       #in0 = input_items[0]
       #ii=input_items
         carrier_width=2
@@ -184,10 +182,10 @@ class max_freq(gr.sync_block):
 	  send_pmt = pmt.string_to_symbol(msg_string)
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
 	if self.debug:
-	  print(max_indices)
-	  print(station_indices_sorted)
-	  print(station_indices_tune)
-	  print(station_strength)
+	  #print(max_indices)
+	  #print(station_indices_sorted)
+	  #print(station_indices_tune)
+	  #print(station_strength)
 	  print(station_freqs)
 
         return len(input_items[0])

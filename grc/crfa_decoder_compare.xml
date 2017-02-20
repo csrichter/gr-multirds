@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<block>
+  <name>decoder_compare</name>
+  <key>crfa_decoder_compare</key>
+  <category>[crfa]</category>
+  <import>import crfa</import>
+  <make>crfa.decoder_compare($nPorts)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Number of Ports</name>
+    <key>nPorts</key>
+    <value>2</value>
+    <type>int</type>
+    <hide>part</hide>
+  </param>
+
+  <check>$nPorts &gt; 0</check>
+  <sink>
+    <name>in</name>
+    <type>message</type>
+    <nports>$nPorts</nports>
+<!--     <optional>1</optional> -->
+  </sink>
+</block>
