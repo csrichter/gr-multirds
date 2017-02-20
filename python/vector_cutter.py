@@ -38,7 +38,8 @@ class vector_cutter(gr.sync_block):
             name="vector_cutter",
             in_sig=[(np.complex64,insize)],
             out_sig=[(np.complex64,outsize)])
-	self.cutpoint=cutpoint
+	self.cutpoint=0
+	self.set_cutpoint(cutpoint)
 	self.insize=insize
 	self.outsize=outsize
 	#print(pad_out)
@@ -54,11 +55,12 @@ class vector_cutter(gr.sync_block):
 	      self.mask=np.concatenate((np.zeros(self.zero_len),np.ones(self.outsize-self.zero_len*2),np.zeros(self.zero_len)))
     def set_cutpoint(self, cutpoint=None):
      #print("cutpoint set to  %i"%cutpoint)
-      if cutpoint is not None:
-	      if isinstance(cutpoint, float) or isinstance(cutpoint, int):
-		      self.cutpoint=cutpoint
-	      else:
-		      self.cutpoint = int(cutpoint)
+      if cutpoint is not None and cutpoint>=0:
+        self.cutpoint = int(cutpoint)
+	      #if isinstance(cutpoint, float) or isinstance(cutpoint, int):
+		      #self.cutpoint=cutpoint
+	      #else:
+		      #self.cutpoint = int(cutpoint)
     def work(self, input_items, output_items):
         in0 = input_items[0]
         out = output_items[0]
