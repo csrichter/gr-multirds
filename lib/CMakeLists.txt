@@ -25,7 +25,8 @@ include(GrPlatform) #define LIB_SUFFIX
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND crfa_sources
-    rds_decoder_impl.cc )
+    rds_decoder_impl.cc
+    diff_add_sync_decim_impl.cc )
 
 set(crfa_sources "${crfa_sources}" PARENT_SCOPE)
 if(NOT crfa_sources)

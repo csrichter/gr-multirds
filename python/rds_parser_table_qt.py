@@ -1223,7 +1223,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	     textcolor=""#use default color (white if background is black)
 	     l=list(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"])
 	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
-	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
+	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates #TODO add 2nd order duplicates ABAB
 	      self.RDS_data[PI]["internals"]["RT_history"].append(l)
 	      if len(self.RDS_data[PI]["internals"]["RT_history"])>10:#only store last 10 RTs
 		self.RDS_data[PI]["internals"]["RT_history"].pop(0)
@@ -1678,6 +1678,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    return_string+=alphabet[alnr][index]
 	  except KeyError:
 	    return_string+="?%02X?"%ord(char)
+            print("symbol not decoded: "+"?%02X?"%ord(char)+"in string:"+return_string)
 	    #charlist[i]='?'#symbol not decoded #TODO
 	    pass
       #return "".join(charlist)
