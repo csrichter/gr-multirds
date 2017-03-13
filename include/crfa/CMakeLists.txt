@@ -22,6 +22,5 @@
 ########################################################################
 install(FILES
     api.h
-    rds_decoder.h
-    diff_add_sync_decim.h DESTINATION include/crfa
+    rds_decoder.h DESTINATION include/crfa
 )

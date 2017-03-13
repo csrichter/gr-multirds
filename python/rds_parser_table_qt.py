@@ -508,8 +508,8 @@ class tmc_message:
     try:
       msg_ltn=tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
       table_ltn=1#german table
-      if msg_ltn != table_ltn  and tableobj.debug and False:#disabled, spams log
-	print("msg_ltn:%i does not match expected table (1) on station: %s"%(msg_ltn,self.psn))
+      if msg_ltn != table_ltn  and tableobj.debug:
+	print("msg_ltn:%i does not match given table (1) on station: %s"%(msg_ltn,self.psn))
     except KeyError:
       if tableobj.debug:
 	print("no LTN found")
@@ -648,14 +648,6 @@ class mgm_tag:#mgm=multi group message
   ,5:" Equivalent of diversion bit set to '1'."
   ,6:" Increase the number of steps in the problem extent by 8."
   ,7:" Increase the number of steps in the problem extent by 16."}
-  control_codes_short={0:"urgency+=1"
-  ,1:" urgency-=1"
-  ,2:" directionality changed"
-  ,3:" dynamic/longer-lasting changed"
-  ,4:" spoken/unspoken duration changed"
-  ,5:" diversion=1"
-  ,6:" extent+=8"
-  ,7:" extent+=16"}
   @staticmethod
   def decode_time_date(raw):#label7/8 raw to datestring
     if raw<=95:
@@ -688,7 +680,7 @@ class mgm_tag:#mgm=multi group message
       if(self.label==0):
         return "duration: %i"%self.data.uint
       elif(self.label==1):
-        return "control code %i: %s"%(self.data.uint,mgm_tag.control_codes_short[self.data.uint])
+        return "control code: %i"%self.data.uint
       elif(self.label==2):
         return "length affected: %i km"%self.length_to_km(self.data.uint)
       elif(self.label==3):
@@ -1143,8 +1135,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    paging=array[4]&0xf
 	    extended_country_code=array[5]
 	    self.RDS_data[PI]["ECC"]=extended_country_code
-	    if self.debug:
-              print("PI:%s PSN:%s,ECC:%s"%(PI,self.RDS_data[PI]["PSN"],hex(extended_country_code)))
+	    #print("ECC:%s"%hex(extended_country_code))
 	  elif variant==1:
 	    TMC_info=SLC
 	  elif variant==2:
@@ -1152,7 +1143,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  elif variant==3:
 	    language_codes=SLC
 	    if self.debug:
-	      print("PI:%s PSN:%s,language_codes:%s"%(PI,self.RDS_data[PI]["PSN"],hex(language_codes)))
+	      print("language_codes:%s"%hex(language_codes))
 	  elif variant==6:
 	    #for use by broadcasters
 	    if self.debug:
@@ -1223,7 +1214,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	     textcolor=""#use default color (white if background is black)
 	     l=list(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"])
 	     rt="".join(l[0:text_end])#remove underscores(default symbol) after line end marker
-	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates #TODO add 2nd order duplicates ABAB
+	     if not self.RDS_data[PI]["internals"]["last_valid_rt"]==rt:#ignore duplicates
 	      self.RDS_data[PI]["internals"]["RT_history"].append(l)
 	      if len(self.RDS_data[PI]["internals"]["RT_history"])>10:#only store last 10 RTs
 		self.RDS_data[PI]["internals"]["RT_history"].pop(0)
@@ -1263,31 +1254,20 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    self.RDS_data[PI]["AID_list"][AID]["groupType"]=app_group
 	    self.RDS_data[PI]["AID_list"][AID]["app_name"]=app_name
 	    self.RDS_data[PI]["AID_list"][AID]["app_data"]=app_data
-	    if AID==52550:#TMC alert-c initialize
-              self.RDS_data[PI]["AID_list"][AID]["provider name"]="________"
 	    if self.log:
-	      print("new ODA: AID:%i, name:'%s', app_group:%s, station:%s" %(AID,app_name,app_group,PI))
+	      print("new ODA: AID:%i, name:%s, app_group:%s, station:%s" %(AID,app_name,app_group,PI))
 	  #decode 3A group of TMC
-	  if AID==52550:#TMC alert-c (continuously update)
-	    variant=app_data>>14 
+	  if AID==52550:#TMC alert-c
+	    variant=app_data>>14
 	    if variant==0:
-	      self.RDS_data[PI]["AID_list"][AID]["LTN"]=(app_data>>6)&0x3f#location table number (6 bits)
+	      self.RDS_data[PI]["AID_list"][AID]["LTN"]=(app_data>>6)&0x3f#location table number
 	      self.RDS_data[PI]["AID_list"][AID]["AFI"]=(app_data>>5)&0x1#alternative frequency indicator
 	      self.RDS_data[PI]["AID_list"][AID]["M"]=(app_data>>4)&0x1#transmission mode indicator
 	      #Message Geographical Scope:
-	      self.RDS_data[PI]["AID_list"][AID]["scope"]=""
-	      if (app_data>>3)&0x1==1:
-                self.RDS_data[PI]["AID_list"][AID]["scope"]+="I"#international (EUROROAD)
-              if (app_data>>2)&0x1==1:
-                self.RDS_data[PI]["AID_list"][AID]["scope"]+="N"#national
-              if (app_data>>1)&0x1==1:
-                self.RDS_data[PI]["AID_list"][AID]["scope"]+="R"#regional
-              if (app_data>>0)&0x1==1:
-                self.RDS_data[PI]["AID_list"][AID]["scope"]+="U"#urban
-	      #self.RDS_data[PI]["AID_list"][AID]["I"]=(app_data>>3)&0x1#international (EUROROAD)
-	      #self.RDS_data[PI]["AID_list"][AID]["N"]=(app_data>>2)&0x1#national
-	      #self.RDS_data[PI]["AID_list"][AID]["R"]=(app_data>>1)&0x1#regional
-	      #self.RDS_data[PI]["AID_list"][AID]["U"]=(app_data>>0)&0x1#urban
+	      self.RDS_data[PI]["AID_list"][AID]["I"]=(app_data>>3)&0x1#international (EUROROAD)
+	      self.RDS_data[PI]["AID_list"][AID]["N"]=(app_data>>2)&0x1#national
+	      self.RDS_data[PI]["AID_list"][AID]["R"]=(app_data>>1)&0x1#regional
+	      self.RDS_data[PI]["AID_list"][AID]["U"]=(app_data>>0)&0x1#urban
 	    elif variant==1:
 	      self.RDS_data[PI]["AID_list"][AID]["SID"]=(app_data>>6)&0x3f#service identifier
 	      #timing parameters (used to switch away from TMC station without missing messages):
@@ -1393,23 +1373,18 @@ class rds_parser_table_qt(gr.sync_block):#START
 	      if adr==4 or adr==5:#service provider name
 		segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
 		if self.debug:
-		  print("TMC-info adr:%i (provider name), segment:%s, station:%s"%(adr,segment,self.RDS_data[PI]["PSN"]))
-		if self.RDS_data[PI]["AID_list"].has_key(52550):
-                  text_list=list(self.RDS_data[PI]["AID_list"][52550]["provider name"])
-                  seg_adr_start=(adr-4)*4#start of segment
-                  text_list[seg_adr_start:seg_adr_start+4]=segment
-                  self.RDS_data[PI]["AID_list"][52550]["provider name"]="".join(text_list)
+		  print("TMC-info adr:%i (provider name), segment:%s"%(adr,segment))
 	      if adr== 7:#freq of tuned an mapped station (not seen yet)
 		freq_TN=tmc_y>>8
 		freq_ON=tmc_y&0xff#mapped frequency
 		if self.debug:
-		  print("TMC-info: TN:%i, station:%s"%(freq_TN,self.RDS_data[PI]["PSN"]))
+		  print("TMC-info: TN:%i"%freq_TN)
 		self.RDS_data[PI]["TMC_TN"]=freq_TN
 	    else:
 	      if self.debug:
-		print("alert plus on station %s (%s)"%(PI,self.RDS_data[PI]["PSN"]))#(not seen yet)
+		print("alert plus")#(not seen yet)
 	    
-	 #self.tableobj.RDS_data["D301"]["AID_list"][52550]["provider name"]="test____"
+	 
 	#RadioText+ (grouptype mostly 12A):
 	elif self.RDS_data[PI]["AID_list"].has_key(19415) and self.RDS_data[PI]["AID_list"][19415]["groupType"]==groupType:#RT+
 	  if not self.RDS_data[PI].has_key("RT+"):
@@ -1553,14 +1528,12 @@ class rds_parser_table_qt(gr.sync_block):#START
 	      #lock in tuned network if freq_TN matches decoder frequency
 	      if(self.RDS_data[PI].has_key("tuned_freq") and freq_TN==self.RDS_data[PI]["tuned_freq"]and not self.RDS_data[PI]["AF"].has_key("main")):
 		if self.log:
-		  print("main frequency found in 14A: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq_TN/1e6))
+		  print("main frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI]["PSN"],freq_TN/1e6))
 		self.RDS_data[PI]["AF"]["main"]=freq_TN
-		freq_str="EON_TN:%0.1fM"% (freq_TN/1e6)
-		self.signals.DataUpdateEvent.emit({'PI':PI,'freq':freq_str})
 	      #lock in ON if TN is locked in
 	      if(self.RDS_data[PI]["AF"].has_key("main") and self.RDS_data[PI]["AF"]["main"]==freq_TN and not self.RDS_data[PI_ON]["AF"].has_key("main")):
 		if self.log:
-		  print("mapped frequency found in 14A: station:%s, freq:%0.1fM"% (self.RDS_data[PI_ON]["PSN"],freq_ON/1e6))
+		  print("mapped frequency found: station:%s, freq:%0.1fM"% (self.RDS_data[PI_ON]["PSN"],freq_ON/1e6))
 		self.RDS_data[PI_ON]["AF"]["main"]=freq_ON
 		freq_str="EON:%0.1fM"% (freq_ON/1e6)
 		self.signals.DataUpdateEvent.emit({'PI':PI_ON,'freq':freq_str})
@@ -1678,7 +1651,6 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    return_string+=alphabet[alnr][index]
 	  except KeyError:
 	    return_string+="?%02X?"%ord(char)
-            print("symbol not decoded: "+"?%02X?"%ord(char)+"in string:"+return_string)
 	    #charlist[i]='?'#symbol not decoded #TODO
 	    pass
       #return "".join(charlist)
@@ -1744,7 +1716,7 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         label_layout.addWidget(self.count_label)  
         layout.addLayout(label_layout)
         #TODO set different minsize if TMC is shown
-        self.setMinimumSize(Qt.QSize(500,40*self.tableobj.nPorts))
+        self.setMinimumSize(Qt.QSize(500,50*self.tableobj.nPorts))
         if self.showTMC:
 	  self.tmc_message_label=QtGui.QLabel("TMC messages:")
 	  self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
@@ -1961,7 +1933,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         scrollArea.setWidgetResizable(True)
         scrollArea.setWidget(l)
 	view.layout().addWidget(scrollArea)
-	view.setWindowTitle(self.tableobj.RDS_data[PI]["PSN"])
 	view.exec_()
     def onCLick(self):
 	print("button clicked")	
