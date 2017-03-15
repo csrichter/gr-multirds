@@ -743,7 +743,7 @@ class rds_parser_table_qt(gr.sync_block):#START
       if self.writeDB:
 	#self.db.commit()
 	self.db.close()
-    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir,writeDB):
+    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir,writeDB,showTMC):
 	#QObject.__init__()
         gr.sync_block.__init__(self,
             name="RDS Table",
@@ -763,6 +763,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	self.log=log
 	self.debug=debug
 	self.writeDB=writeDB
+	self.showTMC=showTMC
 	self.signals=signals
 	self.RDS_data={}
 	self.change_freq_tune=slot
@@ -985,8 +986,8 @@ class rds_parser_table_qt(gr.sync_block):#START
 	self.RDS_data[PI]["blockcounts"]["any"]+=1
 	if self.RDS_data[PI]["blockcounts"]["any"]==5:
 	  self.RDS_data[PI]["blockcounts"]["any"]=0
-	  t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])#TODO only update DB every few seconds
 	  if self.writeDB:
+            t=(str(PI),groupType,self.RDS_data[PI]["blockcounts"][groupType])#TODO only update DB every few seconds
 	    db.execute("INSERT OR REPLACE INTO grouptypeCounts (PI,grouptype,count) VALUES (?,?,?)",t)
 	dots="."*self.RDS_data[PI]["blockcounts"]["any"]
 	self.RDS_data[PI]["TP"]=TP
@@ -1180,7 +1181,9 @@ class rds_parser_table_qt(gr.sync_block):#START
 	   #  self.RDS_data[PI]["RT_last_ab_flag"] =ab_flag  
 	   self.RDS_data[PI]["RT_last_ab_flag"] =ab_flag
 	   
-	   segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
+	   #segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
+	   segment=chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7])#EDIT:latedecode
+	   
 	   #print("RT:adress: %d, segment:%s"%(adr,segment))
 	   #self.signals.DataUpdateEvent.emit({'col':5,'row':port,'PI':PI,'groupType':groupType,'adress':adr,'segment':segment})
 	   text_list=list(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"])
@@ -1227,19 +1230,20 @@ class rds_parser_table_qt(gr.sync_block):#START
 	      self.RDS_data[PI]["internals"]["RT_history"].append(l)
 	      if len(self.RDS_data[PI]["internals"]["RT_history"])>10:#only store last 10 RTs
 		self.RDS_data[PI]["internals"]["RT_history"].pop(0)
-	      t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",rt)
 	      if self.writeDB:
+                t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT",self.decode_chars(rt))
 		db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	      self.RDS_data[PI]["internals"]["last_valid_rt"]=rt
 	      try:#save rt+ if it exist
 		if self.writeDB:
-		  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",str(self.RDS_data[PI]["RT+"]))
+		  t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"RT+",self.decode_chars(str(self.RDS_data[PI]["RT+"])))
 		  db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	      except KeyError:
 		pass#no rt+ -> dont save
 	   else:
 	     textcolor="gray"
-	   formatted_text=self.color_text(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"],adr*4,adr*4+4,textcolor,segmentcolor)
+	   display_text=self.decode_chars(self.RDS_data[PI]["RT_"+str(ab_flag)]["RT"].split("\r")[0])
+	   formatted_text=self.color_text(display_text,adr*4,adr*4+4,textcolor,segmentcolor)
 	   rtcol=self.colorder.index('text')
 	   self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'string':formatted_text})
 	   
@@ -1580,6 +1584,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  if self.debug:
 	    print("8A without 3A on PI:%s"%PI)
 	#else:#other group
+          #print("group of type %s not decoded on station %s"% (groupType,PI))
 	if 1==1:
 	  #printdelay=50
 	  printdelay=500
@@ -1597,7 +1602,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	        print("RT+:",end="")
 	        pp.pprint(self.RDS_data[key]["RT+"])
 	    self.printcounter=0
-	    #print("group of type %s not decoded on station %s"% (groupType,PI))
+	    
 	    
 	pr.disable() #disabled-internal-profiling
 	#end of handle_msg
@@ -1610,17 +1615,15 @@ class rds_parser_table_qt(gr.sync_block):#START
 	reflocs=tmc_msg.location.reflocs
 	if not self.TMC_data.has_key(tmc_hash):#if message new
 	  try:
-	    #message_string="TMC-message,event:%s lcn:%i,location:%s,reflocs:%s, station:%s"%(str(tmc_msg.event),tmc_msg.location.lcn,tmc_msg.location,reflocs,self.RDS_data[PI]["PSN"])
-	    #message_string=tmc_msg.log_string()
 	    self.TMC_data[tmc_hash]=tmc_msg
-	    self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':tmc_msg.multi_str()})
+	    if self.showTMC:
+              self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':tmc_msg.multi_str()})
 	    #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
 	    #self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
 	    timestring=self.RDS_data[PI]["time"]["timestring"]
-	    #message_string="%s ,locname:%s, reflocs:%s"%(str(tmc_msg.event),tmc_msg.location,reflocs)
-	    message_string=tmc_msg.db_string()
-	    t=(tmc_hash,timestring,PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),tmc_msg.multi_str().decode("utf-8"),str(tmc_msg.debug_data))
 	    if self.writeDB:
+              message_string=tmc_msg.db_string()
+              t=(tmc_hash,timestring,PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),tmc_msg.multi_str().decode("utf-8"),str(tmc_msg.debug_data))
 	      self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
 	  except Exception as e:
 	    print(e)
@@ -1665,17 +1668,23 @@ class rds_parser_table_qt(gr.sync_block):#START
       #charlist=list(charstring)
       return_string=""
       for i,char in enumerate(charstring):
-      	
-	if ord(char)<= 0b01111111:
+      	#split byte
+        alnr=(ord(char)&0xF0 )>>4 #upper 4 bit
+        index=ord(char)&0x0F #lower 4 bit 
+	if ord(char)<= 0b00011111:#control code
+          if ord(char)==0x0D or ord(char)==0x00:#end of message SWR uses: \r\0\0\0 for last block (\0 fill 4 char segment)
+            #return_string+="\r"
+            return_string+=char
+          else:
+            return_string+="{%02X}"%ord(char)#output control code
+	elif ord(char)<= 0b01111111:
 	  #charlist[i]=char #use ascii
 	  return_string+=char
 	else:
-	  #split byte
-	  alnr=(ord(char)&0xF0 )>>4 #upper 4 bit
-	  index=ord(char)&0x0F #lower 4 bit 
 	  try:
 	    #charlist[i]=alphabet[alnr][index]
 	    return_string+=alphabet[alnr][index]
+            return_string+=unichr(ord(char))#TODO remove test code and properly decide for UTF8 or EBU charset
 	  except KeyError:
 	    return_string+="?%02X?"%ord(char)
             print("symbol not decoded: "+"?%02X?"%ord(char)+"in string:"+return_string)
