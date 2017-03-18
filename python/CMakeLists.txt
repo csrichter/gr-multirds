@@ -40,7 +40,8 @@ GR_PYTHON_INSTALL(
     chart.py
     stream_selector.py
     vector_cutter.py
-    decoder_compare.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    decoder_compare.py
+    qtgui_range.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################

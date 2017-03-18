@@ -125,6 +125,7 @@ class CRWidget(QtGui.QWidget):
         self.location_filter=QtGui.QLineEdit()
 
         self.button = QtGui.QPushButton("i am a button")
+        self.button.clicked.connect(self.onCLick)
         layout.addWidget(self.button)
         
         #self.filter_label=QtGui.QLabel()

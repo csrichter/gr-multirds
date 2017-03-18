@@ -31,7 +31,7 @@ from PyQt4 import Qt, QtCore, QtGui
 import pprint,code,pickle#for easier testing
 pp = pprint.PrettyPrinter()
 import cProfile, pstats, StringIO #for profiling
-pr = cProfile.Profile()#disabled-internal-profiling
+pr = cProfile.Profile()
 
 #from threading import Timer#to periodically save DB
 
@@ -1846,16 +1846,16 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
       details_button=QtGui.QPushButton("Detail")
       details_button.clicked.connect(functools.partial(self.getDetails, row=rowPosition))
       button_layout.addWidget(details_button)
-      left_button=QtGui.QPushButton("L")
-      left_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="left"))
-      button_layout.addWidget(left_button)
-      right_button=QtGui.QPushButton("R")
-      right_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="right"))
-      button_layout.addWidget(right_button)
-      #self.table.setCellWidget(rowPosition,self.table.columnCount()-1,button_layout)
+      #2017-03-17 disabled LR buttons
+      #left_button=QtGui.QPushButton("L")
+      #left_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="left"))
+      #button_layout.addWidget(left_button)
+      #right_button=QtGui.QPushButton("R")
+      #right_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="right"))
+      #button_layout.addWidget(right_button)
+      
       cellWidget = QtGui.QWidget()
       cellWidget.setLayout(button_layout)
-      #button_col=self.table.columnCount()-1
       button_col=3
       self.table.setCellWidget(rowPosition,button_col,cellWidget)
     def display_data(self, event):
@@ -1897,7 +1897,9 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
 	    item.setText(quality_string)
 	  if event.has_key('PTY'):
 	    item=self.table.cellWidget(row,self.colorder.index('PTY'))
+	    tt=item.toolTip()
 	    item.setText(event['PTY'])
+	    item.setToolTip(tt)
 	  if event.has_key('flags'):
 	    item=self.table.cellWidget(row,self.colorder.index('PTY'))   
 	    item.setToolTip(Qt.QString(event['flags']))
