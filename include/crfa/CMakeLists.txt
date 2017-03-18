@@ -24,5 +24,6 @@ install(FILES
     api.h
     rds_decoder.h
     diff_add_sync_decim.h
-    sync_decim.h DESTINATION include/crfa
+    sync_decim.h
+    rds_decoder_redsea.h DESTINATION include/crfa
 )

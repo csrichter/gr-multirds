@@ -28,5 +28,6 @@ install(FILES
     crfa_vector_cutter.xml
     crfa_decoder_compare.xml
     crfa_diff_add_sync_decim.xml
-    crfa_sync_decim.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_sync_decim.xml
+    crfa_rds_decoder_redsea.xml DESTINATION share/gnuradio/grc/blocks
 )

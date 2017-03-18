@@ -21,53 +21,53 @@
 #ifndef INCLUDED_CRFA_RDS_DECODER_IMPL_H
 #define INCLUDED_CRFA_RDS_DECODER_IMPL_H
 
-#include <crfa/rds_decoder.h>
+#include <crfa/rds_decoder_redsea.h>
 
 namespace gr {
   namespace crfa {
 
-    class rds_decoder_impl : public rds_decoder
+    class rds_decoder_redsea_impl : public rds_decoder_redsea
     {
 public:
-	rds_decoder_impl(bool log, bool debug);
+        rds_decoder_redsea_impl(bool log, bool debug);
 
 private:
-	~rds_decoder_impl();
+        ~rds_decoder_redsea_impl();
 
       // Where all the action really happens
       int work(int noutput_items,
          gr_vector_const_void_star &input_items,
          gr_vector_void_star &output_items);
-	void enter_no_sync();
-	void enter_sync(unsigned int);
-	unsigned int calc_syndrome(unsigned long, unsigned char);
-	void decode_group(unsigned int*);
+        void enter_no_sync();
+        void enter_sync(unsigned int);
+        unsigned int calc_syndrome(unsigned long, unsigned char);
+        void decode_group(unsigned int*);
 
-	unsigned long  bit_counter;
-	unsigned long  lastseen_offset_counter, reg;
-	unsigned int   block_bit_counter;
-	unsigned int   wrong_blocks_counter;
-	unsigned int   blocks_counter;
-	unsigned int   group_good_blocks_counter;
-	unsigned int   group[4];
-	unsigned char  offset_chars[4];  // [ABCcDEx] (x=error)
-	bool           debug;
-	bool           log;
-	bool           presync;
-	bool           good_block;
-	bool           group_assembly_started;
-	unsigned char  last_wrong_blocks_counter;
-	unsigned char  lastseen_offset;
-	unsigned char  block_number;
-	enum { NO_SYNC, SYNC } d_state;
-        /*//below copied from redsea
+        unsigned long  bit_counter;
+        unsigned long  lastseen_offset_counter, reg;
+        unsigned int   block_bit_counter;
+        unsigned int   wrong_blocks_counter;
+        unsigned int   blocks_counter;
+        unsigned int   group_good_blocks_counter;
+        unsigned int   group[4];
+        unsigned char  offset_chars[4];  // [ABCcDEx] (x=error)
+        bool           debug;
+        bool           log;
+        bool           presync;
+        bool           good_block;
+        bool           group_assembly_started;
+        unsigned char  last_wrong_blocks_counter;
+        unsigned char  lastseen_offset;
+        unsigned char  block_number;
+        enum { NO_SYNC, SYNC } d_state;
+        //below copied from redsea
         enum eOffset {
           OFFSET_A, OFFSET_B, OFFSET_C, OFFSET_CI, OFFSET_D, OFFSET_INVALID
         } ;
         uint32_t calcSyndrome(uint32_t vec);
         eOffset offsetForSyndrome(uint16_t syndrome);
         eOffset nextOffsetFor(eOffset o);
-        uint32_t correctBurstErrors(uint32_t block, eOffset offset);*/
+        uint32_t correctBurstErrors(uint32_t block, eOffset offset);
         
 
     };

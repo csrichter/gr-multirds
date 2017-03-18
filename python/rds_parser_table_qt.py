@@ -320,34 +320,39 @@ class tmc_dict:
     return retStr
   def getMarkerString(self):
     markerstring=""
-    for lcn in self.messages:
-      loc=None
-      endloc=None
-      map_tag='<p>'
-      for updateClass in self.messages[lcn]:
-	message=self.messages[lcn][updateClass]
-	if message.cancellation_time==None:
-	  color="black"
-	else:
-	  color="gray"
-	if message.location.has_koord:
-	  if loc==None:#first message at this location
-	    map_tag+='<h3 style="padding: 0px;margin: 0px;">'
-	    map_tag+=message.location_text()
-	    map_tag+='</h3>'
-	    if message.cancellation_time==None:
-	      endloc=message.end_loc()#line displays length of 1st message (lowest class), that is not cancelled
-	  loc=message.location
-	  map_tag+='<div style="color: %s;">'%color
-	  map_tag+=message.map_string()
-	  map_tag+='<br />'
-	  map_tag+='</div>'
-      map_tag+='</p>'
-      if not loc==None:
-	if endloc==None or not endloc.is_valid:
-	  endloc=loc#creates line of 0 length (dot)
-	markerstring+=tmc_dict.marker_template.format(loc=loc.koord_str_google,text=map_tag,endloc=endloc.koord_str_google)
-	markerstring+="\n"
+    try:
+      for lcn in self.messages:
+        loc=None
+        endloc=None
+        map_tag='<p>'
+        for updateClass in self.messages[lcn]:
+          message=self.messages[lcn][updateClass]
+          if message.cancellation_time==None:
+            color="black"
+          else:
+            color="gray"
+          if message.location.has_koord:
+            if loc==None:#first message at this location
+              map_tag+='<h3 style="padding: 0px;margin: 0px;">'
+              map_tag+=message.location_text()
+              map_tag+='</h3>'
+              if message.cancellation_time==None:
+                endloc=message.end_loc()#line displays length of 1st message (lowest class), that is not cancelled
+            loc=message.location
+            map_tag+='<div style="color: %s;">'%color
+            map_tag+=message.map_string()
+            map_tag+='<br />'
+            map_tag+='</div>'
+        map_tag+='</p>'
+        if not loc==None:
+          if endloc==None or not endloc.is_valid:
+            endloc=loc#creates line of 0 length (dot)
+          markerstring+=tmc_dict.marker_template.format(loc=loc.koord_str_google,text=map_tag,endloc=endloc.koord_str_google)
+          markerstring+="\n"
+    except UnicodeDecodeError as e:
+      print(e)
+      code.interact(local=locals())
+      pass
     return markerstring
   
   
@@ -445,11 +450,12 @@ class tmc_message:
     str_list=[str(elem) for elem in self.events]
     return str(", ".join(str_list))
   def log_string(self):
-    return str(self.event.updateClass)+": "+self.getTime()+": "+self.location_text()+": "+self.events_string()+"; "+self.info_str()+"; "+self.psn
+    return str(self.event.updateClass)+": "+self.getTime()+": "+self.location_text()+": "+self.events_string()+"; "+self.info_str()+"; "+self.psn.encode("utf-8")
+    #2017-03-16 fix:self.psn.encode("utf-8"),  utf8 decoding happens later
   def db_string(self):
     return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()+"; "+self.info_str()
   def map_string(self):
-    return '<span title="%s">'%self.multi_str()+str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+self.info_str()+"; "+self.psn+"</span>"
+    return '<span title="%s">'%self.multi_str()+str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+self.info_str()+"; "+self.psn.encode("utf-8")+"</span>"
   def end_loc(self):
     return self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
   def location_text(self):
@@ -489,7 +495,8 @@ class tmc_message:
       #E
       #EventCode: EventText
       #F   
-    return str(text)
+    #return unicode(text,encoding="utf-8")
+    return text
   def __str__(self):
     return str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+"; "+self.multi_str()
   def __repr__(self):
@@ -904,6 +911,22 @@ class rds_parser_table_qt(gr.sync_block):#START
 	  self.RDS_data[PI]={}
 	  #self.RDS_data[PI]["blockcounts"]={}# no defaults (works aswell)
 	  #defaults are to keep colors in piechart  consistent between stations:
+	  
+	  coverage_area={"0":"local,","1":"international,","2":"national,","3":"supranational,"}
+	  pi_str=""
+	  if list(PI)[1] in "456789ABCDEF":
+            pi_str+="regional, "
+          else:
+            pi_str+=coverage_area[list(PI)[1]]
+	  bundeslaender={"0":"Baden-Württemberg","1":"Bayern","2":"Berlin","3":"Brandenburg","4":"Bremen und Bremerhaven",
+ "5":"Hamburg","6":"Hessen","7":"Mecklenburg-Vorpommern","8":"Niedersachsen","9":"Nordrhein-Westfalen","A":"Rheinland-Pfalz",
+ "B":"Saarland","C":"Sachsen","D":"Sachsen-Anhalt","E":"Schleswig-Holstein","F":"Thüringen"}
+	  if list(PI)[0] in "D1":
+            pi_str+="germany?, "
+            pi_str+=bundeslaender[list(PI)[2]]+", "
+            pi_str+="NR:"+list(PI)[3]
+          self.RDS_data[PI]["CC"]=list(PI)[0]
+	  self.RDS_data[PI]["PI-meaning"]=pi_str
 	  self.RDS_data[PI]["blockcounts"]={"0A":0,"1A":0,"2A":0,"3A":0,"4A":0,"6A":0,"8A":0,"12A":0,"14A":0}
 	  self.RDS_data[PI]["blockcounts"]["any"]=0
 	  self.RDS_data[PI]["AID_list"]={}
@@ -1661,10 +1684,21 @@ class rds_parser_table_qt(gr.sync_block):#START
 	
     def decode_chars(self,charstring):
       alphabet={
+      0b0010:u" !\#¤%&'()*+,-./",
+      0b0011:u"0123456789:;<=>?",
+      0b0100:u"@ABCDEFGHIJKLMNO",
+      0b0101:u"PQRSTUVWXYZ[\]―_",
+      0b0110:u"‖abcdefghijklmno",
+      0b0111:u"pqrstuvwxyz{|}¯ ",
       0b1000:u"áàéèíìóòúùÑÇŞßiĲ",
-      0b1001:u"âäêëîïôöûüñçş??ĳ",
+      0b1001:u"âäêëîïôöûüñçşǧıĳ",
+      0b1010:u"ªα©‰Ǧěňőπ€£$←↑→↓",
+      0b1011:u"º¹²³±İńűµ¿÷°¼½¾§",
       0b1100:u"ÁÀÉÈÍÌÓÒÚÙŘČŠŽĐĿ",
-      0b1101:u"ÂÄÊËÎÏÔÖÛÜřčšžđŀ"}
+      0b1101:u"ÂÄÊËÎÏÔÖÛÜřčšžđŀ",
+      0b1110:u"ÃÅÆŒŷÝÕØÞŊŔĆŚŹŦð",
+      0b1111:u"ãåæœŵýõøþŋŕćśźŧ"}#0xff should not occur (not in standard)
+
       #charlist=list(charstring)
       return_string=""
       for i,char in enumerate(charstring):
@@ -1677,20 +1711,16 @@ class rds_parser_table_qt(gr.sync_block):#START
             return_string+=char
           else:
             return_string+="{%02X}"%ord(char)#output control code
-	elif ord(char)<= 0b01111111:
-	  #charlist[i]=char #use ascii
-	  return_string+=char
+#	elif ord(char)<= 0b01111111: #real encoding slightly different from ascii
+#	  return_string+=char#use ascii
 	else:
 	  try:
-	    #charlist[i]=alphabet[alnr][index]
 	    return_string+=alphabet[alnr][index]
-            return_string+=unichr(ord(char))#TODO remove test code and properly decide for UTF8 or EBU charset
+            #return_string+=unichr(ord(char))#TODO: properly decide for UTF8 or EBU charset
 	  except KeyError:
-	    return_string+="?%02X?"%ord(char)
+	    return_string+="?%02X?"%ord(char)#symbol not decoded
             print("symbol not decoded: "+"?%02X?"%ord(char)+"in string:"+return_string)
-	    #charlist[i]='?'#symbol not decoded #TODO
 	    pass
-      #return "".join(charlist)
       return return_string
     def color_text(self, text, start,end,textcolor,segmentcolor):
       #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])

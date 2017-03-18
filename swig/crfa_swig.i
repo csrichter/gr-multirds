@@ -11,6 +11,7 @@
 #include "crfa/rds_decoder.h"
 #include "crfa/diff_add_sync_decim.h"
 #include "crfa/sync_decim.h"
+#include "crfa/rds_decoder_redsea.h"
 %}
 
 %include "crfa/rds_decoder.h"
@@ -19,3 +20,5 @@ GR_SWIG_BLOCK_MAGIC2(crfa, rds_decoder);
 GR_SWIG_BLOCK_MAGIC2(crfa, diff_add_sync_decim);
 %include "crfa/sync_decim.h"
 GR_SWIG_BLOCK_MAGIC2(crfa, sync_decim);
+%include "crfa/rds_decoder_redsea.h"
+GR_SWIG_BLOCK_MAGIC2(crfa, rds_decoder_redsea);

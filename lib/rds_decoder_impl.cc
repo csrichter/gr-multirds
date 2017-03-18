@@ -28,6 +28,8 @@
 #include <gnuradio/io_signature.h>
 #include "constants.h"
 #include "rds_decoder_impl.h"
+#include <map>
+#include <vector>
 
 namespace gr {
   namespace crfa {
@@ -260,7 +262,9 @@ int rds_decoder_impl::work (int noutput_items,
 		bit_counter++;
 	}
 	return noutput_items;
-   }/*work function*/
+   }/*end of work function*/
+   
+
   } /* namespace crfa */
 } /* namespace gr */
 
