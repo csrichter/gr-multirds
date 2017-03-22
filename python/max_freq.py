@@ -43,7 +43,7 @@ class max_freq(gr.sync_block):
 	self.timer=time.time()
 	self.message_port_register_in(pmt.intern('ctrl'))
 	self.set_msg_handler(pmt.intern('ctrl'), self.handle_ctrl_msg)
-	self.searchMode=False
+	self.searchMode=True
 	self.index_fixed=[False]*self.num_decoders
     def freq_to_index(self,freq):
       startfreq=self.center_freq-self.samp_rate/2
@@ -51,6 +51,12 @@ class max_freq(gr.sync_block):
       #(freq-startfreq)*self.fft_len/self.samp_rate=index
       index=(freq-startfreq)*self.fft_len/self.samp_rate
       return index
+    def index_to_freq(self,index):
+      startfreq=self.center_freq-self.samp_rate/2
+      index=(freq-startfreq)*self.fft_len/self.samp_rate
+      freq=index*self.samp_rate/self.fft_len+startfreq
+      return freq
+    
     def handle_ctrl_msg(self,msg):
       m = pmt.pmt_to_python.pmt_to_dict(msg)
       if m.has_key("cmd") and m["cmd"]=="set_audio_freq":
@@ -93,11 +99,13 @@ class max_freq(gr.sync_block):
         carrier_width=2
         carrier=self.fft_len/2
         numbers=np.delete(input_items[0][0],range(carrier-carrier_width,carrier+carrier_width+1))#read input and disregard center (hackrf LO)
-        threshold=40# uni
+        #threshold=40# uni
         #threshold=60#home
+        threshold=np.mean(numbers)#2017-03-21 fft-multi-decoder
         #minimum number of consecutive maximums (in fft domain) to consider signal as station:
         #min_consec_max_threshold=1#uni
-        min_consec_max_threshold=3#home
+        #min_consec_max_threshold=3#home
+        min_consec_max_threshold=6#2017-03-21 fft-multi-decoder
         fuzzyness=2#uni
         #fuzzyness=10#home
         
@@ -133,15 +141,37 @@ class max_freq(gr.sync_block):
           if count>=min_consec_max_threshold:
             threshold_reached=True
           last_index=i
+          
+        same_station_threshold=int(100000*self.fft_len/self.samp_rate)#0.1mhz
+        #group similar indices:
+        lastindex=0
+        group=None
+        station_indices_grouped=[]
+        for idx in station_indices:
+          if group==None: #start new group
+            group=[idx]
+          elif (idx-lastindex)<same_station_threshold: #add to group
+            group.append(idx)
+          elif group!=None:#finish group
+            group_mean=np.mean(np.array(group))
+            station_indices_grouped.append(int(group_mean))
+            group=[idx]#first non-member of group
+          lastindex=idx
+        
+        
         #sort station_indices by signal strength (dont bother decoding quiet stations)
-        station_indices_sorted=sorted(station_indices,reverse=True,key=lambda elem:numbers[elem])
+        station_indices_sorted=sorted(station_indices_grouped,reverse=True,key=lambda elem:numbers[elem])
         
         #prevents back and forth switching if two station have similar signal strength
+        
+        
         station_indices_trunc=list(station_indices_sorted)#copy list
         del station_indices_trunc[self.num_decoders:]#remove non decodable (too quiet) incidices
         
         station_indices_tune=[0]*self.num_decoders
-        same_station_threshold=3
+        
+        same_station_threshold=int(500000*self.fft_len/self.samp_rate)#0.5mhz
+        #same_station_threshold=3
         new_stations=[]
         #add fixed stations:
         for i,old_freq in enumerate(self.last_station_indices):
@@ -183,6 +213,10 @@ class max_freq(gr.sync_block):
 	  self.message_port_pub(pmt.intern('out'), send_pmt)
 	if self.debug:
 	  #print(max_indices)
+	  #print(np.mean(numbers))
+	  #print(len(max_indices))
+	  #print(station_indices)
+	  #print(station_indices_grouped)
 	  #print(station_indices_sorted)
 	  #print(station_indices_tune)
 	  #print(station_strength)
