@@ -53,7 +53,6 @@ class max_freq(gr.sync_block):
       return index
     def index_to_freq(self,index):
       startfreq=self.center_freq-self.samp_rate/2
-      index=(freq-startfreq)*self.fft_len/self.samp_rate
       freq=index*self.samp_rate/self.fft_len+startfreq
       return freq
     

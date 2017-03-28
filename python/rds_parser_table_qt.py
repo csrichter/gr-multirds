@@ -455,7 +455,7 @@ class tmc_message:
   def db_string(self):
     return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()+"; "+self.info_str()
   def map_string(self):
-    return '<span title="%s">'%self.multi_str()+str(self.event.updateClass)+": "+self.getTime()+": "+self.events_string()+self.info_str()+"; "+self.psn.encode("utf-8")+"</span>"
+    return '<span title="%s">'%self.getDate()+str(self.event.updateClass)+": "+self.getTime()+'</span><span title="%s">'%self.multi_str()+": "+self.events_string()+self.info_str()+"; "+self.psn.encode("utf-8")+"</span>"
   def end_loc(self):
     return self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
   def location_text(self):
@@ -503,6 +503,11 @@ class tmc_message:
     #event_name=self.ecl_dict[self.tmc_event][1]
     #message_string="TMC-message,event:%s location:%i,reflocs:%s, station:%s"%(event_name,self.tmc_location,self.ref_locs(self.tmc_location,""),self.RDS_data[PI]["PSN"])
     return "single:%i,complete:%i,event:%i location:%s"%(self.is_single,self.is_complete,self.event.ecn,self.location)
+  def getDate(self):
+    if self.hastime:
+      return self.datetime_received.strftime("%Y-%m-%d")
+    else:
+      return "no valid date"
   def getTime(self):#always returns string
     if self.hastime:
       return self.datetime_received.strftime("%H:%M")
@@ -1168,7 +1173,7 @@ class rds_parser_table_qt(gr.sync_block):#START
 	    extended_country_code=array[5]
 	    self.RDS_data[PI]["ECC"]=extended_country_code
 	    if self.debug:
-              print("PI:%s PSN:%s,ECC:%s"%(PI,self.RDS_data[PI]["PSN"],hex(extended_country_code)))
+              print("1A variant 0: PI:%s PSN:%s,ECC:%s"%(PI,self.RDS_data[PI]["PSN"],hex(extended_country_code)))
 	  elif variant==1:
 	    TMC_info=SLC
 	  elif variant==2:
@@ -1697,7 +1702,7 @@ class rds_parser_table_qt(gr.sync_block):#START
       0b1100:u"ÁÀÉÈÍÌÓÒÚÙŘČŠŽĐĿ",
       0b1101:u"ÂÄÊËÎÏÔÖÛÜřčšžđŀ",
       0b1110:u"ÃÅÆŒŷÝÕØÞŊŔĆŚŹŦð",
-      0b1111:u"ãåæœŵýõøþŋŕćśźŧ"}#0xff should not occur (not in standard)
+      0b1111:u"ãåæœŵýõøþŋŕćśźŧ "}#0xff should not occur (not in standard) (but occured 2017-03-04-9:18 , probably transmission error)
 
       #charlist=list(charstring)
       return_string=""

@@ -22,13 +22,18 @@
 #
 
 from PyQt4 import Qt, QtCore, QtGui
+import pmt
+from gnuradio import gr
 
-
-class qtgui_range(object):
+class qtgui_range(gr.basic_block):
     def set_test(self,value):
         print("test callback invoked")
         print(value)
     def __init__(self, minv, maxv, step, default, min_length):
+        gr.basic_block.__init__(self,
+            name="qtgui_range",
+            in_sig=None,
+            out_sig=None)
         self.min = float(minv)
         self.max = float(maxv)
         self.step = float(step)
@@ -36,7 +41,6 @@ class qtgui_range(object):
         self.min_length = min_length
         self.find_precision()
         self.find_nsteps()
-
     def find_precision(self):
         # Get the decimal part of the step
         temp = str(float(self.step) - int(self.step))[2:]
@@ -67,15 +71,22 @@ class qtgui_range(object):
 
 
 class RangeWidget(QtGui.QWidget):
-    def set_test(value):
-        print("test callback invoked on widget")
-        print(value)
+    def update_gui(self,value):
+        #print("update_gui called on widget %s"%self.label)
+        #print(value)
+        #self.d_widget.slider.setValue(value)
+        if self.style=="counter_slider":
+          self.d_widget.counter.setValue(value)
+        else:
+          self.d_widget.setValue(value)
+        #self.notifyChanged(self.rangeType(value))
     def __init__(self, ranges, slot, label, style, rangeType=float):
         """ Creates the QT Range widget """
         QtGui.QWidget.__init__(self)
-
+         
         self.range = ranges
         self.style = style
+        self.label=label
 
         # rangeType tells the block how to return the value as a standard
         self.rangeType = rangeType
@@ -161,7 +172,6 @@ class RangeWidget(QtGui.QWidget):
 
         def changed(self, value):
             """ Handle the valueChanged signal and map the value into the correct range """
-            print("gui changed")
             val = self.range.map_range(value)
             self.notifyChanged(self.rangeType(val))
 

@@ -136,8 +136,14 @@ check if pty list file exists
     <optional>1</optional>
   </source>
  
-  <doc>show RDS data from multiple stations in QT table
-  input: raw group data (array of ints)
-  4x2 raw block data, 4x1 checksums, 1x1 number of valid blocks (of last 50)</doc>
+  <doc>show RDS data from multiple stations in QT table \
+  input: raw group data (array of ints) \
+  4x2 raw block data, 4x1 offset chars, 1x1 number of valid blocks (of last 50) \
+  [block1_upper,block1_lower,block2_upper,block2_lower,...,offset1,offset2,offset3,offset4,numerrors]\\
+  
+  The GUI hint can be used to position the widget within the application. \
+  The hint is of the form "tab_id@tab_index: row, col, row_span, col_span" \
+  Both the tab specification and the grid position are optional.
+  </doc>
 
 </block>

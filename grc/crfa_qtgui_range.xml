@@ -15,10 +15,12 @@
 $(range) = qtgui_range($start, $stop, $step, $value, $min_len)
 $(win) = RangeWidget($range, self.set_$(id), $label, "$widget", $rangeType)
 $(gui_hint()($win))</make>
-  <callback>self.freq2_range.set_test($value);</callback>
-  <callback>self.set_$(id)($value)</callback>
-  
+  <!--<callback>self.freq2_range.set_test($value);</callback>-->
+<!--   <callback>self.set_$(id)($value)</callback> -->
+<!--   <callback>set_test($(id));</callback> -->
 
+<!--  <callback>self._$(id)_win.set_test($(id));</callback>-->
+  
   <param>
     <name>Label</name>
     <key>label</key>
@@ -116,7 +118,11 @@ $(gui_hint()($win))</make>
 
   <check>$start &lt;= $value &lt;= $stop</check>
   <check>$start &lt; $stop</check>
-
+<!--  <sink>
+    <name>set</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>-->
   <doc>
     This block creates a variable with a slider. \
     Leave the label blank to use the variable id as the label. \

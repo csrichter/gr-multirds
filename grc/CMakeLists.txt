@@ -30,5 +30,6 @@ install(FILES
     crfa_diff_add_sync_decim.xml
     crfa_sync_decim.xml
     crfa_rds_decoder_redsea.xml
-    crfa_qtgui_range.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_qtgui_range.xml
+    crfa_variable_setter.xml DESTINATION share/gnuradio/grc/blocks
 )
