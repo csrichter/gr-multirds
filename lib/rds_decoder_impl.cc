@@ -54,6 +54,7 @@ namespace gr {
 	set_output_multiple(104);  // 1 RDS datagroup = 104 bits
 	message_port_register_out(pmt::mp("out"));
 	enter_no_sync();
+        std::cout <<"i am old"<<std::endl;
 }
 
     /*

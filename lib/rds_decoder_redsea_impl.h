@@ -39,35 +39,37 @@ private:
          gr_vector_const_void_star &input_items,
          gr_vector_void_star &output_items);
         void enter_no_sync();
-        void enter_sync(unsigned int);
-        unsigned int calc_syndrome(unsigned long, unsigned char);
-        void decode_group(unsigned int*);
+        void enter_sync(uint16_t);
+        uint16_t calc_syndrome(uint32_t, uint8_t);
+        void decode_group(uint16_t*);
 
-        unsigned long  bit_counter;
-        unsigned long  lastseen_offset_counter, reg;
-        unsigned int   block_bit_counter;
-        unsigned int   wrong_blocks_counter;
-        unsigned int   blocks_counter;
-        unsigned int   group_good_blocks_counter;
-        unsigned int   group[4];
-        unsigned char  offset_chars[4];  // [ABCcDEx] (x=error)
+        uint32_t  bit_counter;
+        uint32_t  lastseen_offset_counter, reg;
+        uint16_t   block_bit_counter;
+        uint16_t   wrong_blocks_counter;
+        uint16_t   blocks_counter;
+        uint16_t   group_good_blocks_counter;
+        uint16_t   group[4];
+        uint8_t  offset_chars[4];  // [ABCcDEx] (x=error)
         bool           debug;
         bool           log;
         bool           presync;
         bool           good_block;
         bool           group_assembly_started;
-        unsigned char  last_wrong_blocks_counter;
-        unsigned char  lastseen_offset;
-        unsigned char  block_number;
+        uint8_t  last_wrong_blocks_counter;
+        uint8_t  lastseen_offset;
+        uint8_t  block_number;
+        std::map<std::pair<uint16_t, char>, uint32_t> kErrorLookup;
         enum { NO_SYNC, SYNC } d_state;
         //below copied from redsea
         enum eOffset {
           OFFSET_A, OFFSET_B, OFFSET_C, OFFSET_CI, OFFSET_D, OFFSET_INVALID
         } ;
+        std::map<std::pair<uint16_t, char>, uint32_t> makeErrorLookupTable();
         uint32_t calcSyndrome(uint32_t vec);
         eOffset offsetForSyndrome(uint16_t syndrome);
         eOffset nextOffsetFor(eOffset o);
-        uint32_t correctBurstErrors(uint32_t block, eOffset offset);
+        uint32_t correctBurstErrors(uint32_t block, char offset);
         
 
     };

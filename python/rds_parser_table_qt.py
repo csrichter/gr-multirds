@@ -471,7 +471,7 @@ class tmc_message:
       else:
 	print(offset_loc)
 	offset_loc_name="###INVALID###"
-      templates={"de_1":"{A}, {B} in Richtung {C}"#codeing handbook: zwischen {D} und {E}, sprachdurchsagen: zwischen {E} und {D}
+      templates={"de_1":"{A}, {B} in Richtung {C}"#coding handbook: zwischen {D} und {E}, sprachdurchsagen(manchmal): zwischen {E} und {D} TODO: swap D and E if offset-dir negative
 		    ,"de_2a":", zwischen {D} und {E}"
 		    ,"de_2b":", bei {D}"#extent==0
 		    ,"en_1":"{A}, {B} {C}"

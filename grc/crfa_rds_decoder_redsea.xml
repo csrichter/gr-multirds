@@ -4,7 +4,7 @@
   <key>crfa_rds_decoder_redsea</key>
   <category>[crfa]</category>
   <import>import crfa</import>
-  <make>crfa.rds_decoder($log, $debug)</make>
+  <make>crfa.rds_decoder_redsea($log, $debug)</make>
         <param>
                 <name>Log</name>
                 <key>log</key>

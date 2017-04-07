@@ -54,6 +54,10 @@ namespace gr {
         set_output_multiple(104);  // 1 RDS datagroup = 104 bits
         message_port_register_out(pmt::mp("out"));
         enter_no_sync();
+        std::map<std::pair<uint16_t, char>, uint32_t> kErrorLookup = makeErrorLookupTable();
+       
+        std::cout<< "i am new"<< std::endl;
+        std::cout<<  kErrorLookup.at({704, 'A'})<< std::endl;
 }
 
     /*
@@ -75,7 +79,7 @@ void rds_decoder_redsea_impl::enter_no_sync() {
         d_state = NO_SYNC;
 }
 
-void rds_decoder_redsea_impl::enter_sync(unsigned int sync_block_number) {
+void rds_decoder_redsea_impl::enter_sync(uint16_t sync_block_number) {
         pmt::pmt_t data(pmt::PMT_T);
         //pmt::pmt_t meta(pmt::PMT_NIL);
         pmt::pmt_t meta(pmt::from_long(1));
@@ -89,14 +93,12 @@ void rds_decoder_redsea_impl::enter_sync(unsigned int sync_block_number) {
         group_assembly_started = false;
         d_state                = SYNC;
 }
-
 /* see Annex B, page 64 of the standard */
-unsigned int rds_decoder_redsea_impl::calc_syndrome(unsigned long message,
-                unsigned char mlen) {
-        unsigned long reg = 0;
-        unsigned int i;
-        const unsigned long poly = 0x5B9;
-        const unsigned char plen = 10;
+uint16_t rds_decoder_redsea_impl::calc_syndrome(uint32_t message,uint8_t mlen) {
+        uint32_t reg = 0;
+        uint16_t i;
+        const uint32_t poly = 0x5B9;
+        const uint8_t plen = 10;
 
         for (i = mlen; i > 0; i--)  {
                 reg = (reg << 1) | ((message >> (i-1)) & 0x01);
@@ -109,10 +111,51 @@ unsigned int rds_decoder_redsea_impl::calc_syndrome(unsigned long message,
         return (reg & ((1<<plen)-1));   // select the bottom plen bits of reg
 }
 
-void rds_decoder_redsea_impl::decode_group(unsigned int *group) {
+//redsea stuff:
+const unsigned kBitmask16 = 0x000FFFF;
+const unsigned kBitmask26 = 0x3FFFFFF;
+const unsigned kBitmask28 = 0xFFFFFFF;
+std::map<std::pair<uint16_t, char>, uint32_t> rds_decoder_redsea_impl::makeErrorLookupTable() {
+  std::map<std::pair<uint16_t, char>, uint32_t> result;
+/*static const unsigned int offset_pos[5]={0,1,2,3,2};
+static const unsigned int offset_word[5]={252,408,360,436,848};
+static const unsigned int syndrome[5]={383,14,303,663,748};
+static const char * const offset_name[]={"A","B","C","D","c"};*/
+dout << "constructing error lookup table"<<std::endl; 
+  for (uint8_t offset_num=0;offset_num<5;offset_num++) {
+    // "...the error-correction system should be enabled, but should be
+    // restricted by attempting to correct bursts of errors spanning one or two
+    // bits."
+    // Kopitz & Marks 1999: "RDS: The Radio Data System", p. 224
+    for (uint32_t e=0x1;e <= 0x3;e+=0x2) {//for (uint32_t e : {0x1, 0x3}) {
+      for (int shift=0; shift < 26; shift++) {
+        uint32_t errvec = ((e << shift) & kBitmask26);
+        uint16_t sy = calc_syndrome(errvec ^ offset_word[offset_num],26);
+        result.insert({{sy, offset_name[offset_num]}, errvec});
+        //dout << "adding  sy:"<<sy<<"\t\toffset:"<<offset_name[offset_num]<<"\terrvec:"<<std::bitset<32>(errvec) <<std::endl;
+      }
+    }
+  }
+  return result;
+}
+//end redsea stuff
+uint32_t rds_decoder_redsea_impl::correctBurstErrors(uint32_t block, char offset) {
+  uint16_t syndrome = calc_syndrome(block,26);
+  uint32_t corrected_block = block;
+  dout << "trying to correct sy:"<<syndrome<<"\t\toffset:"<<offset<<std::endl;
+  if (kErrorLookup.count({syndrome, offset}) > 0) {
+    uint32_t err = kErrorLookup.at({syndrome, offset});
+    dout << "correcting"<<std::endl;
+    corrected_block ^= err;
+  }
+
+  return corrected_block;
+}
+
+void rds_decoder_redsea_impl::decode_group(uint16_t *group) {
         // raw data bytes, as received from RDS.
         // 8 info bytes, followed by 4 RDS offset chars: ABCD/ABcD/EEEE (in US)
-        unsigned char bytes[13];
+        uint8_t bytes[13];
 
         // RDS information words
         bytes[0] = (group[0] >> 8U) & 0xffU;
@@ -143,19 +186,19 @@ int rds_decoder_redsea_impl::work (int noutput_items,
 {
         const bool *in = (const bool *) input_items[0];
 
-        dout << "RDS data decoder at work: input_items = "
+        /*dout << "RDS data decoder at work: input_items = "
                 << noutput_items << ", /104 = "
-                << noutput_items / 104 << std::endl;
+                << noutput_items / 104 << std::endl;*/
 
         int i=0,j;
-        unsigned long bit_distance, block_distance;
-        unsigned int block_calculated_crc, block_received_crc, checkword,dataword;
-        unsigned int reg_syndrome;
-        unsigned char offset_char('x');  // x = error while decoding the word offset
+        uint32_t bit_distance, block_distance;
+        uint16_t block_calculated_crc, block_received_crc, checkword,dataword;
+        uint16_t reg_syndrome;
+        uint8_t offset_char('x');  // x = error while decoding the word offset
 
 /* the synchronization process is described in Annex C, page 66 of the standard */
         while (i<noutput_items) {
-                reg=(reg<<1)|in[i];             // reg contains the last 26 rds bits
+                reg=(reg<<1)|in[i];             // uint32_t reg contains the last 26 rds bits
                 switch (d_state) {
                         case NO_SYNC:
                                 reg_syndrome = calc_syndrome(reg,26);
@@ -186,69 +229,6 @@ int rds_decoder_redsea_impl::work (int noutput_items,
 /* wait until 26 bits enter the buffer */
                                 if (block_bit_counter<25) block_bit_counter++;
                                 else {
-                                      /*uint32_t block = reg;
-    uint16_t message = block >> 10;
-
-    received_offset_ = offsetForSyndrome(calcSyndrome(block));
-
-    if (!acquireSync())
-      continue;
-
-    block_counter_++;
-    bool was_valid_word = true;
-
-    if (expected_offset_ == OFFSET_C && received_offset_ == OFFSET_CI)
-      expected_offset_ = OFFSET_CI;
-
-    block_has_errors_[block_counter_ % block_has_errors_.size()] = false;
-
-    if (received_offset_ != expected_offset_) {
-      block_has_errors_[block_counter_ % block_has_errors_.size()] = true;
-
-      was_valid_word = false;
-
-      // Detect & correct clock slips (Section C.1.2)
-      if (expected_offset_ == OFFSET_A && pi_ != 0 &&
-          ((wideblock_ >> 12) & kBitmask16) == pi_) {
-        message = pi_;
-        wideblock_ >>= 1;
-        received_offset_ = OFFSET_A;
-      } else if (expected_offset_ == OFFSET_A && pi_ != 0 &&
-          ((wideblock_ >> 10) & kBitmask16) == pi_) {
-        message = pi_;
-        wideblock_ = (wideblock_ << 1) + getNextBit();
-        received_offset_ = OFFSET_A;
-        left_to_read_ = 25;
-      } else {
-        uint32_t corrected_block = correctBurstErrors(block, expected_offset_);
-        if (corrected_block != block) {
-          message = corrected_block >> 10;
-          received_offset_ = expected_offset_;
-        }
-      }
-
-      // Still no valid syndrome
-      if (received_offset_ != expected_offset_)
-        uncorrectable();
-    }
-
-    // Error-free block received
-
-    if (received_offset_ == expected_offset_) {
-      if (expected_offset_ == OFFSET_CI)
-        group.setCI(message);
-      else
-        group.set(block_number_for_offset[expected_offset_], message);
-
-      if (group.hasPi())
-        pi_ = group.pi();
-    }
-
-    expected_offset_ = nextOffsetFor(expected_offset_);
-
-    if (expected_offset_ == OFFSET_A) {
-      break;
-    }*/
                                         good_block=false;
                                         dataword=(reg>>10) & 0xffff;//data part of received block (upper 16 bits)
                                         block_calculated_crc=calc_syndrome(dataword,16);
@@ -261,13 +241,24 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                                         good_block=true;
                                                         offset_char = 'C';
                                                 } else {
-                                                        block_received_crc=checkword^offset_word[4];
-                                                        if (block_received_crc==block_calculated_crc) {
-                                                                good_block=true;
-                                                                offset_char = 'c';  // C' (C-Tag)
-                                                        } else {
-                                                                wrong_blocks_counter++;
-                                                                good_block=false;
+                                                        //try correcting:
+                                                        uint32_t corrected_block= correctBurstErrors(reg,'C');
+                                                        if(corrected_block != reg){
+                                                          good_block=true;
+                                                          dataword=(corrected_block>>10) & 0xffff;
+                                                          checkword=corrected_block & 0x3ff;
+                                                          offset_char = 'C';
+                                                          lout << "corrected error"<<std::endl;
+                                                        }
+                                                        else{
+                                                          block_received_crc=checkword^offset_word[4];
+                                                          if (block_received_crc==block_calculated_crc) {
+                                                                  good_block=true;
+                                                                  offset_char = 'c';  // C' (C-Tag)
+                                                          } else {
+                                                                  wrong_blocks_counter++;
+                                                                  good_block=false;
+                                                          }
                                                         }
                                                 }
                                         }
@@ -279,11 +270,23 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                                         else if (block_number==1) offset_char = 'B';
                                                         else if (block_number==3) offset_char = 'D';
                                                 } else {
+                                                  //try correcting:
+                                                  uint32_t corrected_block= correctBurstErrors(reg,expected_offset_char[block_number]);
+                                                  if(corrected_block != reg) {//syndrome found in table ^= correction worked
+                                                        good_block=true;
+                                                        dataword=(corrected_block>>10) & 0xffff;
+                                                        checkword=corrected_block & 0x3ff;
+                                                        lout << "corrected error"<<std::endl;
+                                                        offset_char=expected_offset_char[block_number];
+                                                  }
+                                                  else{
                                                         wrong_blocks_counter++;
                                                         good_block=false;
+                                                  }
+                                                  
                                                 }
                                         }
-/* done checking CRC */
+/* done checking CRC */                 
                                         if (block_number==0 && good_block) {
                                                 group_assembly_started=true;
                                                 group_good_blocks_counter=1;
