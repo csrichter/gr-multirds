@@ -42,7 +42,8 @@ GR_PYTHON_INSTALL(
     vector_cutter.py
     decoder_compare.py
     qtgui_range.py
-    variable_setter.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    variable_setter.py
+    tmc_classes.py DESTINATION ${GR_PYTHON_DIR}/crfa
 )
 
 ########################################################################
