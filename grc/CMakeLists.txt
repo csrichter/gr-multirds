@@ -31,5 +31,6 @@ install(FILES
     crfa_sync_decim.xml
     crfa_rds_decoder_redsea.xml
     crfa_qtgui_range.xml
-    crfa_variable_setter.xml DESTINATION share/gnuradio/grc/blocks
+    crfa_variable_setter.xml
+    crfa_tmc_parser.xml DESTINATION share/gnuradio/grc/blocks
 )

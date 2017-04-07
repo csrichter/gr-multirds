@@ -5,7 +5,9 @@
   <category>[crfa]</category>
   <import>import crfa</import>
   <import>from crfa.rds_parser_table_qt import rds_parser_table_qt, rds_parser_table_qt_Widget,rds_parser_table_qt_Signals</import>
+<!--
   <var_make>self.$(id) = $(id) = $value</var_make>
+-->
   <make>#set $win = 'self._%s_win'%$id
 		#set $signals = 'self._%s_signals'%$id
 #if not $label()
@@ -108,7 +110,7 @@ $(gui_hint()($win))</make>
 		</option>
 	</param>
   
-<!--
+ <!--
 check if pty list file exists
  check directory  doesnt work:
   <check>os.path.isdir($workdir)</check>
@@ -135,7 +137,11 @@ check if pty list file exists
     <type>message</type>
     <optional>1</optional>
   </source>
- 
+ <source>
+    <name>tmc_raw</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
   <doc>show RDS data from multiple stations in QT table \
   input: raw group data (array of ints) \
   4x2 raw block data, 4x1 offset chars, 1x1 number of valid blocks (of last 50) \

@@ -43,4 +43,5 @@ from vector_cutter import vector_cutter
 from decoder_compare import decoder_compare
 from qtgui_range import qtgui_range
 from variable_setter import variable_setter
+from tmc_parser import tmc_parser
 #
