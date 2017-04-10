@@ -14,7 +14,7 @@
 	#set $label = '"%s"'%$id
 #end if
 $(signals) = rds_parser_table_qt_Signals()
-self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir,$writeDB)
+self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir)
 $(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id),$showTMC)
 $(gui_hint()($win))</make>
   <callback>set_freq_tune($freq_tune);</callback>
