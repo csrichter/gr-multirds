@@ -26,7 +26,7 @@ import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,re,sys
 from datetime import datetime
 from datetime import timedelta
 import crfa.chart as chart
-from crfa.tmc_classes import tmc_dict,tmc_message
+from crfa.tmc_classes import tmc_dict,tmc_message,language
 
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code,pickle#for easier testing
@@ -39,7 +39,7 @@ pr = cProfile.Profile()
 from PyQt4.QtCore import QObject, pyqtSignal
 from bitstring import BitArray
 
-language="de"#currently supported: de, en (both partially)
+#language="de"#currently supported: de, en (both partially) #defined in tmc_classes.py
 
 
 class rds_parser_table_qt_Signals(QObject):
@@ -627,6 +627,7 @@ class rds_parser_table_qt(gr.sync_block):#START
                         print("unknown variant %i in TMC 3A group"%variant)
                     send_pmt = pmt.pmt_to_python.pmt_from_dict({
                         "type":"3A_meta",
+                        "PI":PI,
                         "data":self.RDS_data[PI]["AID_list"][AID]})
                     self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
             elif (groupType == "4A"):#CT clock time
@@ -684,10 +685,17 @@ class rds_parser_table_qt(gr.sync_block):#START
                 tmc_x=array[3]&0x1f #lower 5 bit of block2
                 tmc_y=(array[4]<<8)|(array[5]) #block3
                 tmc_z=(array[6]<<8)|(array[7])#block4
+                datetime_received=self.RDS_data[PI]["time"]["datetime"]
+                psn=self.RDS_data[PI]["PSN"]
+                if datetime_received==None:
+                    datetime_str=""
+                else:
+                    datetime_str=datetime_received.strftime("%Y-%m-%d %H:%M:%S")
                 send_pmt = pmt.pmt_to_python.pmt_from_dict({
                     "type":"alert-c",
                     "PI":PI,
-                    "PSN":self.RDS_data[PI]["PSN"],
+                    "PSN":psn,
+                    "datetime_str":datetime_str,
                     "TMC_X":tmc_x,
                     "TMC_Y":tmc_y,
                     "TMC_Z":tmc_z
@@ -697,14 +705,20 @@ class rds_parser_table_qt(gr.sync_block):#START
                 tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
                 tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
                 Y15=int(tmc_y>>15)
-                datetime_received=self.RDS_data[PI]["time"]["datetime"]
+                try:
+                    ltn=self.RDS_data[PI]["AID_list"][52550]["LTN"]
+                except KeyError:
+                    ltn=1#assume germany TODO:add better error handling
+                if self.log:
+                    print("no LTN (yet) for PI:%s"%PI)
                 if tmc_T == 0:
                     if tmc_F==1:#single group
-                        tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,datetime_received,self)
+                        
+                        tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
                         self.print_tmc_msg(tmc_msg)
                     elif tmc_F==0 and Y15==1:#1st group of multigroup
                         ci=int(tmc_x&0x7)
-                        tmc_msg=tmc_message(PI,tmc_x,tmc_y,tmc_z,datetime_received,self)
+                        tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
                         #if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
                             #print("overwriting parital message")
                         self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]={"msg":tmc_msg,"time":time.time()}
@@ -731,7 +745,11 @@ class rds_parser_table_qt(gr.sync_block):#START
                         #seen variants 4569, 6 most often
                         #print("TMC-info variant:%i"%adr)
                         if adr==4 or adr==5:#service provider name
-                            segment=self.decode_chars(chr(array[4])+chr(array[5])+chr(array[6])+chr(array[7]))
+                            chr1=(tmc_y >> 8) & 0xff
+                            chr2=tmc_y & 0xff
+                            chr3=(tmc_z >> 8) & 0xff
+                            chr4=tmc_z & 0xff
+                            segment=self.decode_chars(chr(chr1)+chr(chr2)+chr(chr3)+chr(chr4))
                             if self.debug:
                                 print("TMC-info adr:%i (provider name), segment:%s, station:%s"%(adr,segment,self.RDS_data[PI]["PSN"]))
                             if self.RDS_data[PI]["AID_list"].has_key(52550):

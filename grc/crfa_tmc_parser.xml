@@ -9,13 +9,21 @@
 #if not $label()
 	#set $label = '"%s"'%$id
 #end if
-$(parser) = crfa.tmc_parser($workdir, $log, $debug, $writeDB)
+$(parser) = crfa.tmc_parser($workdir, $log, $debug, $writeDB,maxheight)
 $(win) = $(parser).getqtwidget()
 $(gui_hint()($win))
   </make>
 <!--
   crfa.tmc_parser($workdir, $log, $debug, $writeDB)
 -->
+  <param>
+    <name>maxheight</name>
+    <key>maxheight</key>
+    <value>160</value>
+    <type>int</type>
+    <hide>part</hide>
+  </param>
+  
     <param>
     <name>work directory</name>
     <key>workdir</key>

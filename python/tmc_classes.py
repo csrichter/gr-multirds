@@ -18,6 +18,16 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 # 
+
+#references to tableobj:
+#~ label6_suppl_info
+#~ ecl_dict
+#~ tmc_update_class_names
+#~ lcl_dict
+#~ debug
+#~ tmc_messages
+
+#rename to common.py?
 from bitstring import BitArray 
 import copy
 
@@ -496,11 +506,12 @@ class tmc_message:
       return self.datetime_received.strftime("%H:%M")
     else:
       return "88:88"
-  def __init__(self,PI,tmc_x,tmc_y,tmc_z,datetime_received,tableobj):#TODO handle out of sequence data
-    self.psn=tableobj.RDS_data[PI]["PSN"]
+  def __init__(self,PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,tableobj):#TODO handle out of sequence data
+    #self.psn=tableobj.RDS_data[PI]["PSN"]
+    self.psn=psn
     #check LTN
     try:
-      msg_ltn=tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
+      msg_ltn=ltn#tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
       table_ltn=1#german table
       if msg_ltn != table_ltn  and tableobj.debug and False:#disabled, spams log
 	print("msg_ltn:%i does not match expected table (1) on station: %s"%(msg_ltn,self.psn))
