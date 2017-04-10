@@ -9,7 +9,7 @@
 #if not $label()
 	#set $label = '"%s"'%$id
 #end if
-$(parser) = crfa.tmc_parser($workdir, $log, $debug, $writeDB,maxheight)
+$(parser) = crfa.tmc_parser($workdir, $log, $debug, $writeDB,$maxheight)
 $(win) = $(parser).getqtwidget()
 $(gui_hint()($win))
   </make>
