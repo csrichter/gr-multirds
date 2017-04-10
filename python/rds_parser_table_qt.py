@@ -1010,11 +1010,10 @@ class rds_parser_table_qt(gr.sync_block):#START
         formatted_text=("<span style='font-family:Courier New;color:%s'>%s</span>"*3)% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])
         return formatted_text
 class rds_parser_table_qt_Widget(QtGui.QWidget):
-    def __init__(self, signals,label,tableobj,showTMC):
+    def __init__(self, signals,label,tableobj):
             #print("gui initializing")self.tableobj.RDS_data["D3A2"]
         self.signals = signals
         self.tableobj=tableobj
-        self.showTMC=showTMC
         self.signals.DataUpdateEvent.connect(self.display_data)
         """ Creates the QT Range widget """
         QtGui.QWidget.__init__(self)
@@ -1122,20 +1121,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
             self.count_label.setText("count:%02i, max:%i"%(event['group_count'],event['group_count_max']))
         if type(event)==dict and event.has_key('decoder_frequencies'):
             self.freq_label.setText(event['decoder_frequencies'])
-        if type(event)==dict and event.has_key('TMC_log') and self.showTMC:
-            tmc_msg=event['TMC_log']
-            ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
-            lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
-            filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
-            if self.tableobj.tmc_messages.matchFilter(tmc_msg,filters):
-                self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.log_string()))
-                self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.multi_str()))
-        if type(event)==dict and event.has_key('TMC_log_str')and self.showTMC:
-            ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
-            lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
-            text=unicode(event['TMC_log_str'], encoding="UTF-8").lower()
-            if not text.find(lf)==-1 and not text.find(ef)==-1:
-                self.logOutput.append(Qt.QString.fromUtf8(event['TMC_log_str']))
         if type(event)==dict and event.has_key('PI'):
             PI=event['PI']
             if not self.PI_to_row.has_key(PI):
