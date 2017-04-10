@@ -17,6 +17,10 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 
+#to use extended initializer lists
+add_definitions(-std=c++11)
+
+
 ########################################################################
 # Project setup
 ########################################################################

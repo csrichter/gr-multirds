@@ -121,7 +121,7 @@ class tmc_parser(gr.sync_block):
     def initialize_data_for_PI(self,PI):
         self.unfinished_messages[PI]={}
     def handle_msg(self,msg):
-	if time.time()-self.save_data_timer > 10:#every 10 seconds
+	if time.time()-self.save_data_timer > 3:#every 3 seconds
 	    self.save_data_timer=time.time()
 	    self.save_data()
         m=pmt.to_python(msg)

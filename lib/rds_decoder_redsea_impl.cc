@@ -54,10 +54,19 @@ namespace gr {
         set_output_multiple(104);  // 1 RDS datagroup = 104 bits
         message_port_register_out(pmt::mp("out"));
         enter_no_sync();
-        std::map<std::pair<uint16_t, char>, uint32_t> kErrorLookup = makeErrorLookupTable();
-       
+	
+	dout << "constructing error lookup table"<<std::endl; 
+        kErrorLookup = makeErrorLookupTable();
+	dout<<  kErrorLookup.count({(uint16_t)7, 'A'})<< std::endl;
+	dout<<  kErrorLookup.count({(uint16_t)7, 'B'})<< std::endl;
+	
+	//dout<<  kErrorLookup.count({(uint16_t)7, 'A'})<< std::endl;
+	//dout<<  kErrorLookup.at({704, 'A'})<< std::endl;
+	//~ if (kErrorLookup.count({(uint16_t)14, (char)'A'}) > 0) {
+	//~ dout<<"found sy 14 offset A in table"<<std::endl;
+	//~ }
         std::cout<< "i am new"<< std::endl;
-        std::cout<<  kErrorLookup.at({704, 'A'})<< std::endl;
+        //dout<<  kErrorLookup.at({704, 'A'})<< std::endl;
 }
 
     /*
@@ -121,7 +130,6 @@ std::map<std::pair<uint16_t, char>, uint32_t> rds_decoder_redsea_impl::makeError
 static const unsigned int offset_word[5]={252,408,360,436,848};
 static const unsigned int syndrome[5]={383,14,303,663,748};
 static const char * const offset_name[]={"A","B","C","D","c"};*/
-dout << "constructing error lookup table"<<std::endl; 
   for (uint8_t offset_num=0;offset_num<5;offset_num++) {
     // "...the error-correction system should be enabled, but should be
     // restricted by attempting to correct bursts of errors spanning one or two
@@ -138,20 +146,20 @@ dout << "constructing error lookup table"<<std::endl;
   }
   return result;
 }
-//end redsea stuff
+
 uint32_t rds_decoder_redsea_impl::correctBurstErrors(uint32_t block, char offset) {
   uint16_t syndrome = calc_syndrome(block,26);
   uint32_t corrected_block = block;
-  dout << "trying to correct sy:"<<syndrome<<"\t\toffset:"<<offset<<std::endl;
-  if (kErrorLookup.count({syndrome, offset}) > 0) {
-    uint32_t err = kErrorLookup.at({syndrome, offset});
-    dout << "correcting"<<std::endl;
+  //dout << "trying to correct sy:"<<syndrome<<"\t\toffset:"<<offset;//<<std::endl;
+  //dout << "\tcount:"<<kErrorLookup.count({(uint16_t)syndrome, (char)offset})<<std::endl;
+  if (kErrorLookup.count({(uint16_t)syndrome, (char)offset}) > 0) {
+    uint32_t err = kErrorLookup.at({(uint16_t)syndrome, (char)offset});
+    //dout << "correcting"<<std::endl;
     corrected_block ^= err;
   }
-
   return corrected_block;
 }
-
+//end redsea stuff
 void rds_decoder_redsea_impl::decode_group(uint16_t *group) {
         // raw data bytes, as received from RDS.
         // 8 info bytes, followed by 4 RDS offset chars: ABCD/ABcD/EEEE (in US)
