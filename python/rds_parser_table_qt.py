@@ -696,7 +696,7 @@ class rds_parser_table_qt(gr.sync_block):#START
                 self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
                 
                 #~ tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
-                #~ tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
+                tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
                 #~ tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
                 #~ Y15=int(tmc_y>>15)
                 #~ try:

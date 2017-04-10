@@ -50,6 +50,7 @@ class tmc_parser(gr.sync_block):
         self.TMC_data={}
         self.tmc_messages=tmc_dict()
         atexit.register(self.goodbye)
+	self.save_data_timer=time.time()
         if self.writeDB:
             #create new DB file
             db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'_TMC.db'
@@ -120,6 +121,9 @@ class tmc_parser(gr.sync_block):
     def initialize_data_for_PI(self,PI):
         self.unfinished_messages[PI]={}
     def handle_msg(self,msg):
+	if time.time()-self.save_data_timer > 10:#every 10 seconds
+	    self.save_data_timer=time.time()
+	    self.save_data()
         m=pmt.to_python(msg)
         PI=m["PI"]
         if not self.unfinished_messages.has_key(PI):
