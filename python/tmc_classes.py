@@ -51,6 +51,7 @@ class tmc_event:
     self.name="##Error##"
     self.length_str=None
     self.speed_limit_str=None
+    self.is_cancellation = False
     try:
       #Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
       event_array=self.tableobj.ecl_dict[ecn]
@@ -66,8 +67,6 @@ class tmc_event:
       self.nature=event_array[5]#N:nature (blank): information, F:forecast, S:silent
       if event_array[0]=="message cancelled":
 	self.is_cancellation = True
-      else:
-	self.is_cancellation = False
       self.quantifierType=event_array[6]#Q:quantifier type: (0..12) or blank (no quantifier)
       self.durationType=event_array[7]#T:duration type: D:dynamic, L:long lasting, in brackets or if time-of-day quantifier (no 7) is used in message -> no display, only for management
       directionality=event_array[8]#D:directionality: 1:unidirectional, 2:bidirectional, cancellation messages dont have directionality
@@ -445,8 +444,8 @@ class tmc_message:
   def log_string(self):
     return str(self.event.updateClass)+": "+self.getTime()+": "+self.location_text()+": "+self.events_string()+"; "+self.info_str()+"; "+self.psn.encode("utf-8")
     #2017-03-16 fix:self.psn.encode("utf-8"),  utf8 decoding happens later
-  def db_string(self):
-    return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()+"; "+self.info_str()
+  #def db_string(self):
+  #  return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()+"; "+self.info_str()
   def map_string(self):
     return '<span title="%s">'%self.getDate()+str(self.event.updateClass)+": "+self.getTime()+'</span><span title="%s">'%self.multi_str()+": "+self.events_string()+self.info_str()+"; "+self.psn.encode("utf-8")+"</span>"
   def end_loc(self):

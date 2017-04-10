@@ -56,7 +56,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         if self.writeDB:
         #self.db.commit()
             self.db.close()
-    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir,writeDB,showTMC):
+    def __init__(self,signals,nPorts,slot,freq,log,debug,workdir,writeDB):
         gr.sync_block.__init__(self,
             name="RDS Table",
             in_sig=None,
@@ -77,7 +77,6 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.log=log
         self.debug=debug
         self.writeDB=writeDB
-        self.showTMC=showTMC
         self.signals=signals
         self.RDS_data={}
         self.change_freq_tune=slot
@@ -112,8 +111,8 @@ class rds_parser_table_qt(gr.sync_block):#START
                       (time text,PI text,PSN text, dataType text,data blob)''')
                 db.execute('''CREATE TABLE grouptypeCounts
                       (PI text,grouptype text,count integer,unique (PI, grouptype))''')
-                db.execute('''CREATE TABLE TMC
-                      (hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)''')
+              #  db.execute('''CREATE TABLE TMC
+              #        (hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)''')
                 db.commit()
 
             except sqlite3.OperationalError:
@@ -178,12 +177,6 @@ class rds_parser_table_qt(gr.sync_block):#START
         #print(self.PI_dict)
         if self.writeDB:
             self.db.commit()
-        f=open(self.workdir+'google_maps_markers.js', 'w')
-        markerstring=self.tmc_messages.getMarkerString()
-        markerstring+='\n console.log("loaded "+markers.length+" markers")'
-        markerstring+='\n document.getElementById("errorid").innerHTML = "loaded "+markers.length+" markers";'
-        f.write(markerstring)
-        f.close()
     def update_freq(self):
             #  "&#9;" is a tab character
         message_string="decoder frequencies:"
@@ -701,62 +694,65 @@ class rds_parser_table_qt(gr.sync_block):#START
                     "TMC_Z":tmc_z
                 })
                 self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
-                tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
-                tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
-                tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
-                Y15=int(tmc_y>>15)
-                try:
-                    ltn=self.RDS_data[PI]["AID_list"][52550]["LTN"]
-                except KeyError:
-                    ltn=1#assume germany TODO:add better error handling
-                if self.log:
-                    print("no LTN (yet) for PI:%s"%PI)
-                if tmc_T == 0:
-                    if tmc_F==1:#single group
+                
+                #~ tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
+                #~ tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
+                #~ tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
+                #~ Y15=int(tmc_y>>15)
+                #~ try:
+                    #~ ltn=self.RDS_data[PI]["AID_list"][52550]["LTN"]
+                #~ except KeyError:
+                    #~ ltn=1#assume germany TODO:add better error handling
+                #~ if self.log:
+                    #~ print("no LTN (yet) for PI:%s"%PI)
+                #~ if tmc_T == 0:
+                    #~ if tmc_F==1:#single group
                         
-                        tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
-                        self.print_tmc_msg(tmc_msg)
-                    elif tmc_F==0 and Y15==1:#1st group of multigroup
-                        ci=int(tmc_x&0x7)
-                        tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
-                        #if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
-                            #print("overwriting parital message")
-                        self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]={"msg":tmc_msg,"time":time.time()}
-                    else:
-                        ci=int(tmc_x&0x7)
-                        if self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
-                            tmc_msg=self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["msg"]
-                            tmc_msg.add_group(tmc_y,tmc_z)
-                            age=time.time()-self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]
-                            t=(time.time(),PI,age,ci,tmc_msg.is_complete)
-                            #print("%f: continuing message PI:%s,age:%f,ci:%i complete:%i"%t)
-                            self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]=time.time()
-                            if tmc_msg.is_complete:
-                                self.print_tmc_msg(tmc_msg)#print and store message
-                                del self.RDS_data[PI]["internals"]["unfinished_TMC"][tmc_msg.ci]#delete finished message
-                        else:
-                            #if not ci==0:
-                                #print("ci %i not found, discarding"%ci)
-                            pass
+                        #~ tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
+                        #~ self.print_tmc_msg(tmc_msg)
+                    #~ elif tmc_F==0 and Y15==1:#1st group of multigroup
+                        #~ ci=int(tmc_x&0x7)
+                        #~ tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
+                        #~ #if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
+                            #~ #print("overwriting parital message")
+                        #~ self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]={"msg":tmc_msg,"time":time.time()}
+                    #~ else:
+                        #~ ci=int(tmc_x&0x7)
+                        #~ if self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
+                            #~ tmc_msg=self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["msg"]
+                            #~ tmc_msg.add_group(tmc_y,tmc_z)
+                            #~ age=time.time()-self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]
+                            #~ t=(time.time(),PI,age,ci,tmc_msg.is_complete)
+                            #~ #print("%f: continuing message PI:%s,age:%f,ci:%i complete:%i"%t)
+                            #~ self.RDS_data[PI]["internals"]["unfinished_TMC"][ci]["time"]=time.time()
+                            #~ if tmc_msg.is_complete:
+                                #~ self.print_tmc_msg(tmc_msg)#print and store message
+                                #~ del self.RDS_data[PI]["internals"]["unfinished_TMC"][tmc_msg.ci]#delete finished message
+                        #~ else:
+                            #~ #if not ci==0:
+                                #~ #print("ci %i not found, discarding"%ci)
+                            #~ pass
 
-                else:#alert plus or provider info
+                #~ else:#alert plus or provider info
+                if tmc_T == 1:#rest done by tmc_parser
                     adr=tmc_x&0xf
                     if  4 <= adr and adr <= 9:
                         #seen variants 4569, 6 most often
-                        #print("TMC-info variant:%i"%adr)
+                        #~ #print("TMC-info variant:%i"%adr)
                         if adr==4 or adr==5:#service provider name
-                            chr1=(tmc_y >> 8) & 0xff
-                            chr2=tmc_y & 0xff
-                            chr3=(tmc_z >> 8) & 0xff
-                            chr4=tmc_z & 0xff
-                            segment=self.decode_chars(chr(chr1)+chr(chr2)+chr(chr3)+chr(chr4))
-                            if self.debug:
-                                print("TMC-info adr:%i (provider name), segment:%s, station:%s"%(adr,segment,self.RDS_data[PI]["PSN"]))
-                            if self.RDS_data[PI]["AID_list"].has_key(52550):
-                                text_list=list(self.RDS_data[PI]["AID_list"][52550]["provider name"])
-                                seg_adr_start=(adr-4)*4#start of segment
-                                text_list[seg_adr_start:seg_adr_start+4]=segment
-                                self.RDS_data[PI]["AID_list"][52550]["provider name"]="".join(text_list)
+                           chr1=(tmc_y >> 8) & 0xff
+                           chr2=tmc_y & 0xff
+                           chr3=(tmc_z >> 8) & 0xff
+                           chr4=tmc_z & 0xff
+                           segment=self.decode_chars(chr(chr1)+chr(chr2)+chr(chr3)+chr(chr4))
+                           if self.debug:
+                               print("TMC-info adr:%i (provider name), segment:%s, station:%s"%(adr,segment,self.RDS_data[PI]["PSN"]))
+                           if self.RDS_data[PI]["AID_list"].has_key(52550):
+                               text_list=list(self.RDS_data[PI]["AID_list"][52550]["provider name"])
+                               seg_adr_start=(adr-4)*4#start of segment
+                               text_list[seg_adr_start:seg_adr_start+4]=segment
+                               self.RDS_data[PI]["AID_list"][52550]["provider name"]="".join(text_list)
+                    
                         if adr== 7:#freq of tuned an mapped station (not seen yet)
                             freq_TN=tmc_y>>8
                             freq_ON=tmc_y&0xff#mapped frequency
@@ -764,10 +760,10 @@ class rds_parser_table_qt(gr.sync_block):#START
                                 print("TMC-info: TN:%i, station:%s"%(freq_TN,self.RDS_data[PI]["PSN"]))
                             self.RDS_data[PI]["TMC_TN"]=freq_TN
                     else:
-                        if self.debug:
+                        if self.log or self.debug:
                             print("alert plus on station %s (%s)"%(PI,self.RDS_data[PI]["PSN"]))#(not seen yet)
 
-                     #self.tableobj.RDS_data["D301"]["AID_list"][52550]["provider name"]="test____"
+                     #~ #self.tableobj.RDS_data["D301"]["AID_list"][52550]["provider name"]="test____"
             #RadioText+ (grouptype mostly 12A):
             elif self.RDS_data[PI]["AID_list"].has_key(19415) and self.RDS_data[PI]["AID_list"][19415]["groupType"]==groupType:#RT+
                 if not self.RDS_data[PI].has_key("RT+"):
@@ -939,54 +935,9 @@ class rds_parser_table_qt(gr.sync_block):#START
                     print("8A without 3A on PI:%s"%PI)
             #else:#other group
                 #print("group of type %s not decoded on station %s"% (groupType,PI))
-            if 1==1:
-                #printdelay=50
-                printdelay=500
-                self.printcounter+=0#printing disabled
-                if self.printcounter == printdelay and self.debug:
-
-                    for key in self.RDS_data:
-                        if self.RDS_data[key].has_key("PSN"):
-                            psn=self.RDS_data[key]["PSN"]
-                        else:
-                            psn="?"
-                        print("%s(%s):"%(psn,key),end="")
-                        pp.pprint(self.RDS_data[key]["blockcounts"])
-                        if self.RDS_data[key].has_key("RT+"):
-                            print("RT+:",end="")
-                            pp.pprint(self.RDS_data[key]["RT+"])
-                    self.printcounter=0
-
 
             pr.disable() #disabled-internal-profiling
             #end of handle_msg
-    def print_tmc_msg(self,tmc_msg):
-        try:
-            PI=tmc_msg.PI
-            tmc_F=tmc_msg.is_single
-            tmc_hash=tmc_msg.tmc_hash
-            refloc_name=""
-            reflocs=tmc_msg.location.reflocs
-            if not self.TMC_data.has_key(tmc_hash):#if message new
-                try:
-                    self.TMC_data[tmc_hash]=tmc_msg
-                    if self.showTMC:
-                        self.signals.DataUpdateEvent.emit({'TMC_log':tmc_msg,'multi_str':tmc_msg.multi_str()})
-                    #t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"ALERT-C",message_string.decode("utf-8"))
-                    #self.db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
-                    timestring=self.RDS_data[PI]["time"]["timestring"]
-                    if self.writeDB:
-                        message_string=tmc_msg.db_string()
-                        t=(tmc_hash,timestring,PI, tmc_F,tmc_msg.event.ecn,int(tmc_msg.location.lcn),tmc_msg.tmc_DP,tmc_msg.tmc_D,tmc_msg.tmc_dir,tmc_msg.tmc_extent,message_string.decode("utf-8"),tmc_msg.multi_str().decode("utf-8"),str(tmc_msg.debug_data))
-                        self.db.execute("INSERT INTO TMC (hash,time,PI, F,event,location,DP,div,dir,extent,text,multi,rawmgm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
-                except Exception as e:
-                    print(e)
-                    raise
-                    #print("line 1064")
-
-        except KeyError:
-            #print("location '%i' not found"%tmc_location)
-            pass
     def print_results(self):
         s = StringIO.StringIO()
         sortby = 'cumulative'
@@ -1115,30 +1066,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         layout.addLayout(label_layout)
         #TODO set different minsize if TMC is shown
         self.setMinimumSize(Qt.QSize(500,40*self.tableobj.nPorts))
-        if self.showTMC:
-            self.tmc_message_label=QtGui.QLabel("TMC messages:")
-            self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
-            self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
-            #self.location_filter=QtGui.QLineEdit(u"")
-            self.event_filter.returnPressed.connect(self.filterChanged)
-            self.location_filter.returnPressed.connect(self.filterChanged)
-
-            filter_layout = Qt.QHBoxLayout()
-            filter_layout.addWidget(QtGui.QLabel("event filter:"))
-            filter_layout.addWidget(self.event_filter)
-            filter_layout.addWidget(QtGui.QLabel("location filter:"))
-            filter_layout.addWidget(self.location_filter)
-
-            layout.addLayout(filter_layout)
-            layout.addWidget(self.tmc_message_label)
-            self.logOutput = Qt.QTextEdit()
-            self.logOutput.setReadOnly(True)
-            self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
-            self.logOutput.setMaximumHeight(150)
-            font = self.logOutput.font()
-            font.setFamily("Courier")
-            font.setPointSize(10)
-            layout.addWidget(self.logOutput)
         self.lastResizeTime=0
         self.clip = QtGui.QApplication.clipboard()
         #self.cb.clear(mode=cb.Clipboard )

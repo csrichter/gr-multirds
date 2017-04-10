@@ -41,7 +41,7 @@ class tmc_parser(gr.sync_block):
         self.log=log
         self.debug=debug
         self.workdir=workdir
-        atexit.register(self.goodbye)
+        self.writeDB=writeDB
         self.qtwidget=tmc_parser_Widget(self,maxheight)
         self.message_port_register_in(pmt.intern('in'))
         self.set_msg_handler(pmt.intern('in'), self.handle_msg)
@@ -49,6 +49,25 @@ class tmc_parser(gr.sync_block):
         self.unfinished_messages={}
         self.TMC_data={}
         self.tmc_messages=tmc_dict()
+        atexit.register(self.goodbye)
+        if self.writeDB:
+            #create new DB file
+            db_name=workdir+'RDS_data'+datetime.now().strftime("%Y%m%d_%H%M%S")+'_TMC.db'
+            db=sqlite3.connect(db_name, check_same_thread=False)
+            self.db=db
+            #create tables
+            try:
+
+                #db.execute('CREATE TABLE TMC(hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)')
+                db.execute('''CREATE TABLE TMC(lcn integer,updateclass integer,
+                PI text,time text,ecn integer, isSingle integer,DP integer,div integer,dir integer,extent integer,
+                locstr text,eventstr text,multistr text,infostr text,
+                PRIMARY KEY (lcn, updateclass,PI))''')
+                db.commit()
+
+            except sqlite3.OperationalError as e:
+                print("ERROR: tables already exist")
+                print(e)
         reader = csv.reader(open(self.workdir+'LCL15.1.D-160122_utf8.csv'), delimiter=';', quotechar='"')
         reader.next()#skip header
         self.lcl_dict=dict((int(rows[0]),rows[1:]) for rows in reader)
@@ -71,8 +90,30 @@ class tmc_parser(gr.sync_block):
         else:
             self.tmc_update_class_names=dict((int(rows[0]),rows[1]) for rows in reader)#english names  
     def goodbye(self):
+        self.save_data()
         print("closing tmc display")
+    def save_data(self):
+        if self.writeDB:
+            self.db.commit()
+        f=open(self.workdir+'google_maps_markers.js', 'w')
+        markerstring=self.tmc_messages.getMarkerString()
+        markerstring+='\n console.log("loaded "+markers.length+" markers")'
+        markerstring+='\n document.getElementById("errorid").innerHTML = "loaded "+markers.length+" markers";'
+        f.write(markerstring)
+        f.close()
     def print_tmc_msg(self,tmc_msg):
+        if self.writeDB and tmc_msg.event.is_cancellation == False:
+            try:
+                t=(int(tmc_msg.location.lcn),int(tmc_msg.event.updateClass),tmc_msg.PI,
+                tmc_msg.getTime(),int(tmc_msg.event.ecn),int(tmc_msg.is_single),
+                int(tmc_msg.tmc_DP),int(tmc_msg.tmc_D),int(tmc_msg.tmc_dir),int(tmc_msg.tmc_extent),
+                tmc_msg.location_text().decode("utf-8"),tmc_msg.events_string().decode("utf-8"),tmc_msg.info_str().decode("utf-8"),tmc_msg.multi_str().decode("utf-8"))
+                self.db.execute("REPLACE INTO TMC (lcn,updateclass,PI,time,ecn,isSingle,DP,div,dir,extent,locstr,eventstr,infostr,multistr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
+            except Exception as e:
+                if self.log or self.debug:
+                    print("error during db insert msg:%s"%tmc_msg.log_string())
+                    print(e)
+                pass
         self.qtwidget.print_tmc_msg(tmc_msg)
         if self.debug:
             print("new tmc message %s"%tmc_msg)
@@ -235,8 +276,8 @@ class tmc_parser_Widget(QtGui.QWidget):
         self.logOutput = Qt.QTextEdit()
         self.logOutput.setReadOnly(True)
         self.logOutput.setLineWrapMode(Qt.QTextEdit.NoWrap)
-        #self.logOutput.setMaximumHeight(150) #label was too wide
-        self.setMaximumHeight(maxheight)
+        if not maxheight==0:
+            self.setMaximumHeight(maxheight)
         font = self.logOutput.font()
         font.setFamily("Courier")
         font.setPointSize(10)

@@ -105,4 +105,8 @@ check if event-list file exists
     <type>message</type>
     <optional>1</optional>
   </sink>
+  <doc>
+	  maxheight = max height of widget in pixels
+	  maxheight == 0 -> no restriction
+  </doc>
 </block>
