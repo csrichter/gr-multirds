@@ -639,20 +639,20 @@ class rds_parser_table_qt(gr.sync_block):#START
                     #local_time_offset=0.5*((array[7])&0x1F)
                     if(offsetdir==1):
                         local_time_offset*=-1
-
-                    date=datetime(1858,11,17)+timedelta(days=int(datecode))#convert from MJD (modified julian date)
-
-                    timestring="%02i:%02i (%+.1fh)" % (hours,minutes,local_time_offset)
-                    datestring=date.strftime("%d.%m.%Y")
-                    ctcol=self.colorder.index('time')
-                    self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
-                    t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring+"; datecode(MJD):"+str(datecode))
-                    self.RDS_data[PI]["time"]["timestring"]=timestring
-                    self.RDS_data[PI]["time"]["datestring"]=datestring
                     try:
+                        date=datetime(1858,11,17)+timedelta(days=int(datecode))#convert from MJD (modified julian date)
+        
+                        timestring="%02i:%02i (%+.1fh)" % (hours,minutes,local_time_offset)
+                        datestring=date.strftime("%d.%m.%Y")
+                        ctcol=self.colorder.index('time')
+                        self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
+                        t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring+"; datecode(MJD):"+str(datecode))
+                        self.RDS_data[PI]["time"]["timestring"]=timestring
+                        self.RDS_data[PI]["time"]["datestring"]=datestring
                         self.RDS_data[PI]["time"]["datetime"]=datetime(date.year,date.month,date.day,hours,minutes)+timedelta(hours=local_time_offset)
-                    except ValueError:
-                        print("ERROR: could not interpret time or date:"+datestring+" "+timestring)
+                    except ValueError as e:
+                        print("ERROR: could not interpret time or date:")
+                        print(e)
                     if self.writeDB:
                         db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
             elif (groupType == "6A"):#IH inhouse data -> save for analysis

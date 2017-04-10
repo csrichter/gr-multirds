@@ -57,15 +57,15 @@ namespace gr {
 	
 	dout << "constructing error lookup table"<<std::endl; 
         kErrorLookup = makeErrorLookupTable();
-	dout<<  kErrorLookup.count({(uint16_t)7, 'A'})<< std::endl;
-	dout<<  kErrorLookup.count({(uint16_t)7, 'B'})<< std::endl;
+	//dout<<  kErrorLookup.count({(uint16_t)7, 'A'})<< std::endl;
+	//dout<<  kErrorLookup.count({(uint16_t)7, 'B'})<< std::endl;
 	
 	//dout<<  kErrorLookup.count({(uint16_t)7, 'A'})<< std::endl;
 	//dout<<  kErrorLookup.at({704, 'A'})<< std::endl;
 	//~ if (kErrorLookup.count({(uint16_t)14, (char)'A'}) > 0) {
 	//~ dout<<"found sy 14 offset A in table"<<std::endl;
 	//~ }
-        std::cout<< "i am new"<< std::endl;
+        dout<< "i am new"<< std::endl;
         //dout<<  kErrorLookup.at({704, 'A'})<< std::endl;
 }
 
@@ -256,7 +256,7 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                                           dataword=(corrected_block>>10) & 0xffff;
                                                           checkword=corrected_block & 0x3ff;
                                                           offset_char = 'C';
-                                                          lout << "corrected error"<<std::endl;
+                                                          //dout << "corrected error"<<std::endl;
                                                         }
                                                         else{
                                                           block_received_crc=checkword^offset_word[4];
@@ -284,7 +284,11 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                                         good_block=true;
                                                         dataword=(corrected_block>>10) & 0xffff;
                                                         checkword=corrected_block & 0x3ff;
-                                                        lout << "corrected error"<<std::endl;
+							//dout << "corrected error"<<std::endl;
+							//dout << "old: rx:"<<block_received_crc<<"\tcalc:"<<block_calculated_crc<<std::endl;
+							//block_received_crc=checkword^offset_word[block_number];
+							//block_calculated_crc=calc_syndrome(dataword,16);
+							//dout << "new: rx:"<<block_received_crc<<"\tcalc:"<<block_calculated_crc<<std::endl;
                                                         offset_char=expected_offset_char[block_number];
                                                   }
                                                   else{
