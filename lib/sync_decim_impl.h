@@ -46,6 +46,7 @@ namespace gr {
       enum {COPY, SKIP, NOSKIP } mode;
       unsigned int skip;
       void parse_ctrl_msg(pmt::pmt_t pdu);
+      int dosync_counter;
     };
 
   } // namespace crfa

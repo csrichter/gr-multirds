@@ -29,7 +29,7 @@
 
 #rename to common.py?
 from bitstring import BitArray 
-import copy
+import copy,code
 
 language="de"#currently supported: de, en (both partially)
 
@@ -52,6 +52,8 @@ class tmc_event:
     self.length_str=None
     self.speed_limit_str=None
     self.is_cancellation = False
+    self.updateClass=999#invalid
+    self.is_valid=False
     try:
       #Code,Text  CEN-English,Text (German),Text (German) kein Quantifier,Text (Quantifier = 1),Text (Quantifier >1),N,Q,T,D,U,C,R ,Comment
       event_array=self.tableobj.ecl_dict[ecn]
@@ -390,7 +392,9 @@ class tmc_message:
 		  #m=midnight, nm=midnight nex day, same for forecast and info/silent
        #datetime.timedelta(hours=0.25)
   def getDuration(self):#returns string
-    if "D" in self.event.durationType and not self.event.nature=="F":
+    if not self.event.is_valid:
+      return ""
+    elif "D" in self.event.durationType and not self.event.nature=="F":
       return ", "+tmc_message.duration_dict["Info_dyn"][self.tmc_DP]
     elif "L" in self.event.durationType and not self.event.nature=="F":
       return ", "+tmc_message.duration_dict["Info_long"][self.tmc_DP]
@@ -442,12 +446,20 @@ class tmc_message:
     str_list=[str(elem) for elem in self.events]
     return str(", ".join(str_list))
   def log_string(self):
-    return str(self.event.updateClass)+": "+self.getTime()+": "+self.location_text()+": "+self.events_string()+"; "+self.info_str()+"; "+self.psn.encode("utf-8")
+    retstr=""
+    try:
+      retstr=str(self.event.updateClass)+": "+self.getTime()+": "+self.location_text()+": "+self.events_string()+"; "+self.info_str()+"; "+self.psn
+    except UnicodeDecodeError as e:
+      print e
+      code.interact(local=locals())
+      
+    return retstr    
     #2017-03-16 fix:self.psn.encode("utf-8"),  utf8 decoding happens later
+    #2017-04-10 undid "fix":UnicodeDecodeError: 'ascii' codec can't decode byte 0xc3 in position 0: ordinal not in range(128)
   #def db_string(self):
   #  return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()+"; "+self.info_str()
   def map_string(self):
-    return '<span title="%s">'%self.getDate()+str(self.event.updateClass)+": "+self.getTime()+'</span><span title="%s">'%self.multi_str()+": "+self.events_string()+self.info_str()+"; "+self.psn.encode("utf-8")+"</span>"
+    return '<span title="%s">'%self.getDate()+str(self.event.updateClass)+": "+self.getTime()+'</span><span title="%s">'%self.multi_str()+": "+self.events_string()+self.info_str()+"; "+self.psn+"</span>"
   def end_loc(self):
     return self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
   def location_text(self):

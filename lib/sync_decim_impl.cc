@@ -26,6 +26,7 @@
 #include "sync_decim_impl.h"
 #define DECIM 2
 #define lout log && std::cout
+#define SYNC_COUNTER_MAX 5//higher value -> slower sync, less cpu load
 //#include <pmt.h>
 namespace gr {
   namespace crfa {
@@ -54,6 +55,7 @@ namespace gr {
           //init persistant vars
           last_input=0;
           mode=COPY;
+	  dosync_counter=0;
         }
         /*
         * Our virtual destructor.
@@ -104,7 +106,8 @@ namespace gr {
           //lout<<noutput_items<<std::endl;
           
           /*SYNC:*/
-          if(mode==COPY){
+          if(mode==COPY and dosync_counter==SYNC_COUNTER_MAX){
+	    dosync_counter=0;
             float out_noskip;
             float out_skip;
             int skip_is_better_counter=0;
@@ -118,10 +121,10 @@ namespace gr {
                     
                 out_noskip=in[DECIM*i]-in[DECIM*i+1];
                 if (std::abs(out_skip)>std::abs(out_noskip)){
-                skip_is_better_counter++;
+		  skip_is_better_counter++;
                 }
                 else{
-                skip_is_better_counter--;
+		  skip_is_better_counter--;
                 }
                 //lout<<"state:"<< mode;
                 //lout<<"\t,out_noskip:"<<out_noskip;
@@ -137,6 +140,9 @@ namespace gr {
                 lout<<"switched to noskip"<< std::endl;
               }
             }
+	    else if(mode==COPY){
+	      dosync_counter++;
+	      }
           }
           
           
