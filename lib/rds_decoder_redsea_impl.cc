@@ -316,9 +316,9 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                         block_number=(block_number+1) % 4;
                                         blocks_counter++;
 /* 1187.5 bps / 104 bits = 11.4 groups/sec, or 45.7 blocks/sec */
-                                        if (blocks_counter==20) {//reduced from 50
+                                        if (blocks_counter==30) {//reduced from 50
                                                 last_wrong_blocks_counter=wrong_blocks_counter;
-                                                if (wrong_blocks_counter>14) {//reduced from 35
+                                                if (wrong_blocks_counter>21) {//reduced from 35
                                                         lout << "@@@@@ Lost Sync (Got " << wrong_blocks_counter
                                                                 << " bad blocks on " << blocks_counter
                                                                 << " total)" << std::endl;

@@ -565,9 +565,9 @@ class rds_parser_table_qt(gr.sync_block):#START
                 self.signals.DataUpdateEvent.emit({'col':rtcol,'row':port,'PI':PI,'string':formatted_text})
 
             elif (groupType == "3A"):#ODA announcements (contain application ID "AID")
-                AID=(array[6]<<8)|(array[7])#combine 2 bytes into 1 block
-                app_data=(array[4]<<8)|(array[5])#content defined by ODA-app
-                app_group_raw=array[3]&0x1f #group type in which this app is sent
+                AID=int((array[6]<<8)|(array[7]))#combine 2 bytes into 1 block
+                app_data=int((array[4]<<8)|(array[5]))#content defined by ODA-app
+                app_group_raw=int(array[3]&0x1f) #group type in which this app is sent
                 if (app_group_raw&0x1 == 0):
                     app_group=str(app_group_raw >> 1)+"A"
                 else:
@@ -618,11 +618,17 @@ class rds_parser_table_qt(gr.sync_block):#START
                         self.RDS_data[PI]["AID_list"][AID]["delay_time"]=(app_data>>0)&0x3
                     elif self.debug:
                         print("unknown variant %i in TMC 3A group"%variant)
-                    send_pmt = pmt.pmt_to_python.pmt_from_dict({
-                        "type":"3A_meta",
-                        "PI":PI,
-                        "data":self.RDS_data[PI]["AID_list"][AID]})
-                    self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
+                    if self.RDS_data[PI]["AID_list"].has_key(52550):
+                        try:
+                            send_pmt = pmt.pmt_to_python.pmt_from_dict({
+                            "type":"3A_meta",
+                            "PI":PI,
+                            "data":self.RDS_data[PI]["AID_list"][52550]})
+                            self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
+                        except TypeError as e:
+                            print(e)
+                            print("this gnuradio instance doesnt seem to be able to convert from numpy.int64 to pmt")
+                            code.interact(local=locals())
             elif (groupType == "4A"):#CT clock time
                 bits=BitArray('uint:8=%i,uint:8=%i,uint:8=%i,uint:8=%i,uint:8=%i'%tuple(array[3:8]))
                 spare,datecode,hours,minutes,offsetdir,local_time_offset = bits.unpack("uint:6,uint:17,uint:5,uint:6,uint:1,uint:5")
@@ -646,15 +652,16 @@ class rds_parser_table_qt(gr.sync_block):#START
                         datestring=date.strftime("%d.%m.%Y")
                         ctcol=self.colorder.index('time')
                         self.signals.DataUpdateEvent.emit({'col':ctcol,'row':port,'PI':PI,'string':timestring,'tooltip':datestring})
-                        t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring+"; datecode(MJD):"+str(datecode))
                         self.RDS_data[PI]["time"]["timestring"]=timestring
                         self.RDS_data[PI]["time"]["datestring"]=datestring
                         self.RDS_data[PI]["time"]["datetime"]=datetime(date.year,date.month,date.day,hours,minutes)+timedelta(hours=local_time_offset)
+                        if self.writeDB:
+                            t=(str(datetime.now()),PI,self.RDS_data[PI]["PSN"],"CT",datestring+" "+timestring+"; datecode(MJD):"+str(datecode))
+                            db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
                     except ValueError as e:
                         print("ERROR: could not interpret time or date:")
                         print(e)
-                    if self.writeDB:
-                        db.execute("INSERT INTO data (time,PI,PSN,dataType,data) VALUES (?,?,?,?,?)",t)
+
             elif (groupType == "6A"):#IH inhouse data -> save for analysis
                 """In House Data:
       {'130A': {'1E1077FFFF': {'count': 1,
@@ -689,10 +696,10 @@ class rds_parser_table_qt(gr.sync_block):#START
                     "PI":PI,
                     "PSN":psn,
                     "datetime_str":datetime_str,
-                    "TMC_X":tmc_x,
-                    "TMC_Y":tmc_y,
-                    "TMC_Z":tmc_z
-                })
+                    "TMC_X":int(tmc_x),
+                    "TMC_Y":int(tmc_y),
+                    "TMC_Z":int(tmc_z)
+                })#this gnuradio instance doesnt seem to be able to convert from numpy.int64 to pmt
                 self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
                 
                 #~ tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
@@ -1069,15 +1076,6 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.clip = QtGui.QApplication.clipboard()
         #self.cb.clear(mode=cb.Clipboard )
         #self.cb.setText("Clipboard Text", mode=cb.Clipboard)
-    def filterChanged(self):
-        print("filter changed")
-        ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
-        lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
-        self.logOutput.clear()
-        #filters=[{"type":"location", "str":u"Baden-Württemberg"}]
-        filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
-        self.logOutput.append(Qt.QString.fromUtf8(self.tableobj.tmc_messages.getLogString(filters)))
-        #self.logOutput.append(Qt.QString.fromUtf8(self.tableobj.tmc_messages.getLogString([])))
     def keyPressEvent(self, e):
         if (e.modifiers() & QtCore.Qt.ControlModifier) and len(self.table.selectedRanges())>0:
             selected = self.table.selectedRanges().pop()

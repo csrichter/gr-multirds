@@ -105,7 +105,7 @@ namespace gr {
           last_input=in[(noutput_items-1)*DECIM+1];//to use for next iteration of work
           //lout<<noutput_items<<std::endl;
           
-          /*SYNC:*/
+          /*synchronize:*/
           if(mode==COPY and dosync_counter==SYNC_COUNTER_MAX){
 	    dosync_counter=0;
             float out_noskip;

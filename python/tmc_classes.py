@@ -285,7 +285,10 @@ class tmc_dict:
 	  message.event.name="no message to cancel"
 	  self.messages[lcn][updateClass]=message
       else:
-	self.messages[lcn][updateClass]=message
+        if  self.messages[lcn].has_key(updateClass) and self.messages[lcn][updateClass].tmc_hash ==message.tmc_hash:#if same message -> add confirmation
+            self.messages[lcn][updateClass].add_confirmation(message)
+	else:#(over)write message
+            self.messages[lcn][updateClass]=message
       #print("added message: "+str(message))
     except AttributeError:
       print("ERROR, not adding: "+str(message))
@@ -459,7 +462,11 @@ class tmc_message:
   #def db_string(self):
   #  return str(self.location)+": "+str(self.event.updateClass)+": "+self.events_string()+"; "+self.info_str()
   def map_string(self):
-    return '<span title="%s">'%self.getDate()+str(self.event.updateClass)+": "+self.getTime()+'</span><span title="%s">'%self.multi_str()+": "+self.events_string()+self.info_str()+"; "+self.psn+"</span>"
+      retstr='<span title="%s">'%self.getDate()+str(self.event.updateClass)+": "+self.getTime()+'</span>'
+      retstr+='<span title="%s">'%self.multi_str()+": "+self.events_string()+self.info_str()+"; "+"</span>"
+      retstr+='<span title="%i">'%self.confirmations+str(list(self.psns)).replace("'", '"')+"</span>"
+      return retstr
+           
   def end_loc(self):
     return self.location.get_extent_location(self.location,self.tmc_extent,self.tmc_dir)
   def location_text(self):
@@ -517,36 +524,43 @@ class tmc_message:
       return self.datetime_received.strftime("%H:%M")
     else:
       return "88:88"
+  def add_confirmation(self,tmc_msg):
+      self.PIs.add(tmc_msg.PI)
+      self.psns.add(tmc_msg.psn)
+      self.confirmations+=1
   def __init__(self,PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,tableobj):#TODO handle out of sequence data
     #self.psn=tableobj.RDS_data[PI]["PSN"]
     self.psn=psn
-    #check LTN
-    try:
-      msg_ltn=ltn#tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
-      table_ltn=1#german table
-      if msg_ltn != table_ltn  and tableobj.debug and False:#disabled, spams log
-	print("msg_ltn:%i does not match expected table (1) on station: %s"%(msg_ltn,self.psn))
-    except KeyError:
-      if tableobj.debug:
-	print("no LTN found")
-    #self.time_received=time_received
-    self.datetime_received=datetime_received
-    if self.datetime_received==None:
-      self.hastime=False
-    else:
-      self.hastime=True
+    self.psns=set([psn])
+    self.PI=PI
+    self.PIs=set([PI])
+    self.confirmations=1
     self.debug_data=""
     self.tableobj=tableobj
-    self.PI=PI
     #self.isCancelled=False
     self.cancellation_time=None
-    self.tmc_hash=hash((PI,tmc_x,tmc_y,tmc_z))
+    self.tmc_hash=hash((tmc_x,tmc_y,tmc_z))
     tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
     assert tmc_T==0, "this is tuning info and no alert_c message"
     Y15=int(tmc_y>>15)
     tmc_F=int((tmc_x>>3)&0x1) #identifies the message as a Single Group (F = 1) or Multi Group (F = 0)
     self.is_single=(tmc_F==1)
     self.is_multi=(tmc_F==0)
+    #check LTN
+    try:
+      msg_ltn=ltn#tableobj.RDS_data[PI]["AID_list"][52550]["LTN"]
+      table_ltn=1#german table
+      if msg_ltn != table_ltn  and tableobj.debug and False:#disabled, spams log
+        print("msg_ltn:%i does not match expected table (1) on station: %s"%(msg_ltn,self.psn))
+    except KeyError:
+      if tableobj.debug:
+        print("no LTN found")
+    #self.time_received=time_received
+    self.datetime_received=datetime_received
+    if self.datetime_received==None:
+      self.hastime=False
+    else:
+      self.hastime=True
     if self.is_single or (self.is_multi and Y15==1):#single group or 1st group of multigroup
       if self.is_single:
 	self.tmc_D=Y15 #diversion bit(Y15)

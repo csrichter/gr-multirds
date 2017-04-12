@@ -60,10 +60,10 @@ class tmc_parser(gr.sync_block):
             try:
 
                 #db.execute('CREATE TABLE TMC(hash text PRIMARY KEY UNIQUE,time text,PI text, F integer,event integer,location integer,DP integer,div integer,dir integer,extent integer,text text,multi text,rawmgm text)')
-                db.execute('''CREATE TABLE TMC(lcn integer,updateclass integer,
+                db.execute('''CREATE TABLE TMC(lcn integer,updateclass integer,hash int,
                 PI text,time text,ecn integer, isSingle integer,DP integer,div integer,dir integer,extent integer,
                 locstr text,eventstr text,multistr text,infostr text,
-                PRIMARY KEY (lcn, updateclass,PI))''')
+                PRIMARY KEY (lcn, updateclass,hash))''')
                 db.commit()
 
             except sqlite3.OperationalError as e:
@@ -105,11 +105,11 @@ class tmc_parser(gr.sync_block):
     def print_tmc_msg(self,tmc_msg):
         if self.writeDB and tmc_msg.event.is_cancellation == False:
             try:
-                t=(int(tmc_msg.location.lcn),int(tmc_msg.event.updateClass),tmc_msg.PI,
+                t=(int(tmc_msg.location.lcn),int(tmc_msg.event.updateClass),tmc_msg.PI,tmc_msg.tmc_hash,
                 tmc_msg.getTime(),int(tmc_msg.event.ecn),int(tmc_msg.is_single),
                 int(tmc_msg.tmc_DP),int(tmc_msg.tmc_D),int(tmc_msg.tmc_dir),int(tmc_msg.tmc_extent),
                 tmc_msg.location_text().decode("utf-8"),tmc_msg.events_string().decode("utf-8"),tmc_msg.info_str().decode("utf-8"),tmc_msg.multi_str().decode("utf-8"))
-                self.db.execute("REPLACE INTO TMC (lcn,updateclass,PI,time,ecn,isSingle,DP,div,dir,extent,locstr,eventstr,infostr,multistr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
+                self.db.execute("REPLACE INTO TMC (lcn,updateclass,hash,PI,time,ecn,isSingle,DP,div,dir,extent,locstr,eventstr,infostr,multistr) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",t)
             except Exception as e:
                 if self.log or self.debug:
                     print("error during db insert msg:%s"%tmc_msg.log_string())
