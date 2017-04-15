@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>RDS Decoder (redsea)</name>
-  <key>crfa_rds_decoder_redsea</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <make>crfa.rds_decoder_redsea($log, $debug)</make>
+  <key>multirds_rds_decoder_redsea</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.rds_decoder_redsea($log, $debug)</make>
         <param>
                 <name>Log</name>
                 <key>log</key>

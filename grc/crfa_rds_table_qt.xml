@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>RDS Table (qt)</name>
-  <key>crfa_rds_table_qt</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <import>from crfa.rds_table_qt import rds_table_qt, rds_table_qt_Widget,rds_table_qt_Signals</import>
+  <key>multirds_rds_table_qt</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <import>from multirds.rds_table_qt import rds_table_qt, rds_table_qt_Widget,rds_table_qt_Signals</import>
   <var_make>self.$(id) = $(id) = $value</var_make>
   <make>#set $win = 'self._%s_win'%$id
 		#set $signals = 'self._%s_signals'%$id
@@ -12,7 +12,7 @@
 	#set $label = '"%s"'%$id
 #end if
 $(signals) = rds_table_qt_Signals()
-self.$(id) = crfa.rds_table_qt($(signals),$nPorts)
+self.$(id) = multirds.rds_table_qt($(signals),$nPorts)
 $(win) = rds_table_qt_Widget($signals, $label)
 $(gui_hint()($win))</make>
   <param>

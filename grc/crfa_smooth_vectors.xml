@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>smooth_vectors</name>
-  <key>crfa_smooth_vectors</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <make>crfa.smooth_vectors($vec_len, $decim, $moving_avg_len)</make>
+  <key>multirds_smooth_vectors</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.smooth_vectors($vec_len, $decim, $moving_avg_len)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name

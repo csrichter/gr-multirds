@@ -25,8 +25,8 @@ import pmt,functools,csv,md5,collections,copy,sqlite3,atexit,time,re,sys
 #old imports: folium
 from datetime import datetime
 from datetime import timedelta
-import crfa.chart as chart
-from crfa.tmc_classes import tmc_dict,tmc_message,language
+import multirds.chart as chart
+from multirds.tmc_classes import tmc_dict,tmc_message,language
 
 from PyQt4 import Qt, QtCore, QtGui
 import pprint,code,pickle#for easier testing

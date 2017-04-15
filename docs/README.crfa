@@ -1,11 +1,11 @@
-This is the crfa-write-a-block package meant as a guide to building
-out-of-tree packages. To use the crfa blocks, the Python namespaces
-is in 'crfa', which is imported as:
+This is the multirds-write-a-block package meant as a guide to building
+out-of-tree packages. To use the multirds blocks, the Python namespaces
+is in 'multirds', which is imported as:
 
-    import crfa
+    import multirds
 
 See the Doxygen documentation for details about the blocks available
 in this package. A quick listing of the details can be found in Python
 after importing by using:
 
-    help(crfa)
+    help(multirds)

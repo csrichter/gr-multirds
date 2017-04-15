@@ -28,7 +28,7 @@
 #define lout log && std::cout
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     diff_add_sync_decim::sptr
     diff_add_sync_decim::make(float threshold,float max_ratio_below_threshold,bool log)
@@ -137,6 +137,6 @@ namespace gr {
       return noutput_items;
     }
 
-  } /* namespace crfa */
+  } /* namespace multirds */
 } /* namespace gr */
 

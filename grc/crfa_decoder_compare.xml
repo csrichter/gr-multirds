@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>decoder_compare</name>
-  <key>crfa_decoder_compare</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <make>crfa.decoder_compare($nPorts)</make>
+  <key>multirds_decoder_compare</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.decoder_compare($nPorts)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name

@@ -25,12 +25,12 @@
  * add them here.
  */
 
-#include "qa_crfa.h"
+#include "qa_multirds.h"
 
 CppUnit::TestSuite *
-qa_crfa::suite()
+qa_multirds::suite()
 {
-  CppUnit::TestSuite *s = new CppUnit::TestSuite("crfa");
+  CppUnit::TestSuite *s = new CppUnit::TestSuite("multirds");
 
   return s;
 }

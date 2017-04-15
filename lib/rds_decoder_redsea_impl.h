@@ -21,10 +21,10 @@
 #ifndef INCLUDED_CRFA_RDS_DECODER_IMPL_H
 #define INCLUDED_CRFA_RDS_DECODER_IMPL_H
 
-#include <crfa/rds_decoder_redsea.h>
+#include <multirds/rds_decoder_redsea.h>
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     class rds_decoder_redsea_impl : public rds_decoder_redsea
     {
@@ -74,7 +74,7 @@ private:
 
     };
 
-  } // namespace crfa
+  } // namespace multirds
 } // namespace gr
 
 #endif /* INCLUDED_CRFA_RDS_DECODER_IMPL_H */

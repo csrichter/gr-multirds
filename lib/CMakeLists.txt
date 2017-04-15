@@ -24,24 +24,24 @@ include(GrPlatform) #define LIB_SUFFIX
 
 include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
-list(APPEND crfa_sources
+list(APPEND multirds_sources
     rds_decoder_impl.cc
     diff_add_sync_decim_impl.cc
     sync_decim_impl.cc
     rds_decoder_redsea_impl.cc )
 
-set(crfa_sources "${crfa_sources}" PARENT_SCOPE)
-if(NOT crfa_sources)
+set(multirds_sources "${multirds_sources}" PARENT_SCOPE)
+if(NOT multirds_sources)
 	MESSAGE(STATUS "No C++ sources... skipping lib/")
 	return()
-endif(NOT crfa_sources)
+endif(NOT multirds_sources)
 
-add_library(gnuradio-crfa SHARED ${crfa_sources})
-target_link_libraries(gnuradio-crfa ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
-set_target_properties(gnuradio-crfa PROPERTIES DEFINE_SYMBOL "gnuradio_crfa_EXPORTS")
+add_library(gnuradio-multirds SHARED ${multirds_sources})
+target_link_libraries(gnuradio-multirds ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
+set_target_properties(gnuradio-multirds PROPERTIES DEFINE_SYMBOL "gnuradio_multirds_EXPORTS")
 
 if(APPLE)
-    set_target_properties(gnuradio-crfa PROPERTIES
+    set_target_properties(gnuradio-multirds PROPERTIES
         INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
     )
 endif(APPLE)
@@ -50,7 +50,7 @@ endif(APPLE)
 # Install built library files
 ########################################################################
 include(GrMiscUtils)
-GR_LIBRARY_FOO(gnuradio-crfa RUNTIME_COMPONENT "crfa_runtime" DEVEL_COMPONENT "crfa_devel")
+GR_LIBRARY_FOO(gnuradio-multirds RUNTIME_COMPONENT "multirds_runtime" DEVEL_COMPONENT "multirds_devel")
 
 ########################################################################
 # Build and register unit test
@@ -59,22 +59,22 @@ include(GrTest)
 
 include_directories(${CPPUNIT_INCLUDE_DIRS})
 
-list(APPEND test_crfa_sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/test_crfa.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/qa_crfa.cc
+list(APPEND test_multirds_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_multirds.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_multirds.cc
 )
 
-add_executable(test-crfa ${test_crfa_sources})
+add_executable(test-multirds ${test_multirds_sources})
 
 target_link_libraries(
-  test-crfa
+  test-multirds
   ${GNURADIO_RUNTIME_LIBRARIES}
   ${Boost_LIBRARIES}
   ${CPPUNIT_LIBRARIES}
-  gnuradio-crfa
+  gnuradio-multirds
 )
 
-GR_ADD_TEST(test_crfa test-crfa)
+GR_ADD_TEST(test_multirds test-multirds)
 
 ########################################################################
 # Print summary

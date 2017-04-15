@@ -22,15 +22,15 @@
 #ifndef INCLUDED_CRFA_DIFF_ADD_SYNC_DECIM_H
 #define INCLUDED_CRFA_DIFF_ADD_SYNC_DECIM_H
 
-#include <crfa/api.h>
+#include <multirds/api.h>
 #include <gnuradio/sync_decimator.h>
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     /*!
      * \brief <+description of block+>
-     * \ingroup crfa
+     * \ingroup multirds
      *
      */
     class CRFA_API diff_add_sync_decim : virtual public gr::sync_decimator
@@ -39,17 +39,17 @@ namespace gr {
       typedef boost::shared_ptr<diff_add_sync_decim> sptr;
 
       /*!
-       * \brief Return a shared_ptr to a new instance of crfa::diff_add_sync_decim.
+       * \brief Return a shared_ptr to a new instance of multirds::diff_add_sync_decim.
        *
-       * To avoid accidental use of raw pointers, crfa::diff_add_sync_decim's
+       * To avoid accidental use of raw pointers, multirds::diff_add_sync_decim's
        * constructor is in a private implementation
-       * class. crfa::diff_add_sync_decim::make is the public interface for
+       * class. multirds::diff_add_sync_decim::make is the public interface for
        * creating new instances.
        */
       static sptr make(float threshold,float max_ratio_below_threshold,bool log);
     };
 
-  } // namespace crfa
+  } // namespace multirds
 } // namespace gr
 
 #endif /* INCLUDED_CRFA_DIFF_ADD_SYNC_DECIM_H */

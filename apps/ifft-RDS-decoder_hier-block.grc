@@ -1378,7 +1378,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_decoder_compare</key>
+    <key>multirds_decoder_compare</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1405,7 +1405,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_decoder_compare_0</value>
+      <value>multirds_decoder_compare_0</value>
     </param>
     <param>
       <key>nPorts</key>
@@ -1413,7 +1413,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_diff_add_sync_decim</key>
+    <key>multirds_diff_add_sync_decim</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1440,7 +1440,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_diff_add_sync_decim_0</value>
+      <value>multirds_diff_add_sync_decim_0</value>
     </param>
     <param>
       <key>log</key>
@@ -1464,7 +1464,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_rds_decoder</key>
+    <key>multirds_rds_decoder</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1495,7 +1495,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_rds_decoder_3</value>
+      <value>multirds_rds_decoder_3</value>
     </param>
     <param>
       <key>log</key>
@@ -1511,7 +1511,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_rds_decoder</key>
+    <key>multirds_rds_decoder</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1542,7 +1542,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_rds_decoder_3_1</value>
+      <value>multirds_rds_decoder_3_1</value>
     </param>
     <param>
       <key>log</key>
@@ -1558,7 +1558,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_rds_decoder</key>
+    <key>multirds_rds_decoder</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1589,7 +1589,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_rds_decoder_3_1_0</value>
+      <value>multirds_rds_decoder_3_1_0</value>
     </param>
     <param>
       <key>log</key>
@@ -1605,7 +1605,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_sync_decim</key>
+    <key>multirds_sync_decim</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1632,7 +1632,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_sync_decim_0</value>
+      <value>multirds_sync_decim_0</value>
     </param>
     <param>
       <key>log</key>
@@ -1656,7 +1656,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_vector_cutter</key>
+    <key>multirds_vector_cutter</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1683,7 +1683,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_vector_cutter_0_0</value>
+      <value>multirds_vector_cutter_0_0</value>
     </param>
     <param>
       <key>maxoutbuf</key>
@@ -2891,13 +2891,13 @@
   </connection>
   <connection>
     <source_block_id>blocks_complex_to_real_0</source_block_id>
-    <sink_block_id>crfa_diff_add_sync_decim_0</sink_block_id>
+    <sink_block_id>multirds_diff_add_sync_decim_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>blocks_complex_to_real_0</source_block_id>
-    <sink_block_id>crfa_sync_decim_0</sink_block_id>
+    <sink_block_id>multirds_sync_decim_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -2993,7 +2993,7 @@
   </connection>
   <connection>
     <source_block_id>blocks_null_source_0</source_block_id>
-    <sink_block_id>crfa_rds_decoder_3</sink_block_id>
+    <sink_block_id>multirds_rds_decoder_3</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -3004,49 +3004,49 @@
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_diff_add_sync_decim_0</source_block_id>
+    <source_block_id>multirds_diff_add_sync_decim_0</source_block_id>
     <sink_block_id>digital_binary_slicer_fb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_rds_decoder_3</source_block_id>
-    <sink_block_id>crfa_decoder_compare_0</sink_block_id>
+    <source_block_id>multirds_rds_decoder_3</source_block_id>
+    <sink_block_id>multirds_decoder_compare_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>in0</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_rds_decoder_3</source_block_id>
-    <sink_block_id>crfa_sync_decim_0</sink_block_id>
+    <source_block_id>multirds_rds_decoder_3</source_block_id>
+    <sink_block_id>multirds_sync_decim_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>ctrl</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_rds_decoder_3</source_block_id>
+    <source_block_id>multirds_rds_decoder_3</source_block_id>
     <sink_block_id>pad_sink_0_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>in</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_rds_decoder_3_1</source_block_id>
-    <sink_block_id>crfa_decoder_compare_0</sink_block_id>
+    <source_block_id>multirds_rds_decoder_3_1</source_block_id>
+    <sink_block_id>multirds_decoder_compare_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>in1</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_rds_decoder_3_1_0</source_block_id>
-    <sink_block_id>crfa_decoder_compare_0</sink_block_id>
+    <source_block_id>multirds_rds_decoder_3_1_0</source_block_id>
+    <sink_block_id>multirds_decoder_compare_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>in2</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_sync_decim_0</source_block_id>
+    <source_block_id>multirds_sync_decim_0</source_block_id>
     <sink_block_id>digital_binary_slicer_fb_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
-    <source_block_id>crfa_vector_cutter_0_0</source_block_id>
+    <source_block_id>multirds_vector_cutter_0_0</source_block_id>
     <sink_block_id>fft_vxx_1_1</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
@@ -3071,19 +3071,19 @@
   </connection>
   <connection>
     <source_block_id>digital_diff_decoder_bb_0</source_block_id>
-    <sink_block_id>crfa_rds_decoder_3</sink_block_id>
+    <sink_block_id>multirds_rds_decoder_3</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>digital_diff_decoder_bb_0_1</source_block_id>
-    <sink_block_id>crfa_rds_decoder_3_1</sink_block_id>
+    <sink_block_id>multirds_rds_decoder_3_1</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
   <connection>
     <source_block_id>digital_diff_decoder_bb_0_1_0</source_block_id>
-    <sink_block_id>crfa_rds_decoder_3_1_0</sink_block_id>
+    <sink_block_id>multirds_rds_decoder_3_1_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>
@@ -3131,7 +3131,7 @@
   </connection>
   <connection>
     <source_block_id>pad_source_0</source_block_id>
-    <sink_block_id>crfa_vector_cutter_0_0</sink_block_id>
+    <sink_block_id>multirds_vector_cutter_0_0</sink_block_id>
     <source_key>0</source_key>
     <sink_key>0</sink_key>
   </connection>

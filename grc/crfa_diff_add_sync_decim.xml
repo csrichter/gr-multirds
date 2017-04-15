@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>diff_add_sync_decim</name>
-  <key>crfa_diff_add_sync_decim</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <make>crfa.diff_add_sync_decim($threshold,$max_ratio_below_threshold, $log)</make>
+  <key>multirds_diff_add_sync_decim</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.diff_add_sync_decim($threshold,$max_ratio_below_threshold, $log)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name

@@ -1597,7 +1597,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_decoder_compare</key>
+    <key>multirds_decoder_compare</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1624,7 +1624,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_decoder_compare_0</value>
+      <value>multirds_decoder_compare_0</value>
     </param>
     <param>
       <key>nPorts</key>
@@ -1632,7 +1632,7 @@
     </param>
   </block>
   <block>
-    <key>crfa_rds_parser_table_qt</key>
+    <key>multirds_rds_parser_table_qt</key>
     <param>
       <key>alias</key>
       <value></value>
@@ -1667,7 +1667,7 @@
     </param>
     <param>
       <key>id</key>
-      <value>crfa_rds_parser_table_qt_0_0</value>
+      <value>multirds_rds_parser_table_qt_0_0</value>
     </param>
     <param>
       <key>label</key>
@@ -6425,7 +6425,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
   </connection>
   <connection>
     <source_block_id>epy_block_0</source_block_id>
-    <sink_block_id>crfa_rds_parser_table_qt_0_0</sink_block_id>
+    <sink_block_id>multirds_rds_parser_table_qt_0_0</sink_block_id>
     <source_key>out</source_key>
     <sink_key>freq</sink_key>
   </connection>
@@ -6491,13 +6491,13 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
   </connection>
   <connection>
     <source_block_id>hier_ifft_decoder_0</source_block_id>
-    <sink_block_id>crfa_decoder_compare_0</sink_block_id>
+    <sink_block_id>multirds_decoder_compare_0</sink_block_id>
     <source_key>rds</source_key>
     <sink_key>in0</sink_key>
   </connection>
   <connection>
     <source_block_id>hier_ifft_decoder_0</source_block_id>
-    <sink_block_id>crfa_rds_parser_table_qt_0_0</sink_block_id>
+    <sink_block_id>multirds_rds_parser_table_qt_0_0</sink_block_id>
     <source_key>rds</source_key>
     <sink_key>in0</sink_key>
   </connection>
@@ -6527,13 +6527,13 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
   </connection>
   <connection>
     <source_block_id>hier_ifft_decoder_0_0</source_block_id>
-    <sink_block_id>crfa_decoder_compare_0</sink_block_id>
+    <sink_block_id>multirds_decoder_compare_0</sink_block_id>
     <source_key>rds</source_key>
     <sink_key>in1</sink_key>
   </connection>
   <connection>
     <source_block_id>hier_ifft_decoder_0_0</source_block_id>
-    <sink_block_id>crfa_rds_parser_table_qt_0_0</sink_block_id>
+    <sink_block_id>multirds_rds_parser_table_qt_0_0</sink_block_id>
     <source_key>rds</source_key>
     <sink_key>in1</sink_key>
   </connection>
@@ -6563,13 +6563,13 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
   </connection>
   <connection>
     <source_block_id>hier_ifft_decoder_0_1</source_block_id>
-    <sink_block_id>crfa_decoder_compare_0</sink_block_id>
+    <sink_block_id>multirds_decoder_compare_0</sink_block_id>
     <source_key>rds</source_key>
     <sink_key>in2</sink_key>
   </connection>
   <connection>
     <source_block_id>hier_ifft_decoder_0_1</source_block_id>
-    <sink_block_id>crfa_rds_parser_table_qt_0_0</sink_block_id>
+    <sink_block_id>multirds_rds_parser_table_qt_0_0</sink_block_id>
     <source_key>rds</source_key>
     <sink_key>in2</sink_key>
   </connection>

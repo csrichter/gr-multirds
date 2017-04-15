@@ -1,20 +1,20 @@
 <?xml version="1.0"?>
 <block>
   <name>tmc_parser</name>
-  <key>crfa_tmc_parser</key>
-  <category>crfa</category>
-  <import>import crfa</import>
+  <key>multirds_tmc_parser</key>
+  <category>multirds</category>
+  <import>import multirds</import>
   <make>#set $win = 'self._%s_win'%$id
         #set $parser = 'self.%s_parser'%$id
 #if not $label()
 	#set $label = '"%s"'%$id
 #end if
-$(parser) = crfa.tmc_parser($workdir, $log, $debug, $writeDB,$maxheight)
+$(parser) = multirds.tmc_parser($workdir, $log, $debug, $writeDB,$maxheight)
 $(win) = $(parser).getqtwidget()
 $(gui_hint()($win))
   </make>
 <!--
-  crfa.tmc_parser($workdir, $log, $debug, $writeDB)
+  multirds.tmc_parser($workdir, $log, $debug, $writeDB)
 -->
   <param>
     <name>maxheight</name>

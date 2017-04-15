@@ -44,7 +44,7 @@ GR_PYTHON_INSTALL(
     qtgui_range.py
     variable_setter.py
     tmc_classes.py
-    tmc_parser.py DESTINATION ${GR_PYTHON_DIR}/crfa
+    tmc_parser.py DESTINATION ${GR_PYTHON_DIR}/multirds
 )
 
 ########################################################################
@@ -52,5 +52,5 @@ GR_PYTHON_INSTALL(
 ########################################################################
 include(GrTest)
 
-set(GR_TEST_TARGET_DEPS gnuradio-crfa)
+set(GR_TEST_TARGET_DEPS gnuradio-multirds)
 set(GR_TEST_PYTHON_DIRS ${CMAKE_BINARY_DIR}/swig)

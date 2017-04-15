@@ -25,7 +25,7 @@ add_definitions(-std=c++11)
 # Project setup
 ########################################################################
 cmake_minimum_required(VERSION 2.6)
-project(gr-crfa CXX C)
+project(gr-multirds CXX C)
 enable_testing()
 
 #install to PyBOMBS target prefix if defined
@@ -76,7 +76,7 @@ set(Boost_ADDITIONAL_VERSIONS
 find_package(Boost "1.35" COMPONENTS filesystem system)
 
 if(NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost required to compile crfa")
+    message(FATAL_ERROR "Boost required to compile multirds")
 endif()
 
 ########################################################################
@@ -85,7 +85,7 @@ endif()
 include(GrPlatform) #define LIB_SUFFIX
 set(GR_RUNTIME_DIR      bin)
 set(GR_LIBRARY_DIR      lib${LIB_SUFFIX})
-set(GR_INCLUDE_DIR      include/crfa)
+set(GR_INCLUDE_DIR      include/multirds)
 set(GR_DATA_DIR         share)
 set(GR_PKG_DATA_DIR     ${GR_DATA_DIR}/${CMAKE_PROJECT_NAME})
 set(GR_DOC_DIR          ${GR_DATA_DIR}/doc)
@@ -132,7 +132,7 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/Modules)
 include(GrVersion)
 
 if(NOT CPPUNIT_FOUND)
-    message(FATAL_ERROR "CppUnit required to compile crfa")
+    message(FATAL_ERROR "CppUnit required to compile multirds")
 endif()
 
 ########################################################################
@@ -182,7 +182,7 @@ add_custom_target(uninstall
 ########################################################################
 # Add subdirectories
 ########################################################################
-add_subdirectory(include/crfa)
+add_subdirectory(include/multirds)
 add_subdirectory(lib)
 add_subdirectory(swig)
 add_subdirectory(python)
@@ -197,6 +197,6 @@ if(NOT CMAKE_MODULES_DIR)
   set(CMAKE_MODULES_DIR lib${LIB_SUFFIX}/cmake)
 endif(NOT CMAKE_MODULES_DIR)
 
-install(FILES cmake/Modules/crfaConfig.cmake
-    DESTINATION ${CMAKE_MODULES_DIR}/crfa
+install(FILES cmake/Modules/multirdsConfig.cmake
+    DESTINATION ${CMAKE_MODULES_DIR}/multirds
 )

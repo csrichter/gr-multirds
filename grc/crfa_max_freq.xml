@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>max_freq</name>
-  <key>crfa_max_freq</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <make>crfa.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate,$round_to,$debug)</make>
+  <key>multirds_max_freq</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate,$round_to,$debug)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name

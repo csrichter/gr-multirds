@@ -32,7 +32,7 @@
 #include <vector>
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     rds_decoder_redsea::sptr
     rds_decoder_redsea::make(bool log, bool debug)
@@ -344,6 +344,6 @@ int rds_decoder_redsea_impl::work (int noutput_items,
    }/*end of work function*/
    
 
-  } /* namespace crfa */
+  } /* namespace multirds */
 } /* namespace gr */
 

@@ -25,7 +25,7 @@ import pmt
 from PyQt4 import Qt, QtCore, QtGui
 import code,time,csv,sqlite3,atexit
 from bitstring import BitArray
-from crfa.tmc_classes import tmc_dict,tmc_message,language
+from multirds.tmc_classes import tmc_dict,tmc_message,language
 from datetime import datetime
 from datetime import timedelta
 

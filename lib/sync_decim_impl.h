@@ -21,10 +21,10 @@
 #ifndef INCLUDED_CRFA_SYNC_DECIM_IMPL_H
 #define INCLUDED_CRFA_SYNC_DECIM_IMPL_H
 
-#include <crfa/sync_decim.h>
+#include <multirds/sync_decim.h>
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     class sync_decim_impl : public sync_decim
     {
@@ -49,7 +49,7 @@ namespace gr {
       int dosync_counter;
     };
 
-  } // namespace crfa
+  } // namespace multirds
 } // namespace gr
 
 #endif /* INCLUDED_CRFA_SYNC_DECIM_IMPL_H */

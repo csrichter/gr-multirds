@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>RDS Parser Table (qt)</name>
-  <key>crfa_rds_parser_table_qt</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <import>from crfa.rds_parser_table_qt import rds_parser_table_qt, rds_parser_table_qt_Widget,rds_parser_table_qt_Signals</import>
+  <key>multirds_rds_parser_table_qt</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <import>from multirds.rds_parser_table_qt import rds_parser_table_qt, rds_parser_table_qt_Widget,rds_parser_table_qt_Signals</import>
 <!--
   <var_make>self.$(id) = $(id) = $value</var_make>
 -->
@@ -14,7 +14,7 @@
 	#set $label = '"%s"'%$id
 #end if
 $(signals) = rds_parser_table_qt_Signals()
-self.$(id) = crfa.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir,$writeDB)
+self.$(id) = multirds.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir,$writeDB)
 $(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id))
 $(gui_hint()($win))</make>
   <callback>set_freq_tune($freq_tune);</callback>

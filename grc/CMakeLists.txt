@@ -17,20 +17,20 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 install(FILES
-    crfa_multi_rds_printer.xml
-    crfa_qtguitest.xml
-    crfa_rds_table_qt.xml
-    crfa_rds_parser_table_qt.xml
-    crfa_rds_decoder.xml
-    crfa_max_freq.xml
-    crfa_smooth_vectors.xml
-    crfa_stream_selector.xml
-    crfa_vector_cutter.xml
-    crfa_decoder_compare.xml
-    crfa_diff_add_sync_decim.xml
-    crfa_sync_decim.xml
-    crfa_rds_decoder_redsea.xml
-    crfa_qtgui_range.xml
-    crfa_variable_setter.xml
-    crfa_tmc_parser.xml DESTINATION share/gnuradio/grc/blocks
+    multirds_multi_rds_printer.xml
+    multirds_qtguitest.xml
+    multirds_rds_table_qt.xml
+    multirds_rds_parser_table_qt.xml
+    multirds_rds_decoder.xml
+    multirds_max_freq.xml
+    multirds_smooth_vectors.xml
+    multirds_stream_selector.xml
+    multirds_vector_cutter.xml
+    multirds_decoder_compare.xml
+    multirds_diff_add_sync_decim.xml
+    multirds_sync_decim.xml
+    multirds_rds_decoder_redsea.xml
+    multirds_qtgui_range.xml
+    multirds_variable_setter.xml
+    multirds_tmc_parser.xml DESTINATION share/gnuradio/grc/blocks
 )

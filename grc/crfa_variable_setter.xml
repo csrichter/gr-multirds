@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <block>
   <name>variable_setter</name>
-  <key>crfa_variable_setter</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
+  <key>multirds_variable_setter</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
   <make>#set $block = 'self.%s'%$id
     #set $varsetter = 'self.set_%s'%$varname
     #set $guiupdater = 'self._%s_win.update_gui'%$varname
-    crfa.variable_setter("$varname",$varsetter,$guiupdater,$is_pair,$msgkey)</make>
-  <!--$(block) = crfa.variable_setter($varname,$varsetter) -->
+    multirds.variable_setter("$varname",$varsetter,$guiupdater,$is_pair,$msgkey)</make>
+  <!--$(block) = multirds.variable_setter($varname,$varsetter) -->
   <param>
     <name>varname</name>
     <key>varname</key>

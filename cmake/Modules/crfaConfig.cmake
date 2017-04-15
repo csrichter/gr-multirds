@@ -1,9 +1,9 @@
 INCLUDE(FindPkgConfig)
-PKG_CHECK_MODULES(PC_CRFA crfa)
+PKG_CHECK_MODULES(PC_CRFA multirds)
 
 FIND_PATH(
     CRFA_INCLUDE_DIRS
-    NAMES crfa/api.h
+    NAMES multirds/api.h
     HINTS $ENV{CRFA_DIR}/include
         ${PC_CRFA_INCLUDEDIR}
     PATHS ${CMAKE_INSTALL_PREFIX}/include
@@ -13,7 +13,7 @@ FIND_PATH(
 
 FIND_LIBRARY(
     CRFA_LIBRARIES
-    NAMES gnuradio-crfa
+    NAMES gnuradio-multirds
     HINTS $ENV{CRFA_DIR}/lib
         ${PC_CRFA_LIBDIR}
     PATHS ${CMAKE_INSTALL_PREFIX}/lib

@@ -24,7 +24,7 @@
 
 #include <gnuradio/attributes.h>
 
-#ifdef gnuradio_crfa_EXPORTS
+#ifdef gnuradio_multirds_EXPORTS
 #  define CRFA_API __GR_ATTR_EXPORT
 #else
 #  define CRFA_API __GR_ATTR_IMPORT

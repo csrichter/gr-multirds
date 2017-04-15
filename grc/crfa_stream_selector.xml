@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
   <name>stream_selector</name>
-  <key>crfa_stream_selector</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <make>crfa.stream_selector()</make>
+  <key>multirds_stream_selector</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.stream_selector()</make>
 
  <!-- <param>
     <name>...</name>

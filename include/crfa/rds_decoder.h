@@ -22,15 +22,15 @@
 #ifndef INCLUDED_CRFA_RDS_DECODER_H
 #define INCLUDED_CRFA_RDS_DECODER_H
 
-#include <crfa/api.h>
+#include <multirds/api.h>
 #include <gnuradio/sync_block.h>
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     /*!
      * \brief <+description of block+>
-     * \ingroup crfa
+     * \ingroup multirds
      *
      */
     class CRFA_API rds_decoder : virtual public gr::sync_block
@@ -39,17 +39,17 @@ namespace gr {
       typedef boost::shared_ptr<rds_decoder> sptr;
 
       /*!
-       * \brief Return a shared_ptr to a new instance of crfa::rds_decoder.
+       * \brief Return a shared_ptr to a new instance of multirds::rds_decoder.
        *
-       * To avoid accidental use of raw pointers, crfa::rds_decoder's
+       * To avoid accidental use of raw pointers, multirds::rds_decoder's
        * constructor is in a private implementation
-       * class. crfa::rds_decoder::make is the public interface for
+       * class. multirds::rds_decoder::make is the public interface for
        * creating new instances.
        */
       static sptr make(bool log, bool debug);
     };
 
-  } // namespace crfa
+  } // namespace multirds
 } // namespace gr
 
 #endif /* INCLUDED_CRFA_RDS_DECODER_H */

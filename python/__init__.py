@@ -23,10 +23,10 @@ This is the GNU Radio CRFA module. Place your Python package
 description here (python/__init__.py).
 '''
 
-# import swig generated symbols into the crfa namespace
+# import swig generated symbols into the multirds namespace
 try:
 	# this might fail if the module is python-only
-	from crfa_swig import *
+	from multirds_swig import *
 except ImportError:
 	pass
 

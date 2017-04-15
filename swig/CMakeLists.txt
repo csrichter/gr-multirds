@@ -20,10 +20,10 @@
 ########################################################################
 # Check if there is C++ code at all
 ########################################################################
-if(NOT crfa_sources)
+if(NOT multirds_sources)
 	MESSAGE(STATUS "No C++ sources... skipping swig/")
 	return()
-endif(NOT crfa_sources)
+endif(NOT multirds_sources)
 
 ########################################################################
 # Include swig generation macros
@@ -43,23 +43,23 @@ foreach(incdir ${GNURADIO_RUNTIME_INCLUDE_DIRS})
     list(APPEND GR_SWIG_INCLUDE_DIRS ${incdir}/gnuradio/swig)
 endforeach(incdir)
 
-set(GR_SWIG_LIBRARIES gnuradio-crfa)
-set(GR_SWIG_DOC_FILE ${CMAKE_CURRENT_BINARY_DIR}/crfa_swig_doc.i)
+set(GR_SWIG_LIBRARIES gnuradio-multirds)
+set(GR_SWIG_DOC_FILE ${CMAKE_CURRENT_BINARY_DIR}/multirds_swig_doc.i)
 set(GR_SWIG_DOC_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-GR_SWIG_MAKE(crfa_swig crfa_swig.i)
+GR_SWIG_MAKE(multirds_swig multirds_swig.i)
 
 ########################################################################
 # Install the build swig module
 ########################################################################
-GR_SWIG_INSTALL(TARGETS crfa_swig DESTINATION ${GR_PYTHON_DIR}/crfa)
+GR_SWIG_INSTALL(TARGETS multirds_swig DESTINATION ${GR_PYTHON_DIR}/multirds)
 
 ########################################################################
 # Install swig .i files for development
 ########################################################################
 install(
     FILES
-    crfa_swig.i
-    ${CMAKE_CURRENT_BINARY_DIR}/crfa_swig_doc.i
-    DESTINATION ${GR_INCLUDE_DIR}/crfa/swig
+    multirds_swig.i
+    ${CMAKE_CURRENT_BINARY_DIR}/multirds_swig_doc.i
+    DESTINATION ${GR_INCLUDE_DIR}/multirds/swig
 )

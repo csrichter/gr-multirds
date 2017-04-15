@@ -2,10 +2,10 @@
 
 <block>
   <name>qtgui_range (cr)</name>
-  <key>variable_crfa_qtgui_range</key>
-  <category>[crfa]</category>
-  <import>import crfa</import>
-  <import>from crfa.qtgui_range import qtgui_range, RangeWidget</import>
+  <key>variable_multirds_qtgui_range</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <import>from multirds.qtgui_range import qtgui_range, RangeWidget</import>
   <var_make>self.$(id) = $(id) = $value</var_make>
   <make>#set $win = 'self._%s_win'%$id
                 #set $range = 'self.%s_range'%$id

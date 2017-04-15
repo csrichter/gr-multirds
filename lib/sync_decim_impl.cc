@@ -29,7 +29,7 @@
 #define SYNC_COUNTER_MAX 5//higher value -> slower sync, less cpu load
 //#include <pmt.h>
 namespace gr {
-  namespace crfa {
+  namespace multirds {
     
     sync_decim::sptr
     sync_decim::make(float threshold,float min_diff,bool log)
@@ -150,6 +150,6 @@ namespace gr {
           // Tell runtime system how many output items we produced.
           return noutput_items;
         }/*end of work*/
-  } /* namespace crfa */
+  } /* namespace multirds */
 } /* namespace gr */
 

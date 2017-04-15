@@ -21,10 +21,10 @@
 #ifndef INCLUDED_CRFA_DIFF_ADD_SYNC_DECIM_IMPL_H
 #define INCLUDED_CRFA_DIFF_ADD_SYNC_DECIM_IMPL_H
 
-#include <crfa/diff_add_sync_decim.h>
+#include <multirds/diff_add_sync_decim.h>
 
 namespace gr {
-  namespace crfa {
+  namespace multirds {
 
     class diff_add_sync_decim_impl : public diff_add_sync_decim
     {
@@ -47,7 +47,7 @@ namespace gr {
       unsigned int skip;
     };
 
-  } // namespace crfa
+  } // namespace multirds
 } // namespace gr
 
 #endif /* INCLUDED_CRFA_DIFF_ADD_SYNC_DECIM_IMPL_H */
