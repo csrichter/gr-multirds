@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <!--<meta http-equiv="refresh" content="5">-->
+    <title>TMC map</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="errorid"></div>
+    <div id="map"></div>
+    <script>
+      
+      var markers = [];
+      var map;
+      //var trafficLayerActive=true;
+      //var trafficLayer;
+
+      function initMap() {
+        var stuttgart = {lat: 48.7, lng: 9.2};
+
+        map = new google.maps.Map(document.getElementById("map"), {
+          zoom: 9,
+          center: stuttgart
+        });
+        map.trafficLayer = new google.maps.TrafficLayer();
+        map.trafficLayer.setMap(map);
+        map.trafficLayer.active=true;
+
+        map.addListener("click", loadMarkers);
+        loadMarkers();
+        window.onkeydown = function (e) {
+          var code = e.keyCode ? e.keyCode : e.which;
+          if (code === 38) { //up key
+            alert("up");
+          } else if (code === 40) { //down key
+            alert("down");
+          }else if (code === 84) { //t key
+            map.trafficLayer.active ? map.trafficLayer.setMap(null):map.trafficLayer.setMap(map);
+            map.trafficLayer.active=!map.trafficLayer.active;
+          }
+        };
+      }
+      //http://maps.google.com/mapfiles/kml/paddle/wht-blank.png
+
+      function setMapOnAll(map) {
+        markers.forEach(function(item){
+          item.setMap(map);
+          item.line.setMap(map);
+        })
+      }
+      function addMarker(location,text,endloc) {
+        /*var iconBase="http://maps.google.com/mapfiles/kml/";
+        var icons={redmark:{icon: iconBase + 'paddle/red-circle.png'},
+        whitemark:{icon: iconBase + 'paddle/wht-blank.png'}};*/
+        var marker = new google.maps.Marker({
+          position: location,
+          map: map,
+          title: text.replace(/<(?:.|\n)*?>/gm, ''),
+          //icon:redmark_icon
+          //icon:icons.whitemark.icon
+          //icon: iconBase + 'paddle/red-circle.png'
+          id: markers.length,
+          isInfoOpen: false,
+          infowindow: new google.maps.InfoWindow({
+            content: text
+          }),
+          line: new google.maps.Polyline({
+            path: [location,endloc],
+	    geodesic: true,
+	    strokeColor: '#FF0000',
+	    strokeOpacity: 1.0,
+	    strokeWeight: 2,
+	    map:map
+	  }),
+	  toggleInfowindow:function() {
+            this.isInfoOpen?this.infowindow.close():this.infowindow.open(map,this);
+            this.isInfoOpen=!this.isInfoOpen;           
+	  }
+
+        });
+        marker.addListener("click", function() {
+          marker.toggleInfowindow();
+          //toggleInfowindow(marker);
+        });
+        markers.push(marker);
+
+      }
+//       function toggleInfowindow(marker) {
+//         if (marker["isInfoOpen"]) {
+//           //infowindows[marker.id].open(map, marker);
+//           marker.infowindow.close();
+//           marker["isInfoOpen"]=false;
+//         }
+//         else{
+//           marker["isInfoOpen"]=true;
+//           marker.infowindow.open(map, marker);
+//         }
+//       }
+      function clearMarkers() {
+        console.log("cleared "+markers.length+" markers");
+        document.getElementById("errorid").innerHTML = "cleared "+markers.length+" markers";
+        setMapOnAll(null);//clears markers from map
+        markers = [];//deletes reference to them
+      }
+      function loadMarkers() {
+        clearMarkers();
+        var head= document.getElementsByTagName("head")[0];
+        var script= document.createElement("script");
+        script.type= "text/javascript";
+        script.src= "google_maps_markers.js";
+        head.appendChild(script);
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?callback=initMap">
+    </script>
+  </body>
+</html>
