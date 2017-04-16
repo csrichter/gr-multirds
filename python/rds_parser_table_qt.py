@@ -73,7 +73,8 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.set_msg_handler(pmt.intern('freq'), self.set_freq)
         self.message_port_register_out(pmt.intern('ctrl'))
         self.message_port_register_out(pmt.intern('tmc_raw'))
-
+        
+        self.TMC_without_CT==False
         self.log=log
         self.debug=debug
         self.writeDB=writeDB
@@ -691,16 +692,17 @@ class rds_parser_table_qt(gr.sync_block):#START
                     datetime_str=""
                 else:
                     datetime_str=datetime_received.strftime("%Y-%m-%d %H:%M:%S")
-                send_pmt = pmt.pmt_to_python.pmt_from_dict({
-                    "type":"alert-c",
-                    "PI":PI,
-                    "PSN":psn,
-                    "datetime_str":datetime_str,
-                    "TMC_X":int(tmc_x),
-                    "TMC_Y":int(tmc_y),
-                    "TMC_Z":int(tmc_z)
-                })#this gnuradio instance doesnt seem to be able to convert from numpy.int64 to pmt
-                self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
+                if datetime_received!=None or self.TMC_without_CT==True:
+                    send_pmt = pmt.pmt_to_python.pmt_from_dict({
+                        "type":"alert-c",
+                        "PI":PI,
+                        "PSN":psn,
+                        "datetime_str":datetime_str,
+                        "TMC_X":int(tmc_x),
+                        "TMC_Y":int(tmc_y),
+                        "TMC_Z":int(tmc_z)
+                    })#this gnuradio instance doesnt seem to be able to convert from numpy.int64 to pmt
+                    self.message_port_pub(pmt.intern('tmc_raw'), send_pmt)
                 
                 #~ tmc_hash=md5.new(str([PI,tmc_x,tmc_y,tmc_z])).hexdigest()
                 tmc_T=tmc_x>>4 #0:TMC-message 1:tuning info/service provider name
