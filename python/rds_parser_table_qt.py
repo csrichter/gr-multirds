@@ -89,7 +89,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.decoder_frequencies={}
         self.decoders=[]
         for i in range(nPorts):
-            self.decoders.append({'synced':False,'freq':None})
+            self.decoders.append({'synced':False,'freq':None,'PI':""})
         #self.decoder_synced={}
         #self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
         self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','RT+']
@@ -240,12 +240,23 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.RDS_data[PI]["DI"]=[2,2,2,2]
         self.RDS_data[PI]["internals"]={"last_rt_tooltip":"","unfinished_TMC":{},"last_valid_rt":"","last_valid_psn":"","RT_history":[]}
         self.RDS_data[PI]["time"]={"timestring":"88:88","datestring":"00-00-0000","datetime":None}
+        self.RDS_data[PI]["wrong_block_ratio"]=1#100%
     def handle_msg(self, msg, port):#port from 0 to 3
         if pmt.to_long(pmt.car(msg))==1L:
-            data=pmt.to_python(pmt.cdr(msg))
+            synced=pmt.to_python(pmt.cdr(msg))
             #print("port:%i, data: %s"%(port,data))
-            self.decoders[port]['synced']=data
+            self.decoders[port]['synced']=synced
             self.update_freq()
+            PI=self.decoders[port]['PI']
+            if self.RDS_data.has_key(PI) and not synced:
+                self.RDS_data[PI]["wrong_block_ratio"]=1#100%
+        elif pmt.to_long(pmt.car(msg))==2L:
+            wrong_block_ratio=pmt.to_python(pmt.cdr(msg))
+            PI=self.decoders[port]['PI']
+            if self.RDS_data.has_key(PI):
+                dots="."*self.RDS_data[PI]["blockcounts"]["any"]
+                self.RDS_data[PI]["wrong_block_ratio"]=wrong_block_ratio
+                self.signals.DataUpdateEvent.emit({'PI':PI,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
         else: #elif pmt.to_long(pmt.car(msg))==0L
             array=pmt.to_python(msg)[1]
 
@@ -277,10 +288,11 @@ class rds_parser_table_qt(gr.sync_block):#START
             #else:
                 #PI="%02X%02X" %(array[0],array[1])
             PI="%02X%02X" %(array[0],array[1])
+            self.decoders[port]['PI']=PI
             TP=(array[2]>>2)&0x1
             block2=(array[2]<<8)|(array[3]) #block2
             PTY=(block2>>5)&0x1F
-            wrong_blocks=int(array[12])
+            #wrong_blocks=int(array[12])
 
             try:
                 self.PI_dict[PI]+=1
@@ -317,7 +329,7 @@ class rds_parser_table_qt(gr.sync_block):#START
             self.RDS_data[PI]["TP"]=TP
             self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
 
-            self.signals.DataUpdateEvent.emit({'row':port,'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_blocks':wrong_blocks,'dots':dots})
+            self.signals.DataUpdateEvent.emit({'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
 
 
 
@@ -1134,6 +1146,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
                 freqcol=self.colorder.index('freq')
                 item=self.table.cellWidget(row,freqcol)
                 item.setText(event['freq'])
+            if event.has_key('wrong_block_ratio'):
+                item=self.table.cellWidget(row,self.colorder.index('quality'))
+                quality_string="%i%% %s"% (100-100*event['wrong_block_ratio'],event['dots'])
+                item.setText(quality_string)
             if event.has_key('wrong_blocks'):
                 item=self.table.cellWidget(row,self.colorder.index('quality'))
                 quality_string="%i%% %s"% (100-2*event['wrong_blocks'],event['dots'])

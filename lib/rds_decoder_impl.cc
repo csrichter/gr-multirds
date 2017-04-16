@@ -113,7 +113,7 @@ unsigned int rds_decoder_impl::calc_syndrome(unsigned long message,
 void rds_decoder_impl::decode_group(unsigned int *group) {
 	// raw data bytes, as received from RDS.
 	// 8 info bytes, followed by 4 RDS offset chars: ABCD/ABcD/EEEE (in US)
-	unsigned char bytes[13];
+	unsigned char bytes[12];
 
 	// RDS information words
 	bytes[0] = (group[0] >> 8U) & 0xffU;
@@ -130,8 +130,8 @@ void rds_decoder_impl::decode_group(unsigned int *group) {
 	bytes[9] = offset_chars[1];
 	bytes[10] = offset_chars[2];
 	bytes[11] = offset_chars[3];
-	bytes[12]=last_wrong_blocks_counter;
-	pmt::pmt_t data(pmt::make_blob(bytes, 13));
+	//bytes[12]=last_wrong_blocks_counter;
+	pmt::pmt_t data(pmt::make_blob(bytes, 12));
 	//pmt::pmt_t meta(pmt::PMT_NIL);
 	pmt::pmt_t meta(pmt::from_long(0));
 	pmt::pmt_t pdu(pmt::cons(meta, data));  // make PDU: (metadata, data) pair
@@ -250,6 +250,10 @@ int rds_decoder_impl::work (int noutput_items,
 								<< " bad blocks on " << blocks_counter
 								<< " total)" << std::endl;
 						}
+                                                pmt::pmt_t meta(pmt::from_long(2));
+                                                pmt::pmt_t data(pmt::from_double((double)wrong_blocks_counter/(double)blocks_counter));
+                                                pmt::pmt_t pdu(pmt::cons(meta, data));  // make PDU: (metadata, data) pair
+                                                message_port_pub(pmt::mp("out"), pdu);						
 						blocks_counter=0;
 						wrong_blocks_counter=0;
 					}

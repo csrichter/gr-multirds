@@ -153,10 +153,12 @@ class tmc_parser(gr.sync_block):
             if tmc_T == 0:
                 if tmc_F==1:#single group
                     tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
+                    self.tmc_messages.add(tmc_msg)
                     self.print_tmc_msg(tmc_msg)
                 elif tmc_F==0 and Y15==1:#1st group of multigroup
                     ci=int(tmc_x&0x7)
                     tmc_msg=tmc_message(PI,psn,ltn,tmc_x,tmc_y,tmc_z,datetime_received,self)
+                    self.tmc_messages.add(tmc_msg)
                     #if  self.RDS_data[PI]["internals"]["unfinished_TMC"].has_key(ci):
                         #print("overwriting parital message")
                     self.unfinished_messages[PI][ci]={"msg":tmc_msg,"time":time.time()}
@@ -170,7 +172,7 @@ class tmc_parser(gr.sync_block):
                         #print("%f: continuing message PI:%s,age:%f,ci:%i complete:%i"%t)
                         self.unfinished_messages[PI]["time"]=time.time()
                         if tmc_msg.is_complete:
-                            self.print_tmc_msg(tmc_msg)#print and store message
+                            self.print_tmc_msg(tmc_msg)#print message
                             del self.unfinished_messages[PI][tmc_msg.ci]#delete finished message
                     else:
                         #if not ci==0:

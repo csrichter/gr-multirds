@@ -590,7 +590,6 @@ class tmc_message:
 	print(self)
     else:#subsequent groups in multigroup -> Y0..Y11 and Z0..Z15 are special format
       raise ValueError, "subsequent groups must be added to existing tmc message"
-    tableobj.tmc_messages.add(self)
   def add_group(self,tmc_y,tmc_z):
     sg=int((tmc_y>>14)&0x1)#=1 if second group Y14
     gsi=int((tmc_y>>12)&0x3)#group sequence indicator Y12..13 ,max length:5
