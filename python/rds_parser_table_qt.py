@@ -89,7 +89,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.decoder_frequencies={}
         self.decoders=[]
         for i in range(nPorts):
-            self.decoders.append({'synced':False,'freq':None,'PI':""})
+            self.decoders.append({'synced':False,'freq':None,'PI':"",'pilot_strength':0})
         #self.decoder_synced={}
         #self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
         self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','pilot_strength','RT+']
@@ -183,12 +183,13 @@ class rds_parser_table_qt(gr.sync_block):#START
         message_string="decoder frequencies:"
         for num in self.decoder_frequencies:
             freq=self.decoder_frequencies[num]
+            pilot_strength=self.decoders[num]['pilot_strength']
             if self.decoders[num]['synced']:
-                message_string+="<span style='color:green'>&emsp; %i:%0.1fM</span>"% (num,freq/1e6)
+                message_string+="<span style='color:green'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_strength)
                 #print("'color:green'>%i:%0.1fM</span>"% (num,freq/1e6))
             else:#elif self.decoders[num]['synced']==False:
                 #print("'color:red'>%i:%0.1fM</span>"% (num,freq/1e6))
-                message_string+="<span style='color:red'>&emsp; %i:%0.1fM</span>"% (num,freq/1e6)
+                message_string+="<span style='color:red'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_strength)
         message_string+="&emsp; tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
         self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
         #print(message_string)
@@ -262,6 +263,8 @@ class rds_parser_table_qt(gr.sync_block):#START
                 self.signals.DataUpdateEvent.emit({'PI':PI,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
         elif pmt.to_long(pmt.car(msg))==3L: #carrier quality message
             pilot_strength=pmt.to_long(pmt.cdr(msg))
+            self.decoders[port]['pilot_strength']=pilot_strength
+            self.update_freq()
             PI=self.decoders[port]['PI']
             if self.RDS_data.has_key(PI):            
                 self.signals.DataUpdateEvent.emit({'PI':PI,'pilot_strength':pilot_strength})

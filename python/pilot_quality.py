@@ -28,7 +28,7 @@ class pilot_quality(gr.sync_block):
     """
     docstring for block pilot_quality
     """
-    def __init__(self, debug,samp_rate,fft_len,carrier_freq,gap_width,msg_adr):
+    def __init__(self, debug,samp_rate,fft_len,carrier_freq,gap_width,msg_adr,update_period):
         gr.sync_block.__init__(self,
             name="pilot_quality",
             in_sig=[(np.float32,fft_len)],
@@ -36,6 +36,7 @@ class pilot_quality(gr.sync_block):
         #self.carrier_width=1
         self.debug=debug
         self.msg_adr=msg_adr
+        self.update_period=update_period
         self.message_port_register_out(pmt.intern('out'))
         self.carrier_index=int(carrier_freq*fft_len/float(samp_rate))
         self.lowbound_index=int((carrier_freq-gap_width)*fft_len/float(samp_rate))
@@ -53,7 +54,7 @@ class pilot_quality(gr.sync_block):
             self.strength_list.append(strength)
             #if self.debug:
             #    print("i:%i,strength: %f,carrier: %f, around:%f"%(i,strength,carrier,surrounding))
-        if time.time()-self.send_timer>0.1:#10 times per second
+        if time.time()-self.send_timer>self.update_period:
             self.send_timer=time.time()
             strength_mean=int(np.mean(self.strength_list))
             self.strength_list=[]

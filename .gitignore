@@ -1,2 +1,4 @@
 build
 python/cache
+apps/*.py
+apps/*.pyc

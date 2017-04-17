@@ -6296,7 +6296,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(80, 356)</value>
+      <value>(8, 388)</value>
     </param>
     <param>
       <key>_rotation</key>
