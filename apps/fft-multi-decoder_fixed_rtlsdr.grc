@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<?grc format='1' created='3.7.9'?>
+<?grc format='1' created='3.7.11'?>
 <flow_graph>
   <timestamp>Wed Feb  1 13:42:21 2017</timestamp>
   <block>
@@ -190,69 +190,6 @@
     </param>
   </block>
   <block>
-    <key>variable_qtgui_range</key>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>value</key>
-      <value>26</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(311, 758)</value>
-    </param>
-    <param>
-      <key>gui_hint</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>bbgain</value>
-    </param>
-    <param>
-      <key>label</key>
-      <value></value>
-    </param>
-    <param>
-      <key>min_len</key>
-      <value>200</value>
-    </param>
-    <param>
-      <key>orient</key>
-      <value>Qt.Horizontal</value>
-    </param>
-    <param>
-      <key>start</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>step</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>stop</key>
-      <value>62</value>
-    </param>
-    <param>
-      <key>rangeType</key>
-      <value>float</value>
-    </param>
-    <param>
-      <key>widget</key>
-      <value>counter_slider</value>
-    </param>
-  </block>
-  <block>
     <key>variable</key>
     <param>
       <key>comment</key>
@@ -260,7 +197,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -746,7 +683,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -840,7 +777,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -899,7 +836,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>True</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -916,6 +853,69 @@
     <param>
       <key>value</key>
       <value>0</value>
+    </param>
+  </block>
+  <block>
+    <key>variable_qtgui_range</key>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>value</key>
+      <value>30</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(311, 758)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>rfgain</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value></value>
+    </param>
+    <param>
+      <key>min_len</key>
+      <value>200</value>
+    </param>
+    <param>
+      <key>orient</key>
+      <value>Qt.Horizontal</value>
+    </param>
+    <param>
+      <key>start</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>step</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>stop</key>
+      <value>62</value>
+    </param>
+    <param>
+      <key>rangeType</key>
+      <value>float</value>
+    </param>
+    <param>
+      <key>widget</key>
+      <value>counter_slider</value>
     </param>
   </block>
   <block>
@@ -1381,7 +1381,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1272, 380)</value>
+      <value>(1848, 132)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -1594,116 +1594,6 @@
     <param>
       <key>vlen</key>
       <value>1</value>
-    </param>
-  </block>
-  <block>
-    <key>multirds_decoder_compare</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1757, 231)</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>multirds_decoder_compare_0</value>
-    </param>
-    <param>
-      <key>nPorts</key>
-      <value>3</value>
-    </param>
-  </block>
-  <block>
-    <key>multirds_rds_parser_table_qt</key>
-    <param>
-      <key>alias</key>
-      <value></value>
-    </param>
-    <param>
-      <key>comment</key>
-      <value></value>
-    </param>
-    <param>
-      <key>affinity</key>
-      <value></value>
-    </param>
-    <param>
-      <key>debug</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>_enabled</key>
-      <value>1</value>
-    </param>
-    <param>
-      <key>_coordinate</key>
-      <value>(1589, 423)</value>
-    </param>
-    <param>
-      <key>gui_hint</key>
-      <value>7,1,5,3</value>
-    </param>
-    <param>
-      <key>_rotation</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>id</key>
-      <value>multirds_rds_parser_table_qt_0_0</value>
-    </param>
-    <param>
-      <key>label</key>
-      <value></value>
-    </param>
-    <param>
-      <key>log</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>nPorts</key>
-      <value>3</value>
-    </param>
-    <param>
-      <key>showTMC</key>
-      <value>False</value>
-    </param>
-    <param>
-      <key>freq_tune</key>
-      <value>freq_tune</value>
-    </param>
-    <param>
-      <key>workdir</key>
-      <value>/home/clemens/forschungsarbeit/data/</value>
-    </param>
-    <param>
-      <key>writeDB</key>
-      <value>False</value>
     </param>
   </block>
   <block>
@@ -2183,7 +2073,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(704, 521)</value>
+      <value>(704, 544)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2228,6 +2118,112 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     <param>
       <key>samp_rate</key>
       <value>samp_rate</value>
+    </param>
+  </block>
+  <block>
+    <key>multirds_decoder_compare</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1757, 231)</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>multirds_decoder_compare_0</value>
+    </param>
+    <param>
+      <key>nPorts</key>
+      <value>3</value>
+    </param>
+  </block>
+  <block>
+    <key>multirds_rds_parser_table_qt</key>
+    <param>
+      <key>alias</key>
+      <value></value>
+    </param>
+    <param>
+      <key>comment</key>
+      <value></value>
+    </param>
+    <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>debug</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>_enabled</key>
+      <value>1</value>
+    </param>
+    <param>
+      <key>_coordinate</key>
+      <value>(1589, 423)</value>
+    </param>
+    <param>
+      <key>gui_hint</key>
+      <value>7,1,5,3</value>
+    </param>
+    <param>
+      <key>_rotation</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>id</key>
+      <value>multirds_rds_parser_table_qt_0_0</value>
+    </param>
+    <param>
+      <key>label</key>
+      <value></value>
+    </param>
+    <param>
+      <key>log</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>nPorts</key>
+      <value>3</value>
+    </param>
+    <param>
+      <key>freq_tune</key>
+      <value>freq_tune</value>
+    </param>
+    <param>
+      <key>workdir</key>
+      <value>/media/clemens/intdaten/uni_bulk/forschungsarbeit/data/</value>
+    </param>
+    <param>
+      <key>writeDB</key>
+      <value>False</value>
     </param>
   </block>
   <block>
@@ -3534,7 +3530,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(104, 276)</value>
+      <value>(103, 339)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -3641,6 +3637,10 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     <key>qtgui_const_sink_x</key>
     <param>
       <key>autoscale</key>
+      <value>False</value>
+    </param>
+    <param>
+      <key>axislabels</key>
       <value>False</value>
     </param>
     <param>
@@ -3991,8 +3991,12 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
       <value>1.0</value>
     </param>
     <param>
+      <key>axislabels</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>bw</key>
-      <value>chan_rate</value>
+      <value>baseband_rate</value>
     </param>
     <param>
       <key>alias</key>
@@ -4259,12 +4263,20 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
       <value>firdes.WIN_BLACKMAN_hARRIS</value>
     </param>
     <param>
+      <key>label</key>
+      <value>Relative Gain</value>
+    </param>
+    <param>
       <key>ymax</key>
       <value>70</value>
     </param>
     <param>
       <key>ymin</key>
       <value>-60</value>
+    </param>
+    <param>
+      <key>units</key>
+      <value>dB</value>
     </param>
   </block>
   <block>
@@ -4276,6 +4288,10 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     <param>
       <key>average</key>
       <value>1.0</value>
+    </param>
+    <param>
+      <key>axislabels</key>
+      <value>True</value>
     </param>
     <param>
       <key>bw</key>
@@ -4546,12 +4562,20 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
       <value>firdes.WIN_BLACKMAN_hARRIS</value>
     </param>
     <param>
+      <key>label</key>
+      <value>Relative Gain</value>
+    </param>
+    <param>
       <key>ymax</key>
       <value>10</value>
     </param>
     <param>
       <key>ymin</key>
       <value>-100</value>
+    </param>
+    <param>
+      <key>units</key>
+      <value>dB</value>
     </param>
   </block>
   <block>
@@ -4565,8 +4589,12 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
       <value>1.0</value>
     </param>
     <param>
+      <key>axislabels</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>bw</key>
-      <value>baseband_rate</value>
+      <value>baseband_rate/bb_decim</value>
     </param>
     <param>
       <key>alias</key>
@@ -4833,12 +4861,20 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
       <value>firdes.WIN_BLACKMAN_hARRIS</value>
     </param>
     <param>
+      <key>label</key>
+      <value>Relative Gain</value>
+    </param>
+    <param>
       <key>ymax</key>
       <value>0</value>
     </param>
     <param>
       <key>ymin</key>
       <value>-120</value>
+    </param>
+    <param>
+      <key>units</key>
+      <value>dB</value>
     </param>
   </block>
   <block>
@@ -5000,7 +5036,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>gain0</key>
-      <value>28</value>
+      <value>rfgain</value>
     </param>
     <param>
       <key>ant10</key>
@@ -6260,7 +6296,7 @@ class blk(gr.sync_block):  # other base classes are basic_block, decim_block, in
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(80, 396)</value>
+      <value>(80, 356)</value>
     </param>
     <param>
       <key>_rotation</key>
