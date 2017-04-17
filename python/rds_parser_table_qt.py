@@ -92,7 +92,7 @@ class rds_parser_table_qt(gr.sync_block):#START
             self.decoders.append({'synced':False,'freq':None,'PI':""})
         #self.decoder_synced={}
         #self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','RT+']
+        self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','pilot_strength','RT+']
         self.workdir=workdir
         self.PI_dict={}#contains PI:numpackets (string:integer)
         self.tmc_messages=tmc_dict()
@@ -261,9 +261,10 @@ class rds_parser_table_qt(gr.sync_block):#START
                 self.RDS_data[PI]["wrong_block_ratio"]=wrong_block_ratio
                 self.signals.DataUpdateEvent.emit({'PI':PI,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
         elif pmt.to_long(pmt.car(msg))==3L: #carrier quality message
-            data=pmt.to_python(pmt.cdr(msg))
-            if self.debug:
-                print(data)
+            pilot_strength=pmt.to_long(pmt.cdr(msg))
+            PI=self.decoders[port]['PI']
+            if self.RDS_data.has_key(PI):            
+                self.signals.DataUpdateEvent.emit({'PI':PI,'pilot_strength':pilot_strength})
         else: #elif pmt.to_long(pmt.car(msg))==0L
             array=pmt.to_python(msg)[1]
 
@@ -1056,11 +1057,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         self.table=QtGui.QTableWidget(self)
         rowcount=0
         self.table.setRowCount(rowcount)
-        self.table.setColumnCount(10)
-        self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #disallow editing
-
         #self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality']
         self.colorder=tableobj.colorder
+        self.table.setColumnCount(len(self.colorder))
+        self.table.setEditTriggers(QtGui.QAbstractItemView.NoEditTriggers) #disallow editing
+
+        
  ##button.clicked.connect(self.getDetails)
 
         layout.addWidget(self.table)
@@ -1149,7 +1151,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
             row=self.PI_to_row[PI]
             PIcol=self.colorder.index('ID')
             self.table.cellWidget(row,PIcol).setText(PI)
-
+            if event.has_key('pilot_strength'):
+                col=self.colorder.index('pilot_strength')
+                item=self.table.cellWidget(row,col)
+                item.setText("%i dB"%event['pilot_strength'])
             if event.has_key('freq'):
                 freqcol=self.colorder.index('freq')
                 item=self.table.cellWidget(row,freqcol)

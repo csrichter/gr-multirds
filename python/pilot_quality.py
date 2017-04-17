@@ -21,7 +21,7 @@
 
 import numpy as np
 from gnuradio import gr
-import pmt,code
+import pmt,time
 
 
 class pilot_quality(gr.sync_block):
@@ -35,11 +35,13 @@ class pilot_quality(gr.sync_block):
             out_sig=None)
         #self.carrier_width=1
         self.debug=debug
+        self.msg_adr=msg_adr
         self.message_port_register_out(pmt.intern('out'))
         self.carrier_index=int(carrier_freq*fft_len/float(samp_rate))
         self.lowbound_index=int((carrier_freq-gap_width)*fft_len/float(samp_rate))
         self.highbound_index=int((carrier_freq+gap_width)*fft_len/float(samp_rate))
-
+        self.send_timer=time.time()
+        self.strength_list=[]
     def work(self, input_items, output_items):
         in0 = input_items[0]
         # <+signal processing here+>
@@ -48,7 +50,16 @@ class pilot_quality(gr.sync_block):
             carrier=np.mean(in_vec[self.carrier_index-1:self.carrier_index+1])
             #code.interact(local=locals())
             strength=abs(carrier-surrounding)
+            self.strength_list.append(strength)
+            #if self.debug:
+            #    print("i:%i,strength: %f,carrier: %f, around:%f"%(i,strength,carrier,surrounding))
+        if time.time()-self.send_timer>0.1:#10 times per second
+            self.send_timer=time.time()
+            strength_mean=int(np.mean(self.strength_list))
+            self.strength_list=[]
+            send_pmt = pmt.cons(pmt.from_long(self.msg_adr),pmt.from_long(strength_mean))
+            self.message_port_pub(pmt.intern('out'), send_pmt)
             if self.debug:
-                print("strength: %f,carrier: %f, around:%f"%(strength,carrier,surrounding))
+                print("mean:%i"%strength_mean)
         return len(input_items[0])
 
