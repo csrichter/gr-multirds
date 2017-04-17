@@ -32,11 +32,11 @@ except ImportError:
 
 # import any pure python here
 from multi_rds_printer import multi_rds_printer
-from qtguitest import qtguitest
+
 from rds_table_qt import rds_table_qt
 from rds_parser_table_qt import rds_parser_table_qt
 from max_freq import max_freq
-from smooth_vectors import smooth_vectors
+
 from chart import Chart
 from stream_selector import stream_selector
 from vector_cutter import vector_cutter

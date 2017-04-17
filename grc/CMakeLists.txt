@@ -18,16 +18,13 @@
 # Boston, MA 02110-1301, USA.
 install(FILES
     multirds_multi_rds_printer.xml
-    multirds_qtguitest.xml
     multirds_rds_table_qt.xml
     multirds_rds_parser_table_qt.xml
     multirds_rds_decoder.xml
     multirds_max_freq.xml
-    multirds_smooth_vectors.xml
     multirds_stream_selector.xml
     multirds_vector_cutter.xml
     multirds_decoder_compare.xml
-    multirds_diff_add_sync_decim.xml
     multirds_sync_decim.xml
     multirds_rds_decoder_redsea.xml
     multirds_qtgui_range.xml

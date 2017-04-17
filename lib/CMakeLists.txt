@@ -26,7 +26,6 @@ include_directories(${Boost_INCLUDE_DIR})
 link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND multirds_sources
     rds_decoder_impl.cc
-    diff_add_sync_decim_impl.cc
     sync_decim_impl.cc
     rds_decoder_redsea_impl.cc )
 

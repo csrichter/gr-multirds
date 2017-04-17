@@ -32,11 +32,9 @@ GR_PYTHON_INSTALL(
     FILES
     __init__.py
     multi_rds_printer.py
-    qtguitest.py
     rds_table_qt.py
     rds_parser_table_qt.py
     max_freq.py
-    smooth_vectors.py
     chart.py
     stream_selector.py
     vector_cutter.py

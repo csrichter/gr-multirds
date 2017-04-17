@@ -9,15 +9,13 @@
 
 %{
 #include "multirds/rds_decoder.h"
-#include "multirds/diff_add_sync_decim.h"
 #include "multirds/sync_decim.h"
 #include "multirds/rds_decoder_redsea.h"
 %}
 
 %include "multirds/rds_decoder.h"
 GR_SWIG_BLOCK_MAGIC2(multirds, rds_decoder);
-%include "multirds/diff_add_sync_decim.h"
-GR_SWIG_BLOCK_MAGIC2(multirds, diff_add_sync_decim);
+
 %include "multirds/sync_decim.h"
 GR_SWIG_BLOCK_MAGIC2(multirds, sync_decim);
 %include "multirds/rds_decoder_redsea.h"
