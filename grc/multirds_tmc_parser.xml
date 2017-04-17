@@ -2,7 +2,7 @@
 <block>
   <name>tmc_parser</name>
   <key>multirds_tmc_parser</key>
-  <category>multirds</category>
+  <category>[multirds]</category>
   <import>import multirds</import>
   <make>#set $win = 'self._%s_win'%$id
         #set $parser = 'self.%s_parser'%$id
