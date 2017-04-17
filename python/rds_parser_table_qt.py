@@ -74,7 +74,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.message_port_register_out(pmt.intern('ctrl'))
         self.message_port_register_out(pmt.intern('tmc_raw'))
         
-        self.TMC_without_CT==False
+        self.TMC_without_CT=False
         self.log=log
         self.debug=debug
         self.writeDB=writeDB
@@ -249,7 +249,10 @@ class rds_parser_table_qt(gr.sync_block):#START
             self.update_freq()
             PI=self.decoders[port]['PI']
             if self.RDS_data.has_key(PI) and not synced:
-                self.RDS_data[PI]["wrong_block_ratio"]=1#100%
+                dots="."*self.RDS_data[PI]["blockcounts"]["any"]
+                wrong_block_ratio=1#100%
+                self.RDS_data[PI]["wrong_block_ratio"]=wrong_block_ratio
+                self.signals.DataUpdateEvent.emit({'PI':PI,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
         elif pmt.to_long(pmt.car(msg))==2L:
             wrong_block_ratio=pmt.to_python(pmt.cdr(msg))
             PI=self.decoders[port]['PI']
@@ -329,7 +332,8 @@ class rds_parser_table_qt(gr.sync_block):#START
             self.RDS_data[PI]["TP"]=TP
             self.RDS_data[PI]["PTY"]=self.pty_dict[PTY]
 
-            self.signals.DataUpdateEvent.emit({'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
+            self.signals.DataUpdateEvent.emit({'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP,'wrong_block_ratio':self.RDS_data[PI]["wrong_block_ratio"],'dots':dots})
+            #self.signals.DataUpdateEvent.emit({'PI':PI,'PTY':self.pty_dict[PTY],'TP':TP})
 
 
 
