@@ -260,6 +260,10 @@ class rds_parser_table_qt(gr.sync_block):#START
                 dots="."*self.RDS_data[PI]["blockcounts"]["any"]
                 self.RDS_data[PI]["wrong_block_ratio"]=wrong_block_ratio
                 self.signals.DataUpdateEvent.emit({'PI':PI,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
+        elif pmt.to_long(pmt.car(msg))==3L: #carrier quality message
+            data=pmt.to_python(pmt.cdr(msg))
+            if self.debug:
+                print(data)
         else: #elif pmt.to_long(pmt.car(msg))==0L
             array=pmt.to_python(msg)[1]
 

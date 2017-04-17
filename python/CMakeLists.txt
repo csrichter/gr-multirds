@@ -44,7 +44,8 @@ GR_PYTHON_INSTALL(
     qtgui_range.py
     variable_setter.py
     tmc_classes.py
-    tmc_parser.py DESTINATION ${GR_PYTHON_DIR}/multirds
+    tmc_parser.py
+    pilot_quality.py DESTINATION ${GR_PYTHON_DIR}/multirds
 )
 
 ########################################################################
