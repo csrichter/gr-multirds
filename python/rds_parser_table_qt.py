@@ -89,10 +89,10 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.decoder_frequencies={}
         self.decoders=[]
         for i in range(nPorts):
-            self.decoders.append({'synced':False,'freq':None,'PI':"",'pilot_strength':0})
+            self.decoders.append({'synced':False,'freq':None,'PI':"",'pilot_SNR':0})
         #self.decoder_synced={}
         #self.colorder=['ID','freq','name','PTY','AF','time','text','quality','buttons']
-        self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','pilot_strength','RT+']
+        self.colorder=['ID','freq','name','buttons','PTY','AF','time','text','quality','pilot_SNR','RT+']
         self.workdir=workdir
         self.PI_dict={}#contains PI:numpackets (string:integer)
         self.tmc_messages=tmc_dict()
@@ -183,13 +183,13 @@ class rds_parser_table_qt(gr.sync_block):#START
         message_string="decoder frequencies:"
         for num in self.decoder_frequencies:
             freq=self.decoder_frequencies[num]
-            pilot_strength=self.decoders[num]['pilot_strength']
+            pilot_SNR=self.decoders[num]['pilot_SNR']
             if self.decoders[num]['synced']:
-                message_string+="<span style='color:green'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_strength)
+                message_string+="<span style='color:green'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_SNR)
                 #print("'color:green'>%i:%0.1fM</span>"% (num,freq/1e6))
             else:#elif self.decoders[num]['synced']==False:
                 #print("'color:red'>%i:%0.1fM</span>"% (num,freq/1e6))
-                message_string+="<span style='color:red'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_strength)
+                message_string+="<span style='color:red'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_SNR)
         message_string+="&emsp; tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
         self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
         #print(message_string)
@@ -262,12 +262,12 @@ class rds_parser_table_qt(gr.sync_block):#START
                 self.RDS_data[PI]["wrong_block_ratio"]=wrong_block_ratio
                 self.signals.DataUpdateEvent.emit({'PI':PI,'wrong_block_ratio':wrong_block_ratio,'dots':dots})
         elif pmt.to_long(pmt.car(msg))==3L: #carrier quality message
-            pilot_strength=pmt.to_long(pmt.cdr(msg))
-            self.decoders[port]['pilot_strength']=pilot_strength
+            pilot_SNR=pmt.to_long(pmt.cdr(msg))
+            self.decoders[port]['pilot_SNR']=pilot_SNR
             self.update_freq()
             PI=self.decoders[port]['PI']
             if self.RDS_data.has_key(PI):            
-                self.signals.DataUpdateEvent.emit({'PI':PI,'pilot_strength':pilot_strength})
+                self.signals.DataUpdateEvent.emit({'PI':PI,'pilot_SNR':pilot_SNR})
         else: #elif pmt.to_long(pmt.car(msg))==0L
             array=pmt.to_python(msg)[1]
 
@@ -1154,10 +1154,10 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
             row=self.PI_to_row[PI]
             PIcol=self.colorder.index('ID')
             self.table.cellWidget(row,PIcol).setText(PI)
-            if event.has_key('pilot_strength'):
-                col=self.colorder.index('pilot_strength')
+            if event.has_key('pilot_SNR'):
+                col=self.colorder.index('pilot_SNR')
                 item=self.table.cellWidget(row,col)
-                item.setText("%i dB"%event['pilot_strength'])
+                item.setText("%i dB"%event['pilot_SNR'])
             if event.has_key('freq'):
                 freqcol=self.colorder.index('freq')
                 item=self.table.cellWidget(row,freqcol)

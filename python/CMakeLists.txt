@@ -43,7 +43,7 @@ GR_PYTHON_INSTALL(
     variable_setter.py
     tmc_classes.py
     tmc_parser.py
-    pilot_quality.py DESTINATION ${GR_PYTHON_DIR}/multirds
+    pilot_SNR.py DESTINATION ${GR_PYTHON_DIR}/multirds
 )
 
 ########################################################################

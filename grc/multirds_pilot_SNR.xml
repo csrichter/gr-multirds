@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <block>
-  <name>pilot_quality</name>
-  <key>multirds_pilot_quality</key>
+  <name>pilot_SNR</name>
+  <key>multirds_pilot_SNR</key>
   <category>[multirds]</category>
   <import>import multirds</import>
-  <make>multirds.pilot_quality($debug, $samp_rate, $fft_len, $carrier_freq,$gap_width, $msg_adr,$update_period)</make>
+  <make>multirds.pilot_SNR($debug, $samp_rate, $fft_len, $carrier_freq,$gap_width, $msg_adr,$update_period)</make>
   <!-- Make one 'param' node for every Parameter you want settable from the GUI.
        Sub-nodes:
        * name

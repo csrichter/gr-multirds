@@ -30,5 +30,5 @@ install(FILES
     multirds_qtgui_range.xml
     multirds_variable_setter.xml
     multirds_tmc_parser.xml
-    multirds_pilot_quality.xml DESTINATION share/gnuradio/grc/blocks
+    multirds_pilot_SNR.xml DESTINATION share/gnuradio/grc/blocks
 )

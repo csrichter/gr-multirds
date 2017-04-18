@@ -24,13 +24,13 @@ from gnuradio import gr
 import pmt,time
 
 
-class pilot_quality(gr.sync_block):
+class pilot_SNR(gr.sync_block):
     """
-    docstring for block pilot_quality
+    docstring for block pilot_SNR
     """
     def __init__(self, debug,samp_rate,fft_len,carrier_freq,gap_width,msg_adr,update_period):
         gr.sync_block.__init__(self,
-            name="pilot_quality",
+            name="pilot_SNR",
             in_sig=[(np.float32,fft_len)],
             out_sig=None)
         #self.carrier_width=1
@@ -42,7 +42,7 @@ class pilot_quality(gr.sync_block):
         self.lowbound_index=int((carrier_freq-gap_width)*fft_len/float(samp_rate))
         self.highbound_index=int((carrier_freq+gap_width)*fft_len/float(samp_rate))
         self.send_timer=time.time()
-        self.strength_list=[]
+        self.SNR_list=[]
     def work(self, input_items, output_items):
         in0 = input_items[0]
         # <+signal processing here+>
@@ -50,17 +50,17 @@ class pilot_quality(gr.sync_block):
             surrounding=np.mean(in_vec[self.lowbound_index:self.highbound_index])
             carrier=np.mean(in_vec[self.carrier_index-1:self.carrier_index+1])
             #code.interact(local=locals())
-            strength=abs(carrier-surrounding)
-            self.strength_list.append(strength)
+            SNR=abs(carrier-surrounding)
+            self.SNR_list.append(SNR)
             #if self.debug:
-            #    print("i:%i,strength: %f,carrier: %f, around:%f"%(i,strength,carrier,surrounding))
+            #    print("i:%i,SNR: %f,carrier: %f, around:%f"%(i,SNR,carrier,surrounding))
         if time.time()-self.send_timer>self.update_period:
             self.send_timer=time.time()
-            strength_mean=int(np.mean(self.strength_list))
-            self.strength_list=[]
-            send_pmt = pmt.cons(pmt.from_long(self.msg_adr),pmt.from_long(strength_mean))
+            SNR_mean=int(np.mean(self.SNR_list))
+            self.SNR_list=[]
+            send_pmt = pmt.cons(pmt.from_long(self.msg_adr),pmt.from_long(SNR_mean))
             self.message_port_pub(pmt.intern('out'), send_pmt)
             if self.debug:
-                print("mean:%i"%strength_mean)
+                print("mean:%i"%SNR_mean)
         return len(input_items[0])
 
