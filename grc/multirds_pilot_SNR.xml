@@ -75,4 +75,10 @@
 		<type>message</type>
 		<optional>1</optional>
 	</source>
+          <doc>outputs PMT pair of longs (msg_adr . SNR) \
+              SNR is calculated as difference (in dB)\
+              between the 19k carrier power and the \
+              average power between carrier_freq-gap_width and carrier_freq+gap_width \
+
+  </doc>
 </block>
