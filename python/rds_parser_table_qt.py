@@ -925,7 +925,7 @@ class rds_parser_table_qt(gr.sync_block):#START
                     #formatted_text="<font face='Courier New' color='%s'>%s</font>"%("purple",PS_ON_str)
                     self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PSN':formatted_text})
                     try:
-                        t=(PI_ON,self.RDS_data[PI_ON]["PSN"],float(self.RDS_data[PI_ON]["AF"]["main"]),self.RDS_data[PI_ON]["PTY"],int(self.RDS_data[PI_ON]["TP"]))
+                        t=(PI_ON,str(self.RDS_data[PI_ON]["PSN"]),float(self.RDS_data[PI_ON]["AF"]["main"]),str(self.RDS_data[PI_ON]["PTY"]),int(self.RDS_data[PI_ON]["TP"]))
                         if self.writeDB:
                             db.execute("INSERT OR REPLACE INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
                     except KeyError:
