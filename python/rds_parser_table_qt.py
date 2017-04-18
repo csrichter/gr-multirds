@@ -163,7 +163,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         f=open(self.workdir+'pty-list.csv')
         reader = csv.reader(f, delimiter=',', quotechar='"')
         reader.next()#skip header
-        self.pty_dict=dict((int(rows[0]),rows[1]) for rows in reader)
+        self.pty_dict=dict((int(rows[0]),unicode(rows[1],errors='ignore')) for rows in reader)
         f.close()
         self.minute_count=0
         self.minute_count_max=0
@@ -925,9 +925,13 @@ class rds_parser_table_qt(gr.sync_block):#START
                     #formatted_text="<font face='Courier New' color='%s'>%s</font>"%("purple",PS_ON_str)
                     self.signals.DataUpdateEvent.emit({'PI':PI_ON,'PSN':formatted_text})
                     try:
-                        t=(PI_ON,str(self.RDS_data[PI_ON]["PSN"]),float(self.RDS_data[PI_ON]["AF"]["main"]),str(self.RDS_data[PI_ON]["PTY"]),int(self.RDS_data[PI_ON]["TP"]))
+                        t=(PI_ON,self.RDS_data[PI_ON]["PSN"],float(self.RDS_data[PI_ON]["AF"]["main"]),self.RDS_data[PI_ON]["PTY"],int(self.RDS_data[PI_ON]["TP"]))
                         if self.writeDB:
-                            db.execute("INSERT OR REPLACE INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+                            try:
+                                db.execute("INSERT OR REPLACE INTO stations (PI,PSN,freq,PTY,TP) VALUES (?,?,?,?,?)",t)
+                            except Exception as e:
+                                print(e)
+                                code.interact(local=locals())
                     except KeyError:
                         #not all info present -> no db update
                         pass
@@ -1015,7 +1019,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         0b1111:u"ãåæœŵýõøþŋŕćśźŧ "}#0xff should not occur (not in standard) (but occured 2017-03-04-9:18 , probably transmission error)
 
         #charlist=list(charstring)
-        return_string=""
+        return_string=u""
         for i,char in enumerate(charstring):
             #split byte
             alnr=(ord(char)&0xF0 )>>4 #upper 4 bit
@@ -1023,9 +1027,9 @@ class rds_parser_table_qt(gr.sync_block):#START
             if ord(char)<= 0b00011111:#control code
                 if ord(char)==0x0D or ord(char)==0x00:#end of message SWR uses: \r\0\0\0 for last block (\0 fill 4 char segment)
                     #return_string+="\r"
-                    return_string+=char
+                    return_string+=unichr(ord(char))
                 else:
-                    return_string+="{%02X}"%ord(char)#output control code
+                    return_string+=u"{%02X}"%ord(char)#output control code
 #       elif ord(char)<= 0b01111111: #real encoding slightly different from ascii
 #         return_string+=char#use ascii
             else:
@@ -1033,9 +1037,11 @@ class rds_parser_table_qt(gr.sync_block):#START
                     return_string+=alphabet[alnr][index]
                     #return_string+=unichr(ord(char))#TODO: properly decide for UTF8 or EBU charset
                 except KeyError:
-                    return_string+="?%02X?"%ord(char)#symbol not decoded
+                    return_string+=u"?%02X?"%ord(char)#symbol not decoded
                     print("symbol not decoded: "+"?%02X?"%ord(char)+"in string:"+return_string)
                     pass
+        if not type(return_string)==unicode:
+            code.interact(local=locals())
         return return_string
     def color_text(self, text, start,end,textcolor,segmentcolor):
         #formatted_text="<font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font><font face='Courier New' color='%s'>%s</font>"% (textcolor,text[:start],segmentcolor,text[start:end],textcolor,text[end:])

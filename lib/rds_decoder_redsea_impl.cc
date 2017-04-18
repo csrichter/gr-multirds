@@ -135,7 +135,8 @@ static const char * const offset_name[]={"A","B","C","D","c"};*/
     // restricted by attempting to correct bursts of errors spanning one or two
     // bits."
     // Kopitz & Marks 1999: "RDS: The Radio Data System", p. 224
-    for (uint32_t e=0x1;e <= 0x3;e+=0x2) {//for (uint32_t e : {0x1, 0x3}) {
+    //for (uint32_t e=0x1;e <= 0x3;e+=0x2) {//for (uint32_t e : {0x1, 0x3}) {
+    for (uint32_t e : {0x1, 0x3}) {//0x1, 0x3, 0x7,0x15,0x31
       for (int shift=0; shift < 26; shift++) {
         uint32_t errvec = ((e << shift) & kBitmask26);
         uint16_t sy = calc_syndrome(errvec ^ offset_word[offset_num],26);
@@ -316,9 +317,9 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                         block_number=(block_number+1) % 4;
                                         blocks_counter++;
 /* 1187.5 bps / 104 bits = 11.4 groups/sec, or 45.7 blocks/sec */
-                                        if (blocks_counter==30) {//reduced from 50
+                                        if (blocks_counter==40) {//reduced from 50
                                                 last_wrong_blocks_counter=wrong_blocks_counter;
-                                                if (wrong_blocks_counter>21) {//reduced from 35
+                                                if (wrong_blocks_counter>28) {//reduced from 35
                                                         lout << "@@@@@ Lost Sync (Got " << wrong_blocks_counter
                                                                 << " bad blocks on " << blocks_counter
                                                                 << " total)" << std::endl;
