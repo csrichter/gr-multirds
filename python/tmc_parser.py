@@ -33,7 +33,7 @@ class tmc_parser(gr.sync_block):
     """
     docstring for block tmc_parser
     """
-    def __init__(self, workdir,log,debug,writeDB,maxheight):
+    def __init__(self, workdir,log,debug,writeDB,maxheight,auto_scroll):
         gr.sync_block.__init__(self,
             name="tmc_parser",
             in_sig=None,
@@ -42,7 +42,7 @@ class tmc_parser(gr.sync_block):
         self.debug=debug
         self.workdir=workdir
         self.writeDB=writeDB
-        self.qtwidget=tmc_parser_Widget(self,maxheight)
+        self.qtwidget=tmc_parser_Widget(self,maxheight,auto_scroll)
         self.message_port_register_in(pmt.intern('in'))
         self.set_msg_handler(pmt.intern('in'), self.handle_msg)
         self.tmc_meta={}
@@ -251,6 +251,10 @@ class tmc_parser_Widget(QtGui.QWidget):
         if self.parser.tmc_messages.matchFilter(tmc_msg,filters):
             self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.log_string()))
             self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.multi_str()))
+        if self.auto_scroll:
+            scroll_max=self.logOutput.verticalScrollBar().maximum()
+            self.logOutput.verticalScrollBar().setValue(scroll_max)
+        #code.interact(local=locals())
     def updateui(self):
         print("updating ui")
     def filterChanged(self):
@@ -260,11 +264,12 @@ class tmc_parser_Widget(QtGui.QWidget):
         filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
         self.logOutput.append(Qt.QString.fromUtf8(self.parser.tmc_messages.getLogString(filters)))
         print("filter changed")
-    def __init__(self, parser,maxheight):
+    def __init__(self, parser,maxheight,auto_scroll):
         QtGui.QWidget.__init__(self)
         layout = Qt.QVBoxLayout()
         self.setLayout(layout)
         self.parser=parser
+        self.auto_scroll=auto_scroll
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
