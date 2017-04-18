@@ -74,7 +74,7 @@ class rds_parser_table_qt(gr.sync_block):#START
         self.message_port_register_out(pmt.intern('ctrl'))
         self.message_port_register_out(pmt.intern('tmc_raw'))
         
-        self.TMC_without_CT=False
+        self.TMC_without_CT=True
         self.log=log
         self.debug=debug
         self.writeDB=writeDB

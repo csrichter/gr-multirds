@@ -9,7 +9,7 @@
 #if not $label()
 	#set $label = '"%s"'%$id
 #end if
-$(parser) = multirds.tmc_parser($workdir, $log, $debug, $writeDB,$maxheight,$auto_scroll)
+$(parser) = multirds.tmc_parser($workdir, $log, $debug, $writeDB,$maxheight)
 $(win) = $(parser).getqtwidget()
 $(gui_hint()($win))
   </make>
@@ -66,20 +66,6 @@ $(gui_hint()($win))
 			<key>False</key>
 		</option>
 	</param>
-        <param>
-                <name>auto_scroll</name>
-                <key>auto_scroll</key>
-                <value>True</value>
-                <type>bool</type>
-                <option>
-                        <name>Enable</name>
-                        <key>True</key>
-                </option>
-                <option>
-                        <name>Disable</name>
-                        <key>False</key>
-                </option>
-        </param>
 	<param>
 		<name>write Database</name>
 		<key>writeDB</key>

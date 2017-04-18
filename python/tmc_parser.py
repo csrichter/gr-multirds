@@ -33,7 +33,7 @@ class tmc_parser(gr.sync_block):
     """
     docstring for block tmc_parser
     """
-    def __init__(self, workdir,log,debug,writeDB,maxheight,auto_scroll):
+    def __init__(self, workdir,log,debug,writeDB,maxheight):
         gr.sync_block.__init__(self,
             name="tmc_parser",
             in_sig=None,
@@ -42,7 +42,7 @@ class tmc_parser(gr.sync_block):
         self.debug=debug
         self.workdir=workdir
         self.writeDB=writeDB
-        self.qtwidget=tmc_parser_Widget(self,maxheight,auto_scroll)
+        self.qtwidget=tmc_parser_Widget(self,maxheight)
         self.message_port_register_in(pmt.intern('in'))
         self.set_msg_handler(pmt.intern('in'), self.handle_msg)
         self.tmc_meta={}
@@ -245,15 +245,22 @@ class tmc_parser(gr.sync_block):
         return return_string
 class tmc_parser_Widget(QtGui.QWidget):
     def print_tmc_msg(self,tmc_msg):
+        sb=self.logOutput.verticalScrollBar()
+        oldmax=sb.maximum()
+        auto_scroll= abs(oldmax-sb.value())<60#auto_scroll if scrollbar was at max
+        #print("%i %i %r"%(sb.maximum(),sb.value(),auto_scroll))
         ef=unicode(self.event_filter.text().toUtf8(), encoding="UTF-8").lower()
         lf=unicode(self.location_filter.text().toUtf8(), encoding="UTF-8").lower()
         filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
         if self.parser.tmc_messages.matchFilter(tmc_msg,filters):
             self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.log_string()))
             self.logOutput.append(Qt.QString.fromUtf8(tmc_msg.multi_str()))
-        if self.auto_scroll:
-            scroll_max=self.logOutput.verticalScrollBar().maximum()
-            self.logOutput.verticalScrollBar().setValue(scroll_max)
+            #print("new message")
+        if auto_scroll:
+            sb=self.logOutput.verticalScrollBar()
+            new_max=sb.maximum()
+            sb.setValue(new_max)
+            #print("scrolling %i %i %r"%(oldmax,new_max,sb.value()))
         #code.interact(local=locals())
     def updateui(self):
         print("updating ui")
@@ -264,12 +271,11 @@ class tmc_parser_Widget(QtGui.QWidget):
         filters=[{"type":"location", "str":lf},{"type":"event", "str":ef}]
         self.logOutput.append(Qt.QString.fromUtf8(self.parser.tmc_messages.getLogString(filters)))
         print("filter changed")
-    def __init__(self, parser,maxheight,auto_scroll):
+    def __init__(self, parser,maxheight):
         QtGui.QWidget.__init__(self)
         layout = Qt.QVBoxLayout()
         self.setLayout(layout)
         self.parser=parser
-        self.auto_scroll=auto_scroll
         self.tmc_message_label=QtGui.QLabel("TMC messages:")
         self.event_filter=QtGui.QLineEdit()#QPlainTextEdit ?
         self.location_filter=QtGui.QLineEdit(u"Baden-Württemberg")
