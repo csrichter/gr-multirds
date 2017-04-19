@@ -136,7 +136,7 @@ static const char * const offset_name[]={"A","B","C","D","c"};*/
     // bits."
     // Kopitz & Marks 1999: "RDS: The Radio Data System", p. 224
     //for (uint32_t e=0x1;e <= 0x3;e+=0x2) {//for (uint32_t e : {0x1, 0x3}) {
-    for (uint32_t e : {0x1, 0x3, 0x7,0x15,0x31,0x63,0x127,0x255}) {//fix up to 8 bit burst errors
+    for (uint32_t e : {0x1, 0x3, 0x7,0x15,0x31}) {//fix up to 5 bit burst errors
       for (int shift=0; shift < 26; shift++) {
         uint32_t errvec = ((e << shift) & kBitmask26);
         uint16_t sy = calc_syndrome(errvec ^ offset_word[offset_num],26);
