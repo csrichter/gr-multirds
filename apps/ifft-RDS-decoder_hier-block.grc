@@ -1856,7 +1856,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(1040, 44)</value>
+      <value>(1056, 100)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -2079,6 +2079,14 @@
       <value></value>
     </param>
     <param>
+      <key>affinity</key>
+      <value></value>
+    </param>
+    <param>
+      <key>debug</key>
+      <value>False</value>
+    </param>
+    <param>
       <key>_enabled</key>
       <value>1</value>
     </param>
@@ -2095,16 +2103,16 @@
       <value>multirds_pilot_SNR_0</value>
     </param>
     <param>
-      <key>affinity</key>
-      <value></value>
+      <key>maxoutbuf</key>
+      <value>0</value>
+    </param>
+    <param>
+      <key>minoutbuf</key>
+      <value>0</value>
     </param>
     <param>
       <key>carrier_freq</key>
       <value>19e3</value>
-    </param>
-    <param>
-      <key>debug</key>
-      <value>False</value>
     </param>
     <param>
       <key>fft_len</key>
@@ -2113,14 +2121,6 @@
     <param>
       <key>gap_width</key>
       <value>4e3</value>
-    </param>
-    <param>
-      <key>maxoutbuf</key>
-      <value>0</value>
-    </param>
-    <param>
-      <key>minoutbuf</key>
-      <value>0</value>
     </param>
     <param>
       <key>msg_adr</key>
