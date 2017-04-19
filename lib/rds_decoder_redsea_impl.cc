@@ -281,7 +281,7 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                                 } else {
                                                   //try correcting:
                                                   uint32_t corrected_block= correctBurstErrors(reg,expected_offset_char[block_number]);
-                                                  if(corrected_block != reg) {//syndrome found in table ^= correction worked
+                                                  if(corrected_block != reg) {//syndrome found in table == correction worked
                                                         good_block=true;
                                                         dataword=(corrected_block>>10) & 0xffff;
                                                         checkword=corrected_block & 0x3ff;

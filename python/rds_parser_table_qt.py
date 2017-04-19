@@ -48,7 +48,7 @@ class rds_parser_table_qt_Signals(QObject):
         super(QtCore.QObject, self).__init__()
 class rds_parser_table_qt(gr.sync_block):#START
     """
-    docstring for block qtguitest
+    docstring for block rds_parser_table
     """
     def goodbye(self):
         self.clean_data_and_commit_db()
@@ -190,7 +190,7 @@ class rds_parser_table_qt(gr.sync_block):#START
             else:#elif self.decoders[num]['synced']==False:
                 #print("'color:red'>%i:%0.1fM</span>"% (num,freq/1e6))
                 message_string+="<span style='color:red'>&emsp; %i:%0.1fM (%i dB)</span>"% (num,freq/1e6,pilot_SNR)
-        message_string+="&emsp; tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
+        message_string+="<br>tuned frequency:%0.1fM"%(self.tuning_frequency/1e6)
         self.signals.DataUpdateEvent.emit({'decoder_frequencies':message_string})
         #print(message_string)
         #self.signals.DataUpdateEvent.emit({'row':decoder_num,'freq':freq_str})
@@ -1097,9 +1097,12 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         layout.addLayout(button_layout)
         label_layout = Qt.QHBoxLayout()
         self.freq_label=QtGui.QLabel("decoder frequencies:")
+        self.freq_label.setWordWrap(True)
+        self.freq_label.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Ignored))#expand in horizontal direction and only wrap if window too small
         #self.freq_label.setTextFormat(QtCore.Qt.RichText)
         #self.freq_label.setTextFormat(QtCore.Qt.PlainText)
         self.count_label=QtGui.QLabel("count:")
+        self.count_label.setAlignment(QtCore.Qt.AlignRight)
         label_layout.addWidget(self.freq_label)
         label_layout.addWidget(self.count_label)
         layout.addLayout(label_layout)
@@ -1149,7 +1152,8 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
     def display_data(self, event):
             #pp.pprint(event)
         if type(event)==dict and event.has_key('group_count'):
-            self.count_label.setText("count:%02i, max:%i"%(event['group_count'],event['group_count_max']))
+            #self.count_label.setText("count:%02i, max:%i"%(event['group_count'],event['group_count_max']))
+            self.count_label.setText("count:%i"%event['group_count'])
         if type(event)==dict and event.has_key('decoder_frequencies'):
             self.freq_label.setText(event['decoder_frequencies'])
         if type(event)==dict and event.has_key('PI'):
