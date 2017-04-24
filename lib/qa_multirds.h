@@ -20,8 +20,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef _QA_CRFA_H_
-#define _QA_CRFA_H_
+#ifndef _QA_MULTIRDS_H_
+#define _QA_MULTIRDS_H_
 
 #include <gnuradio/attributes.h>
 #include <cppunit/TestSuite.h>
@@ -35,4 +35,4 @@ class __GR_ATTR_EXPORT qa_multirds
   static CppUnit::TestSuite *suite();
 };
 
-#endif /* _QA_CRFA_H_ */
+#endif /* _QA_MULTIRDS_H_ */

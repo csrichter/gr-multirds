@@ -26,7 +26,8 @@
 #include "sync_decim_impl.h"
 #define DECIM 2
 #define lout log && std::cout
-#define SYNC_COUNTER_MAX 5//higher value -> slower sync, less cpu load
+//#define SYNC_COUNTER_MAX 5//higher value -> slower sync, less cpu load
+#define SYNC_COUNTER_MAX 7//higher value -> slower sync, less cpu load
 //#include <pmt.h>
 namespace gr {
   namespace multirds {

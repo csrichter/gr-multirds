@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_CRFA_RDS_DECODER_REDSEA_H
-#define INCLUDED_CRFA_RDS_DECODER_REDSEA_H
+#ifndef INCLUDED_MULTIRDS_RDS_DECODER_REDSEA_H
+#define INCLUDED_MULTIRDS_RDS_DECODER_REDSEA_H
 
 #include <multirds/api.h>
 #include <gnuradio/sync_block.h>
@@ -33,7 +33,7 @@ namespace gr {
      * \ingroup multirds
      *
      */
-    class CRFA_API rds_decoder_redsea : virtual public gr::sync_block
+    class MULTIRDS_API rds_decoder_redsea : virtual public gr::sync_block
     {
      public:
       typedef boost::shared_ptr<rds_decoder_redsea> sptr;
@@ -52,5 +52,5 @@ namespace gr {
   } // namespace multirds
 } // namespace gr
 
-#endif /* INCLUDED_CRFA_RDS_DECODER_REDSEA_H */
+#endif /* INCLUDED_MULTIRDS_RDS_DECODER_REDSEA_H */
 

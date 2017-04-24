@@ -136,7 +136,8 @@ static const char * const offset_name[]={"A","B","C","D","c"};*/
     // bits."
     // Kopitz & Marks 1999: "RDS: The Radio Data System", p. 224
     //for (uint32_t e=0x1;e <= 0x3;e+=0x2) {//for (uint32_t e : {0x1, 0x3}) {
-    for (uint32_t e : {0x1, 0x3, 0x7,0x15,0x31}) {//fix up to 5 bit burst errors
+    //for (uint32_t e : {0x1, 0x3, 0x7,0x15,0x31}) {//fix up to 5 bit burst errors (as code should support)
+    for (uint32_t e : {0x1, 0x3}) {//fix up to 2 bit burst errors (as book says)
       for (int shift=0; shift < 26; shift++) {
         uint32_t errvec = ((e << shift) & kBitmask26);
         uint16_t sy = calc_syndrome(errvec ^ offset_word[offset_num],26);
@@ -204,6 +205,7 @@ int rds_decoder_redsea_impl::work (int noutput_items,
         uint16_t block_calculated_crc, block_received_crc, checkword,dataword;
         uint16_t reg_syndrome;
         uint8_t offset_char('x');  // x = error while decoding the word offset
+        uint8_t variant;
 
 /* the synchronization process is described in Annex C, page 66 of the standard */
         while (i<noutput_items) {
@@ -245,13 +247,40 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                         checkword=reg & 0x3ff;//checkword part of received block (lower 10 bits)
 /* manage special case of C or C' offset word */
                                         if (block_number==2) {
-                                                block_received_crc=checkword^offset_word[block_number];
+                                                if (variant==0){//A
+                                                    offset_char = 'C';
+                                                    block_received_crc=checkword^offset_word[2];
+                                                }
+                                                else{//B
+                                                    offset_char = 'c';
+                                                    block_received_crc=checkword^offset_word[4];
+                                                }
+                                                if (block_received_crc==block_calculated_crc) {
+                                                        good_block=true;
+                                                }else{
+                                                    //try correcting:
+                                                    uint32_t corrected_block= correctBurstErrors(reg,offset_char);
+                                                    if(corrected_block != reg){
+                                                            good_block=true;
+                                                            dataword=(corrected_block>>10) & 0xffff;
+                                                            checkword=corrected_block & 0x3ff;
+                                                            //dout << "corrected error"<<std::endl;
+                                                    }else {
+                                                                  wrong_blocks_counter++;
+                                                                  good_block=false;
+                                                    }
+                                                }
+                                               
+                                                /*block_received_crc=checkword^offset_word[block_number];
                                                 if (block_received_crc==block_calculated_crc) {
                                                         good_block=true;
                                                         offset_char = 'C';
                                                 } else {
                                                         //try correcting:
-                                                        uint32_t corrected_block= correctBurstErrors(reg,'C');
+                                                    
+                                                        //uint32_t corrected_block= correctBurstErrors(reg,'C');
+                                                        uint32_t corrected_block = reg;//2017-04-24 disabled correction for third block 
+                                                        //-> errors if corrected with wrong offset
                                                         if(corrected_block != reg){
                                                           good_block=true;
                                                           dataword=(corrected_block>>10) & 0xffff;
@@ -269,15 +298,16 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                                                   good_block=false;
                                                           }
                                                         }
-                                                }
+                                                }*/
                                         }
                                         else {
                                                 block_received_crc=checkword^offset_word[block_number];
                                                 if (block_received_crc==block_calculated_crc) {
                                                         good_block=true;
-                                                        if (block_number==0) offset_char = 'A';
+                                                        offset_char=expected_offset_char[block_number]; //expected_offset_char[]={'A','B','?','D'};
+                                                        /*if (block_number==0) offset_char = 'A';
                                                         else if (block_number==1) offset_char = 'B';
-                                                        else if (block_number==3) offset_char = 'D';
+                                                        else if (block_number==3) offset_char = 'D';*/
                                                 } else {
                                                   //try correcting:
                                                   uint32_t corrected_block= correctBurstErrors(reg,expected_offset_char[block_number]);
@@ -303,6 +333,9 @@ int rds_decoder_redsea_impl::work (int noutput_items,
                                         if (block_number==0 && good_block) {
                                                 group_assembly_started=true;
                                                 group_good_blocks_counter=1;
+                                        }
+                                        if (block_number==1 && good_block) {//2nd block - > read group type variant
+                                                variant=(dataword>>12)& 0x1;
                                         }
                                         if (group_assembly_started) {
                                                 if (!good_block) group_assembly_started=false;

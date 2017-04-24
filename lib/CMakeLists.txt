@@ -27,7 +27,8 @@ link_directories(${Boost_LIBRARY_DIRS})
 list(APPEND multirds_sources
     rds_decoder_impl.cc
     sync_decim_impl.cc
-    rds_decoder_redsea_impl.cc )
+    rds_decoder_redsea_impl.cc
+    stream_router_impl.cc )
 
 set(multirds_sources "${multirds_sources}" PARENT_SCOPE)
 if(NOT multirds_sources)

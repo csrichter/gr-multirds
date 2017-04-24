@@ -1,4 +1,4 @@
-title: The CRFA OOT Module
+title: The MULTIRDS OOT Module
 brief: Short description of gr-multirds
 tags: # Tags are arbitrary, but look at CGRAN what other authors are using
   - sdr

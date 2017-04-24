@@ -616,7 +616,7 @@ class rds_parser_table_qt(gr.sync_block):#START
                 #decode 3A group of RT+
                 if AID==19415: #RT+
                     self.RDS_data[PI]["AID_list"][AID]["CB"]=(app_data>>12)&0x1 #is set if template available
-                    self.RDS_data[PI]["AID_list"][AID]["SCB"]=(app_data >> 8)&0x0f#server control bit
+                    self.RDS_data[PI]["AID_list"][AID]["SCB"]=(app_data >> 8)&0x0f#server control bits
                     self.RDS_data[PI]["AID_list"][AID]["template_number"]=app_data&0xff
                 #decode 3A group of TMC
                 if AID==52550:#TMC alert-c (continuously update)

@@ -19,8 +19,8 @@
  */
 
 
-#ifndef INCLUDED_CRFA_SYNC_DECIM_H
-#define INCLUDED_CRFA_SYNC_DECIM_H
+#ifndef INCLUDED_MULTIRDS_SYNC_DECIM_H
+#define INCLUDED_MULTIRDS_SYNC_DECIM_H
 
 #include <multirds/api.h>
 #include <gnuradio/sync_decimator.h>
@@ -33,7 +33,7 @@ namespace gr {
      * \ingroup multirds
      *
      */
-    class CRFA_API sync_decim : virtual public gr::sync_decimator
+    class MULTIRDS_API sync_decim : virtual public gr::sync_decimator
     {
      public:
       typedef boost::shared_ptr<sync_decim> sptr;
@@ -52,5 +52,5 @@ namespace gr {
   } // namespace multirds
 } // namespace gr
 
-#endif /* INCLUDED_CRFA_SYNC_DECIM_H */
+#endif /* INCLUDED_MULTIRDS_SYNC_DECIM_H */
 

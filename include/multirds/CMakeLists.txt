@@ -24,5 +24,6 @@ install(FILES
     api.h
     rds_decoder.h
     sync_decim.h
-    rds_decoder_redsea.h DESTINATION include/multirds
+    rds_decoder_redsea.h
+    stream_router.h DESTINATION include/multirds
 )

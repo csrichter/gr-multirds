@@ -18,8 +18,8 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_CRFA_SYNC_DECIM_IMPL_H
-#define INCLUDED_CRFA_SYNC_DECIM_IMPL_H
+#ifndef INCLUDED_MULTIRDS_SYNC_DECIM_IMPL_H
+#define INCLUDED_MULTIRDS_SYNC_DECIM_IMPL_H
 
 #include <multirds/sync_decim.h>
 
@@ -52,5 +52,5 @@ namespace gr {
   } // namespace multirds
 } // namespace gr
 
-#endif /* INCLUDED_CRFA_SYNC_DECIM_IMPL_H */
+#endif /* INCLUDED_MULTIRDS_SYNC_DECIM_IMPL_H */
 

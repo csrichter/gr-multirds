@@ -19,15 +19,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef INCLUDED_CRFA_API_H
-#define INCLUDED_CRFA_API_H
+#ifndef INCLUDED_MULTIRDS_API_H
+#define INCLUDED_MULTIRDS_API_H
 
 #include <gnuradio/attributes.h>
 
 #ifdef gnuradio_multirds_EXPORTS
-#  define CRFA_API __GR_ATTR_EXPORT
+#  define MULTIRDS_API __GR_ATTR_EXPORT
 #else
-#  define CRFA_API __GR_ATTR_IMPORT
+#  define MULTIRDS_API __GR_ATTR_IMPORT
 #endif
 
-#endif /* INCLUDED_CRFA_API_H */
+#endif /* INCLUDED_MULTIRDS_API_H */
