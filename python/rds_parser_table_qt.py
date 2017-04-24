@@ -613,6 +613,11 @@ class rds_parser_table_qt(gr.sync_block):#START
                         self.RDS_data[PI]["AID_list"][AID]["provider name"]="________"
                     if self.log:
                         print("new ODA: AID:%i, name:'%s', app_group:%s, station:%s" %(AID,app_name,app_group,PI))
+                #decode 3A group of RT+
+                if AID==19415: #RT+
+                    self.RDS_data[PI]["AID_list"][AID]["CB"]=(app_data>>12)&0x1 #is set if template available
+                    self.RDS_data[PI]["AID_list"][AID]["SCB"]=(app_data >> 8)&0x0f#server control bit
+                    self.RDS_data[PI]["AID_list"][AID]["template_number"]=app_data&0xff
                 #decode 3A group of TMC
                 if AID==52550:#TMC alert-c (continuously update)
                     variant=app_data>>14
@@ -805,10 +810,11 @@ class rds_parser_table_qt(gr.sync_block):#START
                     self.RDS_data[PI]["RT+_history"]={}
                     self.RDS_data[PI]["internals"]["RT+_times"]={}
                     #self.RDS_data[PI]["RT+"]["last_item_toggle_bit"]=2
-                A3_data=self.RDS_data[PI]["AID_list"][19415]["app_data"]
-                template_number=A3_data&0xff
-                SCB=(A3_data >> 8)&0x0f#server control bit
-                CB_flag=(A3_data>>12)&0x1 #is set if template available
+                #A3_data=self.RDS_data[PI]["AID_list"][19415]["app_data"]
+                #template_number=A3_data&0xff
+                #SCB=(A3_data >> 8)&0x0f#server control bit
+                #CB_flag=(A3_data>>12)&0x1 #is set if template available
+                
                 rtp_message= ((array[3]&0x1f)<<32)|(array[4]<<24)|(array[5]<<16)|(array[6]<<8)|(array[7])
                 item_toggle_bit=(rtp_message>>36)&0x1
                 item_running_bit=(rtp_message>>35)&0x1
