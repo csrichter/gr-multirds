@@ -42,6 +42,7 @@ namespace gr {
       
       void parse_ctrl_msg(pmt::pmt_t pdu);
       int outmappings[3];
+      int num_input_ports;
       
     };
       

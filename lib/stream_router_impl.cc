@@ -46,6 +46,7 @@ namespace gr {
         message_port_register_in(pmt::mp("ctrl"));
         set_msg_handler(pmt::mp("ctrl"), boost::bind(&stream_router_impl::parse_ctrl_msg, this, _1));
         //outmappings={0,1,2};
+        num_input_ports=ninputs;
         outmappings[0]=0;
         outmappings[1]=1;
         outmappings[2]=2;
@@ -87,11 +88,17 @@ namespace gr {
 //       const float *in0 = (const float *) input_items[0];
 //       const float *in1 = (const float *) input_items[1];
 //       const float *in2 = (const float *) input_items[2];
-      const float *inports[] = {
-          (const float *) input_items[0],(const float *) input_items[1],(const float *) input_items[2]
-          ,(const float *) input_items[3],(const float *) input_items[4],(const float *) input_items[5]
-          ,(const float *) input_items[6],(const float *) input_items[7],(const float *) input_items[8]
-    };
+        
+//       const float *inports[] = {
+//           (const float *) input_items[0],(const float *) input_items[1],(const float *) input_items[2]
+//           ,(const float *) input_items[3],(const float *) input_items[4],(const float *) input_items[5]
+//           ,(const float *) input_items[6],(const float *) input_items[7],(const float *) input_items[8]
+//     };
+      const float *inports[num_input_ports];
+      for (int j; j<num_input_ports;j++){
+        inports[j]=(const float *) input_items[j]; 
+      }   
+    
       float *outs[] = {(float *) output_items[0],(float *) output_items[1],(float *) output_items[2]};
 //       float *outL = (float *) output_items[0];
 //       float *outC = (float *) output_items[1];
