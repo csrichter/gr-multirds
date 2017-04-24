@@ -3,3 +3,4 @@ python/cache
 apps/*.py
 apps/*.pyc
 build-manlap
+*.bak
