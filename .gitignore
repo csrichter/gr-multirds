@@ -1,5 +1,6 @@
 build
 python/cache
+python/*.pyc
 apps/*.py
 apps/*.pyc
 build-manlap
