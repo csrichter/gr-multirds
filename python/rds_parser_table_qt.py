@@ -1144,12 +1144,19 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         details_button.clicked.connect(functools.partial(self.getDetails, row=rowPosition))
         button_layout.addWidget(details_button)
         #2017-03-17 disabled LR buttons
-        #left_button=QtGui.QPushButton("L")
+        #2017-04-24 enabled LR buttons
+        left_button=QtGui.QPushButton("L")
         #left_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="left"))
-        #button_layout.addWidget(left_button)
-        #right_button=QtGui.QPushButton("R")
+        left_button.clicked.connect(functools.partial(self.setAudio2, row=rowPosition,audio_channel=0))
+        button_layout.addWidget(left_button)
+        center_button=QtGui.QPushButton("C")
+        #center_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="center"))
+        center_button.clicked.connect(functools.partial(self.setAudio2, row=rowPosition,audio_channel=1))
+        button_layout.addWidget(center_button)
+        right_button=QtGui.QPushButton("R")
         #right_button.clicked.connect(functools.partial(self.setAudio, row=rowPosition,audio_channel="right"))
-        #button_layout.addWidget(right_button)
+        right_button.clicked.connect(functools.partial(self.setAudio2, row=rowPosition,audio_channel=2))
+        button_layout.addWidget(right_button)
 
         cellWidget = QtGui.QWidget()
         cellWidget.setLayout(button_layout)
@@ -1255,6 +1262,20 @@ class rds_parser_table_qt_Widget(QtGui.QWidget):
         #catch:
         #print("no freq, cant set decoder")#show notification? popup: too intrusive, log: maybe not visible, other possibility?
         #print("freq not in RX BW")#automatically shift freq-tune?
+    def setAudio2(self,row,audio_channel):
+
+        PIcol=self.colorder.index('ID')
+        PI=str(self.table.cellWidget(row,PIcol).text())
+        #find port:
+        for  port,decoder in enumerate(self.tableobj.decoders):
+             if decoder['PI']==PI:
+                #self.tableobj.decoders[port]['PI']
+                inport=pmt.from_long(port)
+                outport=pmt.from_long(audio_channel)
+                print("sending chan:%i"%audio_channel)     
+                send_pmt=pmt.cons(inport, outport)  #make PDU: (metadata, data) pair
+                self.tableobj.message_port_pub(pmt.intern('ctrl'), send_pmt)
+
     def getDetails(self,row):
         PIcol=self.colorder.index('ID')
         PI=str(self.table.cellWidget(row,PIcol).text())

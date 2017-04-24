@@ -57,28 +57,29 @@ class max_freq(gr.sync_block):
       return freq
     
     def handle_ctrl_msg(self,msg):
-      m = pmt.pmt_to_python.pmt_to_dict(msg)
-      if m.has_key("cmd") and m["cmd"]=="set_audio_freq":
-	#print(m)
-	#print(self.last_station_indices)
-	freq_index=self.freq_to_index(m["freq"])
-	if m["chan"]=="left" and freq_index<self.fft_len-5:
-	  if self.last_station_indices[0]==freq_index:
-	    self.index_fixed[0]=False
-	    print("decoder 0 free")
-	  else:
-	    self.last_station_indices[0]=freq_index
-	    self.index_fixed[0]=True
-	    print("decoder 0 fixed to %i"%m["freq"])
-	if m["chan"]=="right" and freq_index<self.fft_len-5:
-	  if self.last_station_indices[1]==freq_index:
-	    self.index_fixed[1]=False
-	    print("decoder 1 free")
-	  else:
-	    self.last_station_indices[1]=freq_index
-	    self.index_fixed[1]=True
-	    print("decoder 1 fixed to %i"%m["freq"])
-	#print(self.last_station_indices)
+      if pmt.is_dict():
+        m = pmt.pmt_to_python.pmt_to_dict(msg)
+        if m.has_key("cmd") and m["cmd"]=="set_audio_freq":
+	  #print(m)
+	  #print(self.last_station_indices)
+	  freq_index=self.freq_to_index(m["freq"])
+	  if m["chan"]=="left" and freq_index<self.fft_len-5:
+	    if self.last_station_indices[0]==freq_index:
+	      self.index_fixed[0]=False
+	      print("decoder 0 free")
+	    else:
+	      self.last_station_indices[0]=freq_index
+	      self.index_fixed[0]=True
+	      print("decoder 0 fixed to %i"%m["freq"])
+	  if m["chan"]=="right" and freq_index<self.fft_len-5:
+	    if self.last_station_indices[1]==freq_index:
+	      self.index_fixed[1]=False
+	      print("decoder 1 free")
+	    else:
+	      self.last_station_indices[1]=freq_index
+	      self.index_fixed[1]=True
+	      print("decoder 1 fixed to %i"%m["freq"])
+	  #print(self.last_station_indices)
       if m.has_key("cmd") and m["cmd"]=="switch mode":
 	self.searchMode=not self.searchMode
 	print("searchMode: %s"%self.searchMode)
