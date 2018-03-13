@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<block>
+  <name>Multi RDS Printer</name>
+  <key>multirds_multi_rds_printer</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.multi_rds_printer($print_freq,$nPorts)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+    <name>Print Frequency</name>
+    <key>print_freq</key>
+    <value>10</value>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <param>
+    <name>Number of Ports</name>
+    <key>nPorts</key>
+    <value>2</value>
+    <type>int</type>
+    <hide>part</hide>
+  </param>
+  <sink>
+    <name>in</name>
+    <type>message</type>
+    <nports>$nPorts</nports>
+    <!--<optional>1</optional>-->
+  </sink>
+</block>

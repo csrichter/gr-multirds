@@ -31,16 +31,25 @@ endif()
 GR_PYTHON_INSTALL(
     FILES
     __init__.py
-    rdspanel.py
-    DESTINATION ${GR_PYTHON_DIR}/rds
+    multi_rds_printer.py
+    rds_table_qt.py
+    rds_parser_table_qt.py
+    max_freq.py
+    chart.py
+    stream_selector.py
+    vector_cutter.py
+    decoder_compare.py
+    qtgui_range.py
+    variable_setter.py
+    tmc_classes.py
+    tmc_parser.py
+    pilot_SNR.py DESTINATION ${GR_PYTHON_DIR}/multirds
 )
 
 ########################################################################
 # Handle the unit tests
 ########################################################################
-#include(GrTest)
-#
-#set(GR_TEST_TARGET_DEPS gnuradio-rds)
-#set(GR_TEST_PYTHON_DIRS ${CMAKE_BINARY_DIR}/swig)
-#GR_ADD_TEST(qa_rds ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/qa_rds.py)
+include(GrTest)
 
+set(GR_TEST_TARGET_DEPS gnuradio-multirds)
+set(GR_TEST_PYTHON_DIRS ${CMAKE_BINARY_DIR}/swig)

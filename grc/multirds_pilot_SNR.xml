@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<block>
+  <name>pilot_SNR</name>
+  <key>multirds_pilot_SNR</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.pilot_SNR($debug, $samp_rate, $fft_len, $carrier_freq,$gap_width, $msg_adr,$update_period)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+	<param>
+		<name>Debug</name>
+		<key>debug</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+        <param>
+                <name>carrier_freq</name>
+                <key>carrier_freq</key>
+                <value>19e3</value>
+                <type>float</type>
+        </param>
+        <param>
+                <name>gap_width</name>
+                <key>gap_width</key>
+                <value>4e3</value>
+                <type>float</type>
+        </param>  
+        <param>
+                <name>update_period</name>
+                <key>update_period</key>
+                <value>0.2</value>
+                <type>float</type>
+        </param> 
+         <param>
+                <name>samp_rate</name>
+                <key>samp_rate</key>
+                <value>240000</value>
+                <type>int</type>
+        </param>       
+        <param>
+                <name>fft_len</name>
+                <key>fft_len</key>
+                <value>2048</value>
+                <type>int</type>
+        </param>
+        <param>
+                <name>msg_adr</name>
+                <key>msg_adr</key>
+                <value>3</value>
+                <type>int</type>
+        </param>
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+	<sink>
+		<name>in</name>
+		<type>float</type>
+                <vlen>$fft_len</vlen>
+	</sink>
+	<source>
+		<name>out</name>
+		<type>message</type>
+		<optional>1</optional>
+	</source>
+          <doc>outputs PMT pair of longs (msg_adr . SNR) \
+              SNR is calculated as difference (in dB)\
+              between the 19k carrier power and the \
+              average power between carrier_freq-gap_width and carrier_freq+gap_width \
+
+  </doc>
+</block>

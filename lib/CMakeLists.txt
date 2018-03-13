@@ -1,4 +1,4 @@
-# Copyright 2011 Free Software Foundation, Inc.
+# Copyright 2011,2012,2016 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
@@ -21,23 +21,64 @@
 # Setup library
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
-include(GrMiscUtils)
 
-add_library(gnuradio-rds SHARED
-    decoder_impl.cc
-    encoder_impl.cc
-    parser_impl.cc
-)
-target_link_libraries(gnuradio-rds ${Boost_LIBRARIES}  ${GNURADIO_ALL_LIBRARIES})
-set_target_properties(gnuradio-rds PROPERTIES DEFINE_SYMBOL "gnuradio_RDS_EXPORTS")
+include_directories(${Boost_INCLUDE_DIR})
+link_directories(${Boost_LIBRARY_DIRS})
+list(APPEND multirds_sources
+    rds_decoder_impl.cc
+    sync_decim_impl.cc
+    rds_decoder_redsea_impl.cc
+    stream_router_impl.cc )
+
+set(multirds_sources "${multirds_sources}" PARENT_SCOPE)
+if(NOT multirds_sources)
+	MESSAGE(STATUS "No C++ sources... skipping lib/")
+	return()
+endif(NOT multirds_sources)
+
+add_library(gnuradio-multirds SHARED ${multirds_sources})
+target_link_libraries(gnuradio-multirds ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
+set_target_properties(gnuradio-multirds PROPERTIES DEFINE_SYMBOL "gnuradio_multirds_EXPORTS")
+
+if(APPLE)
+    set_target_properties(gnuradio-multirds PROPERTIES
+        INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+    )
+endif(APPLE)
 
 ########################################################################
 # Install built library files
 ########################################################################
-install(TARGETS gnuradio-rds
-    LIBRARY DESTINATION lib${LIB_SUFFIX} # .so/.dylib file
-    ARCHIVE DESTINATION lib${LIB_SUFFIX} # .lib file
-    RUNTIME DESTINATION bin              # .dll file
+include(GrMiscUtils)
+GR_LIBRARY_FOO(gnuradio-multirds RUNTIME_COMPONENT "multirds_runtime" DEVEL_COMPONENT "multirds_devel")
+
+########################################################################
+# Build and register unit test
+########################################################################
+include(GrTest)
+
+include_directories(${CPPUNIT_INCLUDE_DIRS})
+
+list(APPEND test_multirds_sources
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_multirds.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/qa_multirds.cc
 )
 
-GR_LIBRARY_FOO(gnuradio-rds)
+add_executable(test-multirds ${test_multirds_sources})
+
+target_link_libraries(
+  test-multirds
+  ${GNURADIO_RUNTIME_LIBRARIES}
+  ${Boost_LIBRARIES}
+  ${CPPUNIT_LIBRARIES}
+  gnuradio-multirds
+)
+
+GR_ADD_TEST(test_multirds test-multirds)
+
+########################################################################
+# Print summary
+########################################################################
+message(STATUS "Using install prefix: ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "Building for version: ${VERSION} / ${LIBVER}")
+

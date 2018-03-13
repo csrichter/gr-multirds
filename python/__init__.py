@@ -18,9 +18,31 @@
 
 # The presence of this file turns this directory into a Python package
 
-# import swig generated symbols into the howto namespace
-from rds_swig import *
+'''
+This is the GNU Radio MULTIRDS module. Place your Python package
+description here (python/__init__.py).
+'''
+
+# import swig generated symbols into the multirds namespace
+try:
+	# this might fail if the module is python-only
+	from multirds_swig import *
+except ImportError:
+	pass
 
 # import any pure python here
+from multi_rds_printer import multi_rds_printer
+
+from rds_table_qt import rds_table_qt
+from rds_parser_table_qt import rds_parser_table_qt
+from max_freq import max_freq
+
+from chart import Chart
+from stream_selector import stream_selector
+from vector_cutter import vector_cutter
+from decoder_compare import decoder_compare
+from qtgui_range import qtgui_range
+from variable_setter import variable_setter
+from tmc_parser import tmc_parser
+from pilot_SNR import pilot_SNR
 #
-from rdspanel import *

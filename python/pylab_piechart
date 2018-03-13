@@ -1,0 +1,16 @@
+#from pylab import *
+import pylab
+
+# make a square figure and axes
+pylab.figure(1, figsize=(10, 3))
+ax = axes([0.1, 0.1, 0.8, 0.8])
+
+labels = 'Frogs', 'Hogs', 'Dogs', 'Logs'
+fracs = [15,30,45, 10]
+
+explode=(0, 0.05, 0, 0)
+pylab.pie(fracs, explode=explode, labels=labels, autopct='%1.1f%%', shadow=True)
+pylab.title('Raining Hogs and Dogs', bbox={'facecolor':'0.8', 'pad':5})
+
+pylab.gca().set_aspect('1')
+pylab.show()

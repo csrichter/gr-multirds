@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<block>
+  <name>sync_decim</name>
+  <key>multirds_sync_decim</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.sync_decim($threshold, $min_diff, $log)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <param>
+          <name>Log</name>
+          <key>log</key>
+          <value>False</value>
+          <type>bool</type>
+          <option>
+                  <name>Enable</name>
+                  <key>True</key>
+          </option>
+          <option>
+                  <name>Disable</name>
+                  <key>False</key>
+          </option>
+  </param>
+  <param>
+    <name>Threshold</name>
+    <key>threshold</key>
+    <value>0.25</value>
+    <type>float</type>
+  </param>
+    <param>
+    <name>min_diff</name>
+    <key>min_diff</key>
+    <value>0.2</value>
+    <type>float</type>
+  </param>
+  <check>0 &lt; $min_diff &lt; 1</check>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>float</type>
+  </sink>
+  <sink>
+    <name>ctrl</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>float</type>
+  </source>
+</block>

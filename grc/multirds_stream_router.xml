@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<block>
+  <name>stream_router</name>
+  <key>multirds_stream_router</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.stream_router($ninputs, $noutputs)</make>
+
+  <param>
+    <name>Type</name>
+    <key>type</key>
+    <value>float</value>
+    <type>enum</type>
+    <option><name>Complex</name><key>complex</key><opt>fcn:sink_c</opt></option>
+    <option><name>Float</name><key>float</key><opt>fcn:sink_f</opt></option>
+</param>
+  <param>
+    <name>Number of inputs</name>
+    <key>ninputs</key>
+    <value>9</value>
+    <type>int</type>
+  </param>
+    <param>
+    <name>Number of outputs</name>
+    <key>noutputs</key>
+    <value>3</value>
+    <type>int</type>
+  </param>
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+ <sink>
+    <name>in</name>
+    <type>$type</type>
+    <nports>$ninputs</nports>
+</sink>
+ <sink>
+    <name>ctrl</name>
+    <type>message</type>
+</sink>
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <source>
+    <name>out</name>
+    <type>$type</type>
+    <nports>$noutputs</nports>
+  </source>
+</block>

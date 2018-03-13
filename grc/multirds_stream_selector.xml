@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<block>
+  <name>stream_selector</name>
+  <key>multirds_stream_selector</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.stream_selector()</make>
+
+ <!-- <param>
+    <name>...</name>
+    <key>...</key>
+    <type>...</type>
+    </param>-->
+
+  <sink>
+    <name>in_re</name>
+    <type>float</type>
+  </sink>
+  <sink>
+    <name>in_arg</name>
+    <type>float</type>
+  </sink>
+  <sink>
+    <name>rds_re</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+  <sink>
+    <name>rds_arg</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+  <source>
+    <name>rds_out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+</block>

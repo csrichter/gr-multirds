@@ -1,18 +1,16 @@
-title: gr-rds
+title: The MULTIRDS OOT Module
+brief: Short description of gr-multirds
+tags: # Tags are arbitrary, but look at CGRAN what other authors are using
+  - sdr
 author:
-  - Bastian Bloessl <bloessl@ccs-labs.org>
+  - Author Name <authors@email.address>
 copyright_owner:
-  - Bastian Bloessl
-  - Free Software Foundation
-dependencies:
-  - gnuradio (>= 3.7.4)
-repo: https://github.com/bastibl/gr-rds.git
-tags:
-  - FM
-  - RDS
-  - TMC
-website: https://github.com/bastibl/gr-rds
-brief: FM RDS/TMC Transceiver
-icon: https://fosdem.org/2015/schedule/event/sdr_rds_tmc/sdr_rds_tmc-c26370b6d55400089388d96b7d18d1b1067e997c76e8d8f1b2c6f94862866a1f.png
+  - Copyright Owner 1
+license:
+#repo: # Put the URL of the repository here, or leave blank for default
+#website: <module_website> # If you have a separate project website, put it here
+#icon: <icon_url> # Put a URL to a square image here that will be used as an icon on CGRAN
 ---
-An FM RDS/TMC Transceiver for GNU Radio.
+A longer, multi-line description of gr-multirds.
+You may use some *basic* Markdown here.
+If left empty, it will try to find a README file instead.

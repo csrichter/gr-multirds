@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<block>
+  <name>variable_setter</name>
+  <key>multirds_variable_setter</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>#set $block = 'self.%s'%$id
+    #set $varsetter = 'self.set_%s'%$varname
+    #set $guiupdater = 'self._%s_win.update_gui'%$varname
+    multirds.variable_setter("$varname",$varsetter,$guiupdater,$is_pair,$msgkey)</make>
+  <!--$(block) = multirds.variable_setter($varname,$varsetter) -->
+  <param>
+    <name>varname</name>
+    <key>varname</key>
+    <value></value>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Pair Mode</name>
+    <key>is_pair</key>
+    <value>False</value>
+    <type>enum</type>
+    <option>
+      <name>False</name>
+      <key>False</key>
+    </option>
+    <option>
+      <name>True</name>
+      <key>True</key>
+    </option>
+   </param>
+  <param>
+    <name>Key</name>
+    <key>msgkey</key>
+    <value></value>
+    <type>string</type>
+    <hide>#if $is_pair() == 'True' then 'none' else 'all'#</hide>
+  </param>
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>message</type>
+  </sink>
+
+  <!-- Make one 'source' node per output. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <doc>
+    in pair mode this block only accepts PMT pairs that have a matching CAR
+    no pair mode: block accepts pmt symbols directly
+  </doc>
+
+</block>

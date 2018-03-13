@@ -1,0 +1,87 @@
+<?xml version="1.0"?>
+<block>
+  <name>vector_cutter</name>
+  <key>multirds_vector_cutter</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.vector_cutter($insize, $outsize, $cutpoint,$pad_out,$zero_len)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <callback>set_cutpoint($cutpoint);</callback>
+  <callback>set_zero_len($zero_len);</callback>
+<!--  <param>
+    <name>padded output</name>
+    <key>pad_out</key>
+    <value>False</value>
+    <type>bool</type>
+    <option>
+      <name>Enable</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>Disable</name>
+      <key>False</key>
+    </option>
+  </param>-->
+  <param>
+    <name>padded output</name>
+    <key>pad_out</key>
+    <value>False</value>
+    <type>enum</type>
+    <hide>part</hide>
+    <option>
+      <name>Yes</name>
+      <key>True</key>
+    </option>
+    <option>
+      <name>No</name>
+      <key>False</key>
+    </option>
+  </param>
+  <param>
+    <name>num-zeros</name>
+    <key>zero_len</key>
+    <value>0</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>insize</name>
+    <key>insize</key>
+    <value>2048</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>outsize</name>
+    <key>outsize</key>
+    <value>1024</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>cutpoint</name>
+    <key>cutpoint</key>
+    <value>512</value>
+    <type>int</type>
+  </param>
+
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+    <vlen>$insize</vlen>
+  </sink>
+  <source>
+    <name>out</name>
+    <type>complex</type>
+    <vlen>$outsize</vlen>
+  </source>
+  <source>
+    <name>out_padded</name>
+    <type>complex</type>
+    <vlen>$insize</vlen>
+    <optional>#if $pad_out() == 'True' then 'False' else 'True'#</optional>
+        <!--<optional>#if $pad_out==True then '1' else '0'#</optional>-->
+     <hide>#if $pad_out() == 'True' then 'False' else 'True'#</hide>
+  </source>
+</block>

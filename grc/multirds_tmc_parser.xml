@@ -1,0 +1,112 @@
+<?xml version="1.0"?>
+<block>
+  <name>tmc_parser</name>
+  <key>multirds_tmc_parser</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>#set $win = 'self._%s_win'%$id
+        #set $parser = 'self.%s_parser'%$id
+#if not $label()
+	#set $label = '"%s"'%$id
+#end if
+$(parser) = multirds.tmc_parser($workdir, $log, $debug, $writeDB,$maxheight)
+$(win) = $(parser).getqtwidget()
+$(gui_hint()($win))
+  </make>
+<!--
+  multirds.tmc_parser($workdir, $log, $debug, $writeDB)
+-->
+  <param>
+    <name>maxheight</name>
+    <key>maxheight</key>
+    <value>160</value>
+    <type>int</type>
+    <hide>part</hide>
+  </param>
+  
+    <param>
+    <name>work directory</name>
+    <key>workdir</key>
+    <value></value>
+    <type>string</type>
+    <hide>part</hide>
+  </param>
+    <param>
+    <name>Label</name>
+    <key>label</key>
+    <value></value>
+    <type>string</type>
+    <hide>#if $label() then 'none' else 'part'#</hide>
+  </param>
+	<param>
+		<name>Log</name>
+		<key>log</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+	<param>
+		<name>Debug</name>
+		<key>debug</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+	<param>
+		<name>write Database</name>
+		<key>writeDB</key>
+		<value>False</value>
+		<type>bool</type>
+		<!--<hide>part</hide>-->
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+	  <param>
+    <name>GUI Hint</name>
+    <key>gui_hint</key>
+    <value></value>
+    <type>gui_hint</type>
+    <hide>part</hide>
+  </param>
+<!--
+check if event-list file exists
+ check directory  doesnt work:
+  <check>os.path.isdir($workdir)</check>
+-->
+  <check>open($workdir+"event-list_with_forecast_sort.csv").close() or True</check>
+
+  <!--
+  check if workdir is writable
+-->
+  <check>open($workdir+"directory_writable","w").close() or True</check>
+  
+  <sink>
+    <name>in</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+  <doc>
+	  maxheight = max height of widget in pixels
+	  maxheight == 0 -> no restriction
+  </doc>
+</block>

@@ -1,35 +1,40 @@
+# Copyright 2011 Free Software Foundation, Inc.
 #
-# Copyright 2013 Free Software Foundation, Inc.
+# This file is part of GNU Radio
 #
-# This program is free software: you can redistribute it and/or modify
+# GNU Radio is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
 #
-# This program is distributed in the hope that it will be useful,
+# GNU Radio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
+# along with GNU Radio; see the file COPYING.  If not, write to
+# the Free Software Foundation, Inc., 51 Franklin Street,
+# Boston, MA 02110-1301, USA.
+
+########################################################################
+# Check if there is C++ code at all
+########################################################################
+if(NOT multirds_sources)
+	MESSAGE(STATUS "No C++ sources... skipping swig/")
+	return()
+endif(NOT multirds_sources)
 
 ########################################################################
 # Include swig generation macros
 ########################################################################
 find_package(SWIG)
-find_package(PythonLibs)
+find_package(PythonLibs 2)
 if(NOT SWIG_FOUND OR NOT PYTHONLIBS_FOUND)
     return()
 endif()
 include(GrSwig)
 include(GrPython)
-
-set(GR_SWIG_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/
-    ${CMAKE_CURRENT_BINARY_DIR}/../include/
-)
 
 ########################################################################
 # Setup swig generation
@@ -38,26 +43,23 @@ foreach(incdir ${GNURADIO_RUNTIME_INCLUDE_DIRS})
     list(APPEND GR_SWIG_INCLUDE_DIRS ${incdir}/gnuradio/swig)
 endforeach(incdir)
 
-set(GR_SWIG_LIBRARIES gnuradio-rds)
-set(GR_SWIG_DOC_FILE ${CMAKE_CURRENT_BINARY_DIR}/rds_swig_doc.i)
-set(GR_SWIG_DOC_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/rds/
-    ${CMAKE_CURRENT_BINARY_DIR}/../include/rds/
-)
+set(GR_SWIG_LIBRARIES gnuradio-multirds)
+set(GR_SWIG_DOC_FILE ${CMAKE_CURRENT_BINARY_DIR}/multirds_swig_doc.i)
+set(GR_SWIG_DOC_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 
-GR_SWIG_MAKE(rds_swig rds_swig.i)
+GR_SWIG_MAKE(multirds_swig multirds_swig.i)
 
 ########################################################################
 # Install the build swig module
 ########################################################################
-GR_SWIG_INSTALL( TARGETS rds_swig DESTINATION ${GR_PYTHON_DIR}/rds)
+GR_SWIG_INSTALL(TARGETS multirds_swig DESTINATION ${GR_PYTHON_DIR}/multirds)
 
 ########################################################################
 # Install swig .i files for development
 ########################################################################
 install(
     FILES
-    rds_swig.i
-    ${CMAKE_CURRENT_BINARY_DIR}/rds_swig_doc.i
-    DESTINATION ${GR_INCLUDE_DIR}/rds/swig
+    multirds_swig.i
+    ${CMAKE_CURRENT_BINARY_DIR}/multirds_swig_doc.i
+    DESTINATION ${GR_INCLUDE_DIR}/multirds/swig
 )

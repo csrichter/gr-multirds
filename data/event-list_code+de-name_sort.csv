@@ -1,0 +1,1441 @@
+1,Verkehrsbehinderung
+2,"(L) stockender Verkehr, Staugefahr"
+11,Höhenkontrolle wurde ausgelöst
+12,"Unfall, Verkehr wird an der Unfallstelle vorbeigeführt"
+16,wegen Bergungsarbeiten gesperrt
+20,"Tank- und Rastanlage überfüllt, fahren Sie eine andere Tank- oder Rastanlage an"
+22,"Tank- und Rastanlage, Tankstelle geschlossen"
+23,"Tank- und Rastanlage, Raststätte geschlossen"
+24,Brücke gesperrt
+25,Tunnel gesperrt
+26,Brücke blockiert
+27,Tunnel blockiert
+28,Straße wird mehrfach gesperrt
+36,Tankstelle wieder geöffnet
+37,Raststätte wieder geöffnet
+40,Fahrverbot wegen Smog-Alarm aufgehoben
+41,Überholstreifen gesperrt
+42,Überholstreifen blockiert
+51,"Baustelle, Überholstreifen gesperrt"
+52,Arbeiten am Standstreifen
+53,Arbeiten auf der Notfallspur
+55,Verkehrsbehinderung zu erwarten
+56,Verkehrsstörung zu erwarten
+57,normaler Verkehr zu erwarten
+61,Verkehrsbehinderung durch Gegenstände auf der Fahrbahn
+62,Verkehrsbehinderung durch Rohrbruch
+63,Gefahr durch Gegenstände auf der Fahrbahn
+64,Gefahr durch Rohrbruch
+70,"Verkehrsstörung, mittlere Geschwindigkeit 10 km/h"
+71,"Verkehrsstörung, mittlere Geschwindigkeit 20 km/h"
+72,"Verkehrsstörung, mittlere Geschwindigkeit 30 km/h"
+73,"Verkehrsstörung, mittlere Geschwindigkeit 40 km/h"
+74,"Verkehrsstörung, mittlere Geschwindigkeit 50 km/h"
+75,"Verkehrsstörung, mittlere Geschwindigkeit 60 km/h"
+76,"Verkehrsstörung, mittlere Geschwindigkeit 70 km/h"
+91,Zeitverlust für PKW
+101,(L) Stau
+102,1 km Stau
+103,2 km Stau
+104,4 km Stau
+105,6 km Stau
+106,10 km Stau
+107,Stau zu erwarten
+108,(L) stockender Verkehr
+109,1 km stockender Verkehr
+110,2 km stockender Verkehr
+111,4 km stockender Verkehr
+112,6 km stockender Verkehr
+113,10 km stockender Verkehr
+114,stockender Verkehr zu erwarten
+115,(L) dichter Verkehr
+116,1 km dichter Verkehr
+117,2 km dichter Verkehr
+118,4 km dichter Verkehr
+119,6 km dichter Verkehr
+120,10 km dichter Verkehr
+121,dichter Verkehr zu erwarten
+122,(L) reger Verkehr
+123,reger Verkehr zu erwarten
+124,störungsfreier Verkehr
+125,(L) dichter Verkehr mit zunehmender Tendenz
+126,Meldungen über Störungen liegen nicht vor
+127,die gemeldete Verkehrsstörung besteht nicht mehr
+128,Meldung aufgehoben
+129,3 km Stau
+130,Staugefahr
+131,3 km stockender Verkehr
+132,Gefahr von stockendem Verkehr
+133,lange Staus
+134,3 km dichter Verkehr
+135,(L) dichter Verkehr mit abnehmender Tendenz
+136,Verkehrsstörung
+137,(L) schwacher Verkehr
+138,"(L) stockender Verkehr, vorsichtig an das Stauende heranfahren"
+139,"(L) stockender Verkehr, Stauende liegt im Kurvenbereich"
+140,"(L) stockender Verkehr, Stauende liegt hinter einer Kuppe"
+141,"alle Unfallstellen geräumt, keine Verkehrsbehinderung mehr"
+142,dichterer Verkehr als normal
+143,sehr viel dichterer Verkehr als normal
+200,"Unfall mit mehreren Fahrzeugen, Zeitverlust"
+201,Unfall
+202,schwerer Unfall
+203,Unfall mit mehreren Fahrzeugen
+204,Unfall mit LKW
+205,Unfall mit Gefahrguttransporter
+206,"Unfall, Gefahr durch auslaufenden Kraftstoff"
+207,"Unfall, Gefahr durch auslaufende Chemikalien"
+208,Verkehrsbehinderung durch Neugierige an einer Unfallstelle
+209,Unfall in der Gegenrichtung
+210,Verkehrsbehinderung durch verlorene Ladung
+211,Verkehrsbehinderung durch defektes Fahrzeug
+212,Verkehrsbehinderung durch defekten LKW
+213,brennendes Fahrzeug
+214,Verkehrsbehinderung
+215,"Unfall, (L) Stau"
+216,"Unfall, 1 km Stau"
+217,"Unfall, 2 km Stau"
+218,"Unfall, 4 km Stau"
+219,"Unfall, 6 km Stau"
+220,"Unfall, 10 km Stau"
+221,"Unfall, Staugefahr"
+222,"Unfall, (L) stockender Verkehr"
+223,"Unfall, 1 km stockender Verkehr"
+224,"Unfall, 2 km stockender Verkehr"
+225,"Unfall, 4 km stockender Verkehr"
+226,"Unfall, 6 km stockender Verkehr"
+227,"Unfall, 10 km stockender Verkehr"
+228,"Unfall, Gefahr von stockendem Verkehr"
+229,"Unfall, (L) dichter Verkehr"
+230,"Unfall, 1 km dichter Verkehr"
+231,"Unfall, 2 km dichter Verkehr"
+232,"Unfall, 4 km dichter Verkehr"
+233,"Unfall, 6 km dichter Verkehr"
+234,"Unfall, 10 km dichter Verkehr"
+235,"Unfall, dichter Verkehr zu erwarten"
+236,"Unfall, (L) reger Verkehr"
+237,"Unfall, reger Verkehr zu erwarten"
+238,"Unfall, störungsfreier Verkehr"
+239,"Unfall, (L) dichter Verkehr mit zunehmender Tendenz"
+240,"Unfall, Straße gesperrt"
+241,"Unfall, rechter Fahrstreifen blockiert"
+242,"Unfall, mittlerer Fahrstreifen blockiert"
+243,"Unfall, linker Fahrstreifen blockiert"
+244,"Unfall, Standstreifen blockiert"
+245,"Unfall, zwei Fahrstreifen blockiert"
+246,"Unfall, drei Fahrstreifen blockiert"
+247,"Unfall, Zeitverlust"
+248,"Unfall, es ist mit Zeitverlust zu rechnen"
+249,"Unfall, großer Zeitverlust"
+250,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, (L) Stau"
+251,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 1 km Stau"
+252,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 2 km Stau"
+253,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 4 km Stau"
+254,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 6 km Stau"
+255,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 10 km Stau"
+256,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, Staugefahr"
+257,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, (L) stockender Verkehr"
+258,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 1 km stockender Verkehr"
+259,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 2 km stockender Verkehr"
+260,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 4 km stockender Verkehr"
+261,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 6 km stockender Verkehr"
+262,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 10 km stockender Verkehr"
+263,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, Gefahr von stockendem Verkehr"
+264,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, (L) dichter Verkehr"
+265,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 1 km dichter Verkehr"
+266,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 2 km dichter Verkehr"
+267,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 4 km dichter Verkehr"
+268,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 6 km dichter Verkehr"
+269,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 10 km dichter Verkehr"
+270,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, dichter Verkehr zu erwarten"
+271,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, (L) reger Verkehr"
+272,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, reger Verkehr zu erwarten"
+274,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, (L) dichter Verkehr mit zunehmender Tendenz"
+275,"Verkehrsbehinderung durch Neugierige, Zeitverlust"
+276,"Verkehrsbehinderung durch Neugierige, es ist mit Zeitverlust zu rechnen"
+277,"Verkehrsbehinderung durch Neugierige, großer Zeitverlust"
+278,"verlorene Ladung, (L) Stau"
+279,"verlorene Ladung, 1 km Stau"
+280,"verlorene Ladung, 2 km Stau"
+281,"verlorene Ladung, 4 km Stau"
+282,"verlorene Ladung, 6 km Stau"
+283,"verlorene Ladung, 10 km Stau"
+284,"verlorene Ladung, Staugefahr"
+285,"verlorene Ladung, (L) stockender Verkehr"
+286,"verlorene Ladung, 1 km stockender Verkehr"
+287,"verlorene Ladung, 2 km stockender Verkehr"
+288,"verlorene Ladung, 4 km stockender Verkehr"
+289,"verlorene Ladung, 6 km stockender Verkehr"
+290,"verlorene Ladung, 10 km stockender Verkehr"
+291,"verlorene Ladung, Gefahr von stockendem Verkehr"
+292,"verlorene Ladung, (L) dichter Verkehr"
+293,"verlorene Ladung, 1 km dichter Verkehr"
+294,"verlorene Ladung, 2 km dichter Verkehr"
+295,"verlorene Ladung, 4 km dichter Verkehr"
+296,"verlorene Ladung, 6 km dichter Verkehr"
+297,"verlorene Ladung, 10 km dichter Verkehr"
+298,"verlorene Ladung, dichter Verkehr zu erwarten"
+299,"verlorene Ladung, (L) reger Verkehr"
+300,"verlorene Ladung, reger Verkehr zu erwarten"
+301,"verlorene Ladung, störungsfreier Verkehr"
+302,"verlorene Ladung, (L) dichter Verkehr mit zunehmender Tendenz"
+303,durch verlorene Ladung blockiert
+304,"verlorene Ladung, rechter Fahrstreifen blockiert"
+305,"verlorene Ladung, mittlerer Fahrstreifen blockiert"
+306,"verlorene Ladung, linker Fahrstreifen blockiert"
+307,"verlorene Ladung, Standstreifen blockiert"
+308,"verlorene Ladung, zwei Fahrstreifen blockiert"
+309,"verlorene Ladung, drei Fahrstreifen blockiert"
+310,"verlorene Ladung, Zeitverlust"
+311,"verlorene Ladung, es ist mit Zeitverlust zu rechnen"
+312,"verlorene Ladung, großer Zeitverlust"
+313,"defektes Fahrzeug, (L) Stau"
+314,"defektes Fahrzeug, Staugefahr"
+315,"defektes Fahrzeug, (L) stockender Verkehr"
+316,"defektes Fahrzeug, Gefahr von stockendem Verkehr"
+317,"defektes Fahrzeug, (L) dichter Verkehr"
+318,"defektes Fahrzeug, dichter Verkehr zu erwarten"
+319,"defektes Fahrzeug, (L) reger Verkehr"
+320,"defektes Fahrzeug, reger Verkehr zu erwarten"
+321,"defektes Fahrzeug, störungsfreier Verkehrsfluss"
+322,"defektes Fahrzeug, (L) dichter Verkehr mit zunehmender Tendenz"
+323,"Verkehrsbehinderung durch defektes Fahrzeug, Straße blockiert"
+324,"Verkehrsbehinderung durch defektes Fahrzeug, rechter Fahrstreifen blockiert"
+325,"Verkehrsbehinderung durch defektes Fahrzeug, mittlerer Fahrstreifen blockiert"
+326,"Verkehrsbehinderung durch defektes Fahrzeug, linker Fahrstreifen blockiert"
+327,"Verkehrsbehinderung durch defektes Fahrzeug, Standstreifen blockiert"
+328,"Verkehrsbehinderung durch defektes Fahrzeug, zwei Fahrstreifen blockiert"
+329,"Verkehrsbehinderung durch defektes Fahrzeug, drei Fahrstreifen blockiert"
+330,"Verkehrsbehinderung durch defektes Fahrzeug, Zeitverlust"
+331,"Verkehrsbehinderung durch defektes Fahrzeug, es ist mit Zeitverlust zu rechnen"
+332,"Verkehrsbehinderung durch defektes Fahrzeug, großer Zeitverlust"
+333,Unfallstelle geräumt
+334,Meldung aufgehoben
+335,Unfall mit Bus
+336,"Unfall, Gefahr durch auslaufendes Öl"
+337,Verkehrsbehinderung durch umgestürztes Fahrzeug
+338,Verkehrsbehinderung durch umgestürzten LKW
+339,Verkehrsbehinderung durch querstehenden Anhänger
+340,Verkehrsbehinderung durch querstehenden Wohnwagen
+341,Verkehrsbehinderung durch querstehenden LKW
+342,Fahrzeug verunglückt
+343,vorausgegangener Unfall
+344,Verkehrsbehinderung durch Unfallaufnahme
+345,Folgeunfall
+346,Verkehrsbehinderung durch defekten Bus
+347,Fahrzeug mit Überhöhe
+348,"Unfall, 3 km Stau"
+349,"Unfall, 3 km stockender Verkehr"
+350,"Unfall, 3 km dichter Verkehr"
+351,Unfall im Baustellenbereich
+352,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 3 km Stau"
+353,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 3 km stockender Verkehr"
+354,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, 3 km dichter Verkehr"
+355,"Verkehrsbehinderung durch Neugierige an einer Unfallstelle, Gefahr"
+356,"verlorene Ladung, 3 km Stau"
+357,"verlorene Ladung, 3 km stockender Verkehr"
+358,"verlorene Ladung, 3 km dichter Verkehr"
+359,Gefahr durch verlorene Ladung
+360,"umgestürztes Fahrzeug, (L) Stau"
+361,"umgestürztes Fahrzeug, Staugefahr"
+362,"umgestürztes Fahrzeug, (L) stockender Verkehr"
+363,"umgestürztes Fahrzeug, Gefahr von stockendem Verkehr"
+364,"umgestürztes Fahrzeug, (L) dichter Verkehr"
+365,"umgestürztes Fahrzeug, dichter Verkehr zu erwarten"
+366,"umgestürztes Fahrzeug, (L) reger Verkehr"
+367,"umgestürztes Fahrzeug, reger Verkehr zu erwarten"
+368,"umgestürztes Fahrzeug, (L) dichter Verkehr mit zunehmender Tendenz"
+369,durch umgestürztes Fahrzeug blockiert
+370,"umgestürztes Fahrzeug, rechter Fahrstreifen blockiert"
+371,"umgestürztes Fahrzeug, mittlerer Fahrstreifen blockiert"
+372,"umgestürztes Fahrzeug, linker Fahrstreifen blockiert"
+373,"umgestürztes Fahrzeug, zwei Fahrstreifen blockiert"
+374,"umgestürztes Fahrzeug, drei Fahrstreifen blockiert"
+375,"umgestürztes Fahrzeug, Zeitverlust"
+376,"umgestürztes Fahrzeug, es ist mit Zeitverlust zu rechnen"
+377,"umgestürztes Fahrzeug, großer Zeitverlust"
+378,Gefahr durch umgestürztes Fahrzeug
+379,(L) Stau nach vorausgegangenem Unfall
+380,Staugefahr nach vorausgegangenem Unfall
+381,(L) stockender Verkehr nach vorausgegangenem Unfall
+382,Gefahr von stockendem Verkehr nach vorausgegangenem Unfall
+383,(L) dichter Verkehr nach vorausgegangenem Unfall
+385,(L) reger Verkehr nach vorausgegangenem Unfall
+387,(L) dichter Verkehr mit zunehmender Tendenz nach vorausgegangenem Unfall
+388,"vorausgegangener Unfall, Zeitverlust"
+390,"vorausgegangener Unfall, großer Zeitverlust"
+391,"Unfallaufnahme, Gefahr"
+392,"Folgeunfall, Gefahr"
+393,Gefahr durch defektes Fahrzeug
+394,Gefahr durch defekten LKW
+395,Straße geräumt
+396,die gemeldete Störung besteht nicht mehr
+397,Verkehrsbehinderung durch Bergungsarbeiten
+399,Meldung aufgehoben
+401,gesperrt
+402,blockiert
+403,gesperrt für Schwerverkehr
+404,Durchfahrt gesperrt für LKW
+405,gesperrt für Durchgangsverkehr
+406,Einfahrt gesperrt
+407,Ausfahrt gesperrt
+408,Anschlussstelle gesperrt
+409,Beschränkung der Anschlussstelle
+410,"gesperrt, (L) Stau"
+411,"gesperrt, 1 km Stau"
+412,"gesperrt, 2 km Stau"
+413,"gesperrt, 4 km Stau"
+414,"gesperrt, 6 km Stau"
+415,"gesperrt, 10 km Stau"
+416,"gesperrt, Staugefahr"
+417,"gesperrt, (L) stockender Verkehr"
+418,"gesperrt, 1 km stockender Verkehr"
+419,"gesperrt, 2 km stockender Verkehr"
+420,"gesperrt, 4 km stockender Verkehr"
+421,"gesperrt, 6 km stockender Verkehr"
+422,"gesperrt, 10 km stockender Verkehr"
+423,"gesperrt, Gefahr von stockendem Verkehr"
+424,"gesperrt, (L) dichter Verkehr"
+425,"gesperrt, 1 km dichter Verkehr"
+426,"gesperrt, 2 km dichter Verkehr"
+427,"gesperrt, 4 km dichter Verkehr"
+428,"gesperrt, 6 km dichter Verkehr"
+429,"gesperrt, 10 km dichter Verkehr"
+430,"gesperrt, dichter Verkehr zu erwarten"
+431,"gesperrt, (L) reger Verkehr"
+432,"gesperrt, reger Verkehr zu erwarten"
+433,"gesperrt, störungsfreier Verkehr"
+434,"gesperrt, (L) dichter Verkehr mit zunehmender Tendenz"
+435,"gesperrt, Zeitverlust"
+436,"gesperrt, es ist mit Zeitverlust zu rechnen"
+437,"gesperrt, großer Zeitverlust"
+438,"blockiert, (L) Stau"
+439,"blockiert, 1 km Stau"
+440,"blockiert, 2 km Stau"
+441,"blockiert, 4 km Stau"
+442,"blockiert, 6 km Stau"
+443,"blockiert, 10 km Stau"
+444,"blockiert, Staugefahr"
+445,"blockiert, (L) stockender Verkehr"
+446,"blockiert, 1 km stockender Verkehr"
+447,"blockiert, 2 km stockender Verkehr"
+448,"blockiert, 4 km stockender Verkehr"
+449,"blockiert, 6 km stockender Verkehr"
+450,"blockiert, 10 km stockender Verkehr"
+451,"blockiert, Gefahr von stockendem Verkehr"
+452,"blockiert, (L) dichter Verkehr"
+453,"blockiert, 1 km dichter Verkehr"
+454,"blockiert, 2 km dichter Verkehr"
+455,"blockiert, 4 km dichter Verkehr"
+456,"blockiert, 6 km dichter Verkehr"
+457,"blockiert, 10 km dichter Verkehr"
+458,"blockiert, dichter Verkehr zu erwarten"
+459,"blockiert, (L) reger Verkehr"
+460,"blockiert, reger Verkehr zu erwarten"
+461,"blockiert, störungsfreier Verkehr"
+462,"blockiert, (L) dichter Verkehr mit zunehmender Tendenz"
+463,"blockiert, Zeitverlust"
+464,"blockiert, es ist mit Zeitverlust zu rechnen"
+465,"blockiert, großer Zeitverlust"
+466,Anschlussstelle wieder frei
+467,wieder frei
+468,Meldung aufgehoben
+469,gesperrt
+470,blockiert
+471,Einfahrt gesperrt
+472,Einfahrt blockiert
+473,Einfahrt blockiert
+474,Ausfahrt gesperrt
+475,Ausfahrt blockiert
+476,Ausfahrt blockiert
+477,Anschlussstelle blockiert
+478,Verbindungsfahrbahn gesperrt
+479,Parallelfahrbahn gesperrt
+480,rechte Parallelfahrbahn gesperrt
+481,linke Parallelfahrbahn gesperrt
+482,Schnellspur gesperrt
+483,Fernverkehrsspur gesperrt
+484,Nahverkehrsspur gesperrt
+485,Verbindungsfahrbahn blockiert
+486,Parallelfahrbahn blockiert
+487,rechte Parallelfahrbahn blockiert
+488,linke Parallelfahrbahn blockiert
+489,Schnellspur blockiert
+490,Fernverkehrsspur blockiert
+491,Nahverkehrsspur blockiert
+492,Fahrverbot für Kraftfahrzeuge
+493,Beschränkungen
+494,gesperrt für LKW 
+495,"gesperrt, 3 km Stau"
+496,"gesperrt, 3 km stockender Verkehr"
+497,"gesperrt, 3 km dichter Verkehr"
+498,"blockiert, 3 km Stau"
+499,"blockiert, 3 km stockender Verkehr"
+500,Fahrstreifen gesperrt
+501,rechter Fahrstreifen gesperrt
+502,mittlerer Fahrstreifen gesperrt
+503,linker Fahrstreifen gesperrt
+504,Standstreifen gesperrt
+505,zwei Fahrstreifen gesperrt
+506,drei Fahrstreifen gesperrt
+507,rechter Fahrstreifen blockiert
+508,mittlerer Fahrstreifen blockiert
+509,linker Fahrstreifen blockiert
+510,Standstreifen blockiert
+511,zwei Fahrstreifen blockiert
+512,drei Fahrstreifen blockiert
+513,für beide Richtungen nur ein Fahrstreifen abwechselnd frei
+514,Fahrbahn auf einen Fahrstreifen verengt
+515,Fahrbahn auf zwei Fahrstreifen verengt
+516,Fahrbahn auf drei Fahrstreifen verengt
+517,Verkehr wird über die Gegenfahrbahn geleitet
+518,Fahrbahnverengung
+519,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet"
+520,Fahrstreifen blockiert
+521,"Fahrstreifen gesperrt, (L) Stau"
+522,"Fahrstreifen gesperrt, 1 km Stau"
+523,"Fahrstreifen gesperrt, 2 km Stau"
+524,"Fahrstreifen gesperrt, 4 km Stau"
+525,"Fahrstreifen gesperrt, 6 km Stau"
+526,"Fahrstreifen gesperrt, 10 km Stau"
+527,"Fahrstreifen gesperrt, Staugefahr"
+528,"Fahrstreifen gesperrt, (L) stockender Verkehr"
+529,"Fahrstreifen gesperrt, 1 km stockender Verkehr"
+530,"Fahrstreifen gesperrt, 2 km stockender Verkehr"
+531,"Fahrstreifen gesperrt, 4 km stockender Verkehr"
+532,"Fahrstreifen gesperrt, 6 km stockender Verkehr"
+533,"Fahrstreifen gesperrt, 10 km stockender Verkehr"
+534,"Fahrstreifen gesperrt, Gefahr von stockendem Verkehr"
+535,"Fahrstreifen gesperrt, (L) dichter Verkehr"
+536,"Fahrstreifen gesperrt, 1 km dichter Verkehr"
+537,"Fahrstreifen gesperrt, 2 km dichter Verkehr"
+538,"Fahrstreifen gesperrt, 4 km dichter Verkehr"
+539,"Fahrstreifen gesperrt, 6 km dichter Verkehr"
+540,"Fahrstreifen gesperrt, 10 km dichter Verkehr"
+541,"Fahrstreifen gesperrt, dichter Verkehr zu erwarten"
+542,"Fahrstreifen gesperrt, (L) reger Verkehr"
+543,"Fahrstreifen gesperrt, reger Verkehr zu erwarten"
+544,"Fahrstreifen gesperrt, störungsfreier Verkehr"
+545,"Fahrstreifen gesperrt, (L) dichter Verkehr mit zunehmender Tendenz"
+546,"Fahrbahn auf einen Fahrstreifen verengt, (L) Stau"
+547,"Fahrbahn auf einen Fahrstreifen verengt, Staugefahr"
+548,"Fahrbahn auf einen Fahrstreifen verengt, (L) stockender Verkehr"
+549,"Fahrbahn auf einen Fahrstreifen verengt, Gefahr von stockendem Verkehr"
+550,"Fahrbahn auf einen Fahrstreifen verengt, (L) dichter Verkehr"
+551,"Fahrbahn auf einen Fahrstreifen verengt, dichter Verkehr zu erwarten"
+552,"Fahrbahn auf einen Fahrstreifen verengt, (L) reger Verkehr"
+553,"Fahrbahn auf einen Fahrstreifen verengt, reger Verkehr zu erwarten"
+554,"Fahrbahn auf einen Fahrstreifen verengt, störungsfreier Verkehr"
+555,"Fahrbahn auf einen Fahrstreifen verengt, (L) dichter Verkehr mit zunehmender Tendenz"
+556,"Fahrbahn auf zwei Fahrstreifen verengt, (L) Stau"
+557,"Fahrbahn auf zwei Fahrstreifen verengt, Staugefahr"
+558,"Fahrbahn auf zwei Fahrstreifen verengt, (L) stockender Verkehr"
+559,"Fahrbahn auf zwei Fahrstreifen verengt, Gefahr von stockendem Verkehr"
+560,"Fahrbahn auf zwei Fahrstreifen verengt, (L) dichter Verkehr"
+561,"Fahrbahn auf zwei Fahrstreifen verengt, dichter Verkehr zu erwarten"
+562,"Fahrbahn auf zwei Fahrstreifen verengt, (L) reger Verkehr"
+563,"Fahrbahn auf zwei Fahrstreifen verengt, reger Verkehr zu erwarten"
+564,"Fahrbahn auf zwei Fahrstreifen verengt, störungsfreier Verkehr"
+565,"Fahrbahn auf zwei Fahrstreifen verengt, (L) dichter Verkehr mit zunehmender Tendenz"
+566,"Fahrbahn auf drei Fahrstreifen verengt, (L) Stau"
+567,"Fahrbahn auf drei Fahrstreifen verengt, Staugefahr"
+568,"Fahrbahn auf drei Fahrstreifen verengt, (L) stockender Verkehr"
+569,"Fahrbahn auf drei Fahrstreifen verengt, Gefahr von stockendem Verkehr"
+570,"Fahrbahn auf drei Fahrstreifen verengt, (L) dichter Verkehr"
+571,"Fahrbahn auf drei Fahrstreifen verengt, dichter Verkehr zu erwarten"
+572,"Fahrbahn auf drei Fahrstreifen verengt, (L) reger Verkehr"
+573,"Fahrbahn auf drei Fahrstreifen verengt, reger Verkehr zu erwarten"
+574,"Fahrbahn auf drei Fahrstreifen verengt, störungsfreier Verkehr"
+575,"Fahrbahn auf drei Fahrstreifen verengt, (L) dichter Verkehr mit zunehmender Tendenz"
+576,"Verkehr wird über die Gegenfahrbahn geleitet, (L) Stau"
+577,"Verkehr wird über die Gegenfahrbahn geleitet, 1 km Stau "
+578,"Verkehr wird über die Gegenfahrbahn geleitet, 2 km Stau"
+579,"Verkehr wird über die Gegenfahrbahn geleitet, 4 km Stau"
+580,"Verkehr wird über die Gegenfahrbahn geleitet, 6 km Stau"
+581,"Verkehr wird über die Gegenfahrbahn geleitet, 10 km Stau"
+582,"Verkehr wird über die Gegenfahrbahn geleitet, Staugefahr"
+583,"Verkehr wird über die Gegenfahrbahn geleitet, (L) stockender Verkehr"
+584,"Verkehr wird über die Gegenfahrbahn geleitet, 1 km stockender Verkehr"
+585,"Verkehr wird über die Gegenfahrbahn geleitet, 2 km stockender Verkehr"
+586,"Verkehr wird über die Gegenfahrbahn geleitet, 4 km stockender Verkehr"
+587,"Verkehr wird über die Gegenfahrbahn geleitet, 6 km stockender Verkehr"
+588,"Verkehr wird über die Gegenfahrbahn geleitet, 10 km stockender Verkehr"
+589,"Verkehr wird über die Gegenfahrbahn geleitet, Gefahr von stockendem Verkehr"
+590,"Verkehr wird über die Gegenfahrbahn geleitet, (L) dichter Verkehr"
+591,"Verkehr wird über die Gegenfahrbahn geleitet, 1 km dichter Verkehr"
+592,"Verkehr wird über die Gegenfahrbahn geleitet, 2 km dichter Verkehr"
+593,"Verkehr wird über die Gegenfahrbahn geleitet, 4 km dichter Verkehr"
+594,"Verkehr wird über die Gegenfahrbahn geleitet, 6 km dichter Verkehr"
+595,"Verkehr wird über die Gegenfahrbahn geleitet, 10 km dichter Verkehr"
+596,"Verkehr wird über die Gegenfahrbahn geleitet, dichter Verkehr zu erwarten"
+597,"Verkehr wird über die Gegenfahrbahn geleitet, (L) reger Verkehr"
+598,"Verkehr wird über die Gegenfahrbahn geleitet, reger Verkehr zu erwarten"
+599,"Verkehr wird über die Gegenfahrbahn geleitet, störungsfreier Verkehr"
+600,"Verkehr wird über die Gegenfahrbahn geleitet, (L) dichter Verkehr mit zunehmender Tendenz"
+601,"Fahrbahn auf einen Fahrstreifen verengt, Verkehr wird über die Gegenfahrbahn geleitet"
+602,"Fahrbahn auf zwei Fahrstreifen verengt, Verkehr wird über die Gegenfahrbahn geleitet"
+603,"Fahrbahn auf drei Fahrstreifen verengt, Verkehr wird über die Gegenfahrbahn geleitet"
+604,"Fahrbahnverengung, (L) Stau"
+605,"Fahrbahnverengung, Staugefahr"
+606,"Fahrbahnverengung, (L) stockender Verkehr"
+607,"Fahrbahnverengung, Gefahr von stockendem Verkehr"
+608,"Fahrbahnverengung, (L) dichter Verkehr"
+609,"Fahrbahnverengung, dichter Verkehr zu erwarten"
+610,"Fahrbahnverengung, (L) reger Verkehr"
+611,"Fahrbahnverengung, reger Verkehr zu erwarten"
+612,"Fahrbahnverengung, störungsfreier Verkehr"
+613,"Fahrbahnverengung, (L) dichter Verkehr mit zunehmender Tendenz"
+614,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, (L) Stau"
+615,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, Staugefahr"
+616,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, (L) stockender Verkehr"
+617,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, Gefahr von stockendem Verkehr"
+618,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, (L) dichter Verkehr"
+619,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, dichter Verkehr zu erwarten"
+620,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, (L) reger Verkehr"
+621,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, reger Verkehr zu erwarten"
+622,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, störungsfreier Verkehr"
+623,"Fahrbahnverengung, Verkehr wird über die Gegenfahrbahn geleitet, (L) dichter Verkehr mit zunehmender Tendenz"
+624,Fahrstreifensperrung wieder aufgehoben
+625,Meldung aufgehoben
+626,"blockiert, 3 km dichter Verkehr"
+627,Fahrverbot für Kraftfahrzeuge ohne Katalysator
+628,gesperrt für Kraftfahrzeuge mit geradzahligen Kennzeichen
+629,gesperrt für Kraftfahrzeuge mit ungeradzahligen Kennzeichen
+630,frei
+631,Straße geräumt
+632,Einfahrt wieder frei
+633,Ausfahrt wieder frei
+634,alle Fahrbahnen wieder frei
+635,Fahrverbot für Kraftfahrzeuge aufgehoben
+636,Fahrverbot aufgehoben
+637,Seitenstreifen gesperrt
+638,Wendespur gesperrt
+639,Kriechspur gesperrt
+640,Langsamfahrstreifen gesperrt
+641,ein Fahrstreifen gesperrt
+642,Notfallspur blockiert
+643,Wendespur blockiert
+644,Kriechspur blockiert
+645,Langsamfahrstreifen blockiert
+646,ein Fahrstreifen blockiert
+647,Sonderspur für Fahrgemeinschaften offen
+648,Sonderspur für Fahrgemeinschaften gesperrt
+649,Sonderspur für Fahrgemeinschaften blockiert
+650,Bedingungen für Fahrgemeinschaften geändert
+651,"Fahrstreifen gesperrt, 3 km Stau"
+652,"Fahrstreifen gesperrt, 3 km stockender Verkehr"
+653,"Fahrstreifen gesperrt, 3 km dichter Verkehr"
+654,"Verkehr wird über die Gegenfahrbahn geleitet, 3 km Stau"
+655,"Verkehr wird über die Gegenfahrbahn geleitet, 3 km stockender Verkehr"
+656,"Verkehr wird über die Gegenfahrbahn geleitet, 3 km dichter Verkehr"
+657,Fahrstreifenblockierung beseitigt
+658,Umleitung über die Gegenfahrbahn besteht nicht mehr
+659,Beschränkung der Fahrgemeinschaften besteht nicht mehr
+660,Fahrbahnbeschränkung besteht nicht mehr
+661,Benutzung der Standspur erlaubt
+662,normale Fahrspurregelung wieder in Kraft
+663,alle Fahrbahnen geräumt
+664,Richtungsfahrbahn gesperrt
+665,beide Fahrtrichtungen gesperrt
+666,mehrfach kurzfristige Sperrungen
+671,Nutzung der Busspur für Fahrgemeinschaften erlaubt
+672,Meldung aufgehoben
+673,Meldung aufgehoben
+675,Streufahrzeug
+676,Busspur blockiert
+678,Schwerverkehrsspur  gesperrt
+679,Schwerverkehrsspur  blockiert
+680,Sperrung für Durchgangsverkehr ist aufgehoben
+681,Schneeräumung
+701,Baustelle
+702,Großbaustelle
+703,Wartungsarbeiten
+704,Fahrbahnerneuerung
+705,Arbeiten am Mittelstreifen
+706,Markierungsarbeiten
+707,Brückenarbeiten
+708,vorübergehende Regelung mit provisorischen Ampelanlagen
+709,Sprengarbeiten
+710,"Baustelle, (L) Stau"
+711,"Baustelle, 1 km Stau"
+712,"Baustelle, 2 km Stau"
+713,"Baustelle, 4 km Stau"
+714,"Baustelle, 6 km Stau"
+715,"Baustelle, 10 km Stau"
+716,"Baustelle, Staugefahr"
+717,"Baustelle, (L) stockender Verkehr"
+718,"Baustelle, 1 km stockender Verkehr"
+719,"Baustelle, 2 km stockender Verkehr"
+720,"Baustelle, 4 km stockender Verkehr"
+721,"Baustelle, 6 km stockender Verkehr"
+722,"Baustelle, 10 km stockender Verkehr"
+723,"Baustelle, Gefahr von stockendem Verkehr"
+724,"Baustelle, (L) dichter Verkehr"
+725,"Baustelle, 1 km dichter Verkehr"
+726,"Baustelle, 2 km dichter Verkehr"
+727,"Baustelle, 4 km dichter Verkehr"
+728,"Baustelle, 6 km dichter Verkehr"
+729,"Baustelle, 10 km dichter Verkehr"
+730,"Baustelle, dichter Verkehr zu erwarten"
+731,"Baustelle, (L) reger Verkehr"
+732,"Baustelle, reger Verkehr zu erwarten"
+733,"Baustelle, störungsfreier Verkehr"
+734,"Baustelle, (L) dichter Verkehr mit zunehmender Tendenz"
+735,wegen Baustelle gesperrt
+736,"Baustelle, rechter Fahrstreifen gesperrt"
+737,"Baustelle, mittlerer Fahrstreifen gesperrt"
+738,"Baustelle, linker Fahrstreifen gesperrt"
+739,"Baustelle, Standstreifen gesperrt"
+740,"Baustelle, zwei Fahrstreifen gesperrt"
+741,"Baustelle, drei Fahrstreifen gesperrt"
+742,"Baustelle, für beide Richtungen nur ein Fahrstreifen abwechselnd frei"
+743,"Baustelle, Fahrbahn auf einen Fahrstreifen verengt"
+744,"Baustelle, Fahrbahn auf zwei Fahrstreifen verengt"
+745,"Baustelle, Fahrbahn auf drei Fahrstreifen verengt"
+746,"Baustelle, Verkehr wird über die Gegenfahrbahn geleitet"
+747,"Baustelle, Zeitverlust"
+748,"Baustelle, es ist mit Zeitverlust zu rechnen"
+749,"Baustelle, großer Zeitverlust"
+750,"Fahrbahnerneuerung, (L) Stau"
+751,"Fahrbahnerneuerung, 1 km Stau"
+752,"Fahrbahnerneuerung, 2 km Stau"
+753,"Fahrbahnerneuerung, 4 km Stau"
+754,"Fahrbahnerneuerung, 6 km Stau"
+755,"Fahrbahnerneuerung, 10 km Stau"
+756,"Fahrbahnerneuerung, Staugefahr"
+757,"Fahrbahnerneuerung, (L) stockender Verkehr"
+758,"Fahrbahnerneuerung, 1 km stockender Verkehr"
+759,"Fahrbahnerneuerung, 2 km stockender Verkehr"
+760,"Fahrbahnerneuerung, 4 km stockender Verkehr"
+761,"Fahrbahnerneuerung, 6 km stockender Verkehr"
+762,"Fahrbahnerneuerung, 10 km stockender Verkehr"
+763,"Fahrbahnerneuerung, Gefahr von stockendem Verkehr"
+764,"Fahrbahnerneuerung, (L) dichter Verkehr"
+765,"Fahrbahnerneuerung, 1 km dichter Verkehr"
+766,"Fahrbahnerneuerung, 2 km dichter Verkehr"
+767,"Fahrbahnerneuerung, 4 km dichter Verkehr"
+768,"Fahrbahnerneuerung, 6 km dichter Verkehr"
+769,"Fahrbahnerneuerung, 10 km dichter Verkehr"
+770,"Fahrbahnerneuerung, dichter Verkehr zu erwarten"
+771,"Fahrbahnerneuerung, (L) reger Verkehr"
+772,"Fahrbahnerneuerung, reger Verkehr zu erwarten"
+773,"Fahrbahnerneuerung, störungsfreier Verkehr"
+774,"Fahrbahnerneuerung, (L) dichter Verkehr mit zunehmender Tendenz"
+775,"Fahrbahnerneuerung, für beide Richtungen nur ein Fahrstreifen abwechselnd frei"
+776,"Fahrbahnerneuerung, Fahrbahn auf einen Fahrstreifen verengt"
+777,"Fahrbahnerneuerung, Fahrbahn auf zwei Fahrstreifen verengt"
+778,"Fahrbahnerneuerung, Fahrbahn auf drei Fahrstreifen verengt"
+779,"Fahrbahnerneuerung, Verkehr wird über die Gegenfahrbahn geleitet"
+780,"Fahrbahnerneuerung, Zeitverlust"
+781,"Fahrbahnerneuerung, es ist mit Zeitverlust zu rechnen"
+782,"Fahrbahnerneuerung, großer Zeitverlust"
+783,"Markierungsarbeiten, (L) Stau"
+784,"Markierungsarbeiten, Staugefahr"
+785,"Markierungsarbeiten, (L) stockender Verkehr"
+786,"Markierungsarbeiten, Gefahr von stockendem Verkehr"
+787,"Markierungsarbeiten, (L) dichter Verkehr"
+788,"Markierungsarbeiten, dichter Verkehr zu erwarten"
+789,"Markierungsarbeiten, (L) reger Verkehr"
+790,"Markierungsarbeiten, reger Verkehr zu erwarten"
+791,"Markierungsarbeiten, störungsfreier Verkehr"
+792,"Markierungsarbeiten, (L) dichter Verkehr mit zunehmender Tendenz"
+793,"Markierungsarbeiten, rechter Fahrstreifen gesperrt"
+794,"Markierungsarbeiten, mittlerer Fahrstreifen gesperrt"
+795,"Markierungsarbeiten, linker Fahrstreifen gesperrt"
+796,"Markierungsarbeiten, Standstreifen gesperrt"
+797,"Markierungsarbeiten, zwei Fahrstreifen gesperrt"
+798,"Markierungsarbeiten, drei Fahrstreifen gesperrt"
+799,"Brückenabriss, Straße gesperrt"
+800,Baustelle beseitigt
+801,Meldung aufgehoben
+802,Dauerbaustelle
+803,Bauarbeiten
+804,Wanderbaustelle
+805,Brückenabriss
+806,Arbeiten an Wasserleitungen
+807,Arbeiten an Gasleitungen
+808,Arbeiten an Erdkabeln
+809,Tiefbauarbeiten
+810,geänderte Verkehrsführung im Baustellenbereich
+811,geänderte Verkehrsführung
+812,"Baustelle, 3 km Stau"
+813,"Baustelle, 3 km stockender Verkehr"
+814,"Baustelle, 3 km dichter Verkehr"
+815,Tagesbaustelle
+816,Baustelle in verkehrsarmen Zeiten
+817,Nachtbaustelle
+818,"Fahrbahnerneuerung, 3 km Stau"
+819,"Fahrbahnerneuerung, 3 km stockender Verkehr"
+820,"Fahrbahnerneuerung, 3 km dichter Verkehr"
+821,Fahrbahnerneuerung am Tage
+822,Fahrbahnerneuerung in verkehrsarmen Zeiten
+823,Fahrbahnerneuerung in der Nacht
+824,Gefahr durch Markierungsarbeiten
+825,"Wanderbaustelle, (L) Stau"
+826,"Wanderbaustelle, Staugefahr"
+827,"Wanderbaustelle, (L) stockender Verkehr"
+828,"Wanderbaustelle, Gefahr von stockendem Verkehr"
+829,"Wanderbaustelle, (L) dichter Verkehr"
+830,"Wanderbaustelle, dichter Verkehr zu erwarten"
+831,"Wanderbaustelle, (L) reger Verkehr"
+832,"Wanderbaustelle, reger Verkehr zu erwarten"
+833,"Wanderbaustelle, störungsfreier Verkehr"
+834,"Wanderbaustelle, (L) dichter Verkehr mit zunehmender Tendenz"
+835,"Wanderbaustelle, rechter Fahrstreifen gesperrt"
+836,"Wanderbaustelle, mittlerer Fahrstreifen gesperrt"
+837,"Wanderbaustelle, linker Fahrstreifen gesperrt"
+838,"Wanderbaustelle, zwei Fahrstreifen gesperrt"
+839,"Wanderbaustelle, drei Fahrstreifen gesperrt"
+840,"Arbeiten an Wasserleitungen, Zeitverlust"
+841,"Arbeiten an Wasserleitungen, es ist mit Zeitverlust zu rechnen"
+842,"Arbeiten an Wasserleitungen, großer Zeitverlust"
+843,"Arbeiten an Gasleitungen, Zeitverlust"
+844,"Arbeiten an Gasleitungen, es ist mit Zeitverlust zu rechnen"
+845,"Arbeiten an Gasleitungen, großer Zeitverlust"
+846,"Arbeiten an Erdkabeln, Zeitverlust"
+847,"Arbeiten an Erdkabeln, es ist mit Zeitverlust zu rechnen"
+848,"Arbeiten an Erdkabeln, großer Zeitverlust"
+849,Tiefbauarbeiten Zeitverlust
+850,"Tiefbauarbeiten, es ist mit Zeitverlust zu rechnen"
+851,"Tiefbauarbeiten, großer Zeitverlust"
+852,Verkehrsbehinderung durch Baustellenfahrzeuge
+853,Verkehrsbehinderung durch Abbau der Baustelle
+854,Wartungsarbeiten beendet 
+855,keine geänderte Verkehrsführung
+856,Gefahr durch Baustellenfahrzeuge
+857,ungesicherte Unfallstelle
+858,Gefahr durch ungesicherte Unfallstelle
+859,unbeleuchtetes Fahrzeug auf der Fahrbahn
+860,Gefahr durch unbeleuchtetes Fahrzeug auf der Fahrbahn
+861,Schneebruch
+862,Gefahr durch Schneebruch
+897,Achtung! Personen werfen Gegenstände auf die Fahrbahn
+898,Hindernisse beseitigt 
+899,"Verkehrsbehinderung durch Aufräumarbeiten, Straße wieder frei"
+900,mit Hochwasser ist zu rechnen
+901,Verkehrsbehinderung durch Hindernisse auf der Fahrbahn
+902,Gefahr durch Hindernisse auf der Fahrbahn
+903,Verkehrsbehinderung durch ausgelaufene Flüssigkeiten auf der Straße
+904,Verkehrsbehinderung durch Sturmschäden
+905,Verkehrsbehinderung durch umgestürzte Bäume
+906,Gefahr durch umgestürzte Bäume
+907,Verkehrsbehinderung durch Hochwasser
+908,Gefahr durch Hochwasser
+909,Verkehrsbehinderung durch Überflutung
+910,Überflutungsgefahr
+911,Verkehrsbehinderung durch Lawinen
+912,Verkehrsbehinderung durch drohende Lawinen
+913,Verkehrsbehinderung durch Steinschlag
+914,Verkehrsbehinderung durch Erdrutsch
+915,Verkehrsbehinderung durch Erdbebenschäden
+916,Straßenschäden
+917,Verkehrsbehinderung durch Absenkung der Fahrbahn
+918,Verkehrsbehinderung durch Unterspülung der Fahrbahn
+919,Verkehrsbehinderung durch geplatzte Wasserleitung
+920,Verkehrsbehinderung durch ausströmendes Gas
+921,Verkehrsbehinderung durch Großbrand
+922,Verkehrsbehinderung durch Tiere auf der Fahrbahn
+923,Gefahr durch Tiere auf der Fahrbahn
+924,Verkehrsbehinderung durch Aufräumarbeiten
+925,wegen Sturmschäden blockiert
+926,durch umgestürzte Bäume blockiert
+927,"Verkehrsbehinderung durch umgestürzte Bäume, mit Vorsicht passierbar"
+928,"Hochwasser, (L) Stau"
+929,"Hochwasser, Staugefahr"
+930,"Hochwasser, (L) stockender Verkehr"
+931,"Hochwasser, Gefahr von stockendem Verkehr"
+932,"Hochwasser, (L) dichter Verkehr"
+933,"Hochwasser, dichter Verkehr zu erwarten"
+934,"Hochwasser, (L) reger Verkehr"
+935,"Hochwasser, reger Verkehr zu erwarten"
+936,"Hochwasser, störungsfreier Verkehr"
+937,"Hochwasser, (L) dichter Verkehr mit zunehmender Tendenz"
+938,wegen Hochwassers gesperrt
+939,"Verkehrsbehinderung durch Hochwasser, Zeitverlust"
+940,"Verkehrsbehinderung durch Hochwasser, es ist mit Zeitverlust zu rechnen"
+941,"Verkehrsbehinderung durch Hochwasser, großer Zeitverlust"
+942,"Verkehrsbehinderung durch Hochwasser, mit Vorsicht passierbar"
+943,wegen Lawinen gesperrt
+944,"Verkehrsbehinderung durch Lawinen, mit Vorsicht passierbar"
+945,wegen Steinschlags gesperrt
+946,"Verkehrsbehinderung durch Steinschlag, mit Vorsicht passierbar"
+947,"Erdrutsch, Straße gesperrt"
+948,"Verkehrsbehinderung durch Erdrutsch, mit Vorsicht passierbar"
+949,wegen Fahrbahnabsenkung gesperrt
+950,"Absenkung der Fahrbahn, für beide Richtungen nur ein Fahrstreifen abwechselnd frei"
+951,"Absenkung der Fahrbahn, Fahrbahn auf einen Fahrstreifen verengt"
+952,"Absenkung der Fahrbahn, Fahrbahn auf zwei Fahrstreifen verengt"
+953,"Absenkung der Fahrbahn, Fahrbahn auf drei Fahrstreifen verengt"
+954,"Verkehrsbehinderung durch Absenkung der Fahrbahn, Verkehr wird über die Gegenfahrbahn geleitet"
+955,"Verkehrsbehinderung durch Absenkung der Fahrbahn, mit Vorsicht passierbar"
+956,"Störung in der Kanalisation, Straße gesperrt"
+957,"geplatzte Wasserleitung, Straße gesperrt"
+958,"Verkehrsbehinderung durch geplatzte Wasserleitung, Zeitverlust"
+959,"Verkehrsbehinderung durch geplatzte Wasserleitung, es ist mit Zeitverlust zu rechnen"
+960,"Verkehrsbehinderung durch geplatzte Wasserleitung, großer Zeitverlust"
+961,"ausströmendes Gas, Straße gesperrt"
+962,"Verkehrsbehinderung durch ausströmendes Gas, Zeitverlust"
+963,"Verkehrsbehinderung durch ausströmendes Gas, es ist mit Zeitverlust zu rechnen"
+964,"Verkehrsbehinderung durch ausströmendes Gas, großer Zeitverlust"
+965,"Feuer, Straße gesperrt"
+966,"Verkehrsbehinderung durch Feuer, Zeitverlust"
+967,"Verkehrsbehinderung durch Feuer, es ist mit Zeitverlust zu rechnen"
+968,"Verkehrsbehinderung durch Feuer, großer Zeitverlust"
+969,"Aufräumarbeiten, Straße gesperrt"
+970,Straße wieder frei
+971,Meldung aufgehoben
+972,mit Sturmschäden ist zu rechnen
+973,Verkehrsbehinderung durch herunterhängende Stromkabel
+974,Verkehrsbehinderung durch überlastete Abflusskanäle
+975,Verkehrsbehinderung durch Eisglätte
+976,Verkehrsbehinderung durch Schlammlawine
+977,Verkehrsbehinderung durch Grasbrand
+978,Flugzeugabsturz
+979,Zugunglück
+980,Straße durch Hindernisse blockiert
+981,"Verkehrsbehinderung durch Hindernisse auf der Fahrbahn, mit Vorsicht passierbar"
+982,Straße durch ausgelaufene Flüssigkeiten blockiert
+983,"Verkehrsbehinderung durch verlorene Ladung, mit Vorsicht passierbar"
+984,Gefahr durch ausgelaufene Flüssigkeiten auf der Straße
+985,"Verkehrsbehinderung durch Sturmschäden, mit Vorsicht passierbar"
+986,Gefahr durch Sturmschäden
+987,blockiert durch herunterhängende Stromkabel
+988,"Verkehrsbehinderung durch herunterhängende Stromkabel, mit Vorsicht passierbar"
+989,Gefahr durch herunterhängende Stromkabel
+990,Gefahr durch überlastete Abflusskanäle
+991,Gefahr durch Überflutung
+992,Gefahr durch Lawinen
+993,wegen Lawinengefahr gesperrt
+994,Lawinengefahr
+995,wegen Glatteisbildung gesperrt
+996,"Glatteisgefahr, mit Vorsicht passierbar"
+997,"Eisglätte, für beide Richtungen nur ein Fahrstreifen abwechselnd frei"
+998,Gefahr durch Steinschlag
+999,Gefahr durch Erdrutsch
+1000,Gefahr durch Erdbebenschäden
+1001,gefährliche Fahrbedingungen
+1002,Aquaplaninggefahr
+1003,Straßenglätte
+1004,Verkehrsbehinderung durch verschmutzte Fahrbahn
+1005,Rutschgefahr durch Laub
+1006,Glatteis
+1007,Glatteisgefahr
+1008,Blitzeis
+1009,überfrierende Nässe
+1010,teilweise nasse und vereiste Fahrbahn
+1011,Schneematsch
+1012,schneebedeckte Fahrbahn
+1013,Schneeglätte
+1014,Neuschnee
+1015,tiefer Schnee
+1016,Schneeverwehungen
+1017,Rutschgefahr durch ausgelaufene Flüssigkeiten
+1018,Rutschgefahr durch Schneeglätte
+1019,Reifglätte
+1020,"Schnee, Straße blockiert"
+1021,"Schneeglätte, Fahrbahn auf einen Fahrstreifen verengt"
+1022,"Schneeglätte, Fahrbahn auf zwei Fahrstreifen verengt"
+1023,"Schneeglätte, Fahrbahn auf drei Fahrstreifen verengt"
+1024,Straßenverhältnisse haben sich wieder gebessert
+1025,Meldung aufgehoben
+1026,Gefahr durch Absenkung der Fahrbahn
+1027,"Verkehrsbehinderung durch Unterspülung der Fahrbahn, Zeitverlust"
+1028,"Verkehrsbehinderung durch Unterspülung der Fahrbahn, es ist mit Zeitverlust zu rechnen"
+1029,"Verkehrsbehinderung durch Unterspülung der Fahrbahn, großer Zeitverlust"
+1030,Gefahr durch Unterspülung der Fahrbahn
+1031,Gefahr durch geplatzte Wasserleitung
+1032,Gefahr durch ausströmendes Gas
+1033,Gefahr durch Großbrand
+1034,Gefahr durch Aufräumarbeiten
+1035,nicht passierbar
+1036,fast nicht passierbar
+1037,sehr gefährliche Fahrbedingungen
+1038,schwierige Fahrbedingungen
+1039,mit Vorsicht passierbar
+1040,passierbar
+1041,Verkehrsbehinderung durch Wasser auf der Fahrbahn
+1042,Verkehrsbehinderung durch Sand
+1043,Verkehrsbehinderung durch Rollsplitt
+1044,Verkehrsbehinderung durch Ölspur
+1045,Verkehrsbehinderung durch auslaufenden Kraftstoff
+1047,teilweise vereiste Fahrbahn
+1048,Gefahr durch Straßenglätte
+1050,Gefahr durch Blitzeis
+1054,Rutschgefahr durch Sand auf der Fahrbahn
+1055,Gefahr durch verschmutzte Fahrbahn
+1056,Gefahr durch Rollsplitt
+1057,Gefahr durch Ölspur
+1058,Gefahr durch auslaufenden Kraftstoff
+1059,Gefahr durch Straßenschäden
+1060,teilweise vereiste Fahrbahn auf Brücken
+1061,Gefahr durch Straßenglätte auf Brücken
+1062,"teilweise vereiste Fahrbahn auf Brücken, in schattigen Bereichen und in Anschlussstellen"
+1063,für Schwerverkehr nicht passierbar
+1064,nicht passierbar für Fahrzeuge mit Anhänger
+1065,Fahrbedingungen haben sich gebessert
+1066,Gefahr durch Bergungsarbeiten
+1067,Verkehrsbehinderung durch größere Tiere auf der Fahrbahn
+1068,Verkehrsbehinderung durch Tierherden auf der Fahrbahn
+1069,Rutschgefahr hat abgenommen
+1070,Schnee geräumt
+1073,mit sehr gefährlichen Fahrbedingungen ist zu rechnen
+1074,mit überfrierender Nässe ist zu rechnen
+1075,"Schnee, Gefahr von blockierten Straßen"
+1079,schnell fallende Temperatur
+1080,extreme Hitze
+1081,extreme Kälte
+1082,Temperaturen haben sich normalisiert
+1083,aktuelle Temperatur
+1084,Verkehrsbehinderung durch Feuer
+1085,Waldbrand
+1086,Fahrzeug unter einer Brücke eingeklemmt
+1090,"Warnung vor einem
+Vulkanausbruch"
+1101,starker Schneefall
+1102,"starker Schneefall, Sichtweiten unter 30 m"
+1103,"starker Schneefall, Sichtweiten unter 50 m"
+1104,Schneefall
+1105,"Schneefall, Sichtweiten unter 100 m"
+1106,Hagel
+1107,Schneeregen
+1108,Gewitter
+1109,starker Regen
+1110,"starker Regen, Sichtweiten unter 30 m"
+1111,"starker Regen, Sichtweiten unter 50 m"
+1112,Regen
+1113,"Regen, Sichtweiten unter 100 m"
+1114,Regenschauer
+1115,starker Frost
+1116,Frost
+1126,Wettersituation hat sich gebessert
+1127,Meldung aufgehoben
+1128,Schneesturm
+1130,Blizzard
+1132,starker Hagel
+1134,"starker Schneefall, Sichtbehinderung"
+1135,Sichtbehinderung durch Schneefall
+1136,Sichtbehinderung durch starken Regen
+1137,Sichtbehinderung durch Regen
+1165,Regen geht in Schnee über
+1166,Schnee geht in Regen über
+1170,starker Schneefall zu erwarten
+1171,starker Regen zu erwarten
+1172,Wetterbesserung zu erwarten
+1173,Blizzard zu erwarten
+1174,starker Hagel zu erwarten
+1175,Sichtbehinderungen zu erwarten
+1176,"Sichtbehinderung durch gefrierenden Nebel zu erwarten, Gefahr von Straßenglätte"
+1177,Sichtbehinderung durch dichten Nebel zu erwarten
+1178,Sichtbehinderung durch Nebelbänke zu erwarten
+1179,verbesserte Sichtbedingungen zu erwarten
+1180,Schlechtwetterwarnung aufgehoben
+1190,starker Smog
+1191,starke Luftverschmutzung
+1201,Wirbelsturm
+1202,Orkan
+1203,orkanartige Stürme
+1204,Sturm
+1205,starker Wind
+1209,Windböen
+1210,Seitenwind
+1211,"starker Wind, Behinderung für Fahrzeuge mit hohen Aufbauten"
+1212,"starker Wind, Straße gesperrt für Fahrzeuge mit hohen Aufbauten"
+1213,starke Winde haben nachgelassen
+1214,Meldung aufgehoben
+1215,Beschränkungen für Fahrzeuge mit hohen Aufbauten bestehen nicht mehr
+1217,Wirbelsturmwarnung aufgehoben
+1301,Sichtbehinderung durch dichten Nebel
+1302,"dichter Nebel, Sichtweiten unter 30 m"
+1303,"dichter Nebel, Sichtweiten unter 50 m"
+1304,Sichtbehinderung durch Nebel
+1305,"Nebel, Sichtweiten unter 100 m"
+1307,Sichtbehinderung durch Nebelbänke
+1308,Sichtbehinderung durch gefrierenden Nebel
+1309,Sichtbehinderung durch Rauch
+1310,Sichtbehinderung durch Staub
+1312,Sichtbehinderung durch Schneefall und Nebel
+1313,die Sicht hat sich verbessert
+1314,Meldung aufgehoben
+1318,Sichtbehinderung
+1319,Sichtweiten unter 30 m
+1320,Sichtweiten unter 50 m
+1321,Sichtweiten unter 100 m
+1322,Nebel
+1323,Schneetreiben
+1324,Gefahr durch Spritzwasser
+1325,Sichtbehinderung durch tiefstehende Sonne
+1326,Sichtbehinderung durch Sandsturm
+1332,Smog-Alarm
+1337,"Sichtbehinderung durch gefrierenden Nebel, Straßenglätte"
+1338,"Smog-Alarm, Fahrverbot für Kraftfahrzeuge"
+1340,Sichtbehinderung durch Insektenschwärme
+1345,Nebel löst sich auf
+1346,Nebelwarnung aufgehoben
+1449,Sicherheitsübung
+1450,internationale Sportveranstaltung
+1451,Spiel
+1452,Turnier
+1453,Leichtathletikveranstaltung
+1454,Ballspiel
+1455,Boxturnier
+1456,Stierkampf
+1457,Cricket-Spiel
+1458,Radrennen
+1459,Fußballspiel
+1460,Golfturnier
+1461,Marathonlauf
+1462,Pferderennen
+1463,Rugbyspiel
+1464,Springreiten
+1465,Tennisturnier
+1466,Wassersportveranstaltung
+1467,Wintersportveranstaltung
+1468,Jahrmarkt
+1469,Messe
+1470,Prozession
+1471,Schaulustige behindern Zugang
+1472,Verkehrsbehinderung durch Personen auf der Fahrbahn
+1473,Verkehrsbehinderung durch Kinder auf der Fahrbahn
+1474,Verkehrsbehinderung durch Fahrradfahrer auf der Fahrbahn
+1475,Streik
+1476,Sicherheitsvorfall
+1477,Polizeikontrolle
+1478,Terroranschlag
+1479,Gefahr durch Schusswechsel
+1480,Katastrophenalarm
+1481,Gefahr durch Luftangriff
+1482,Gefahr durch Personen auf der Fahrbahn
+1483,"Kinder auf der Fahrbahn, Gefahr"
+1484,Gefahr durch Fahrradfahrer auf der Fahrbahn
+1485,"Sicherheitsvorfall, Straße gesperrt"
+1486,"Sicherheitsvorfall, Zeitverlust"
+1487,"Sicherheitsvorfall, es ist mit Zeitverlust zu rechnen"
+1488,"Sicherheitsvorfall, großer Zeitverlust"
+1489,"Polizeikontrolle, Zeitverlust"
+1490,"Polizeikontrolle, es ist mit Zeitverlust zu rechnen"
+1491,"Polizeikontrolle, großer Zeitverlust"
+1492,keine Beeinträchtigungen durch Sicherheitsmaßnahmen mehr
+1493,die durch eine Sportveranstaltung bedingte Verkehrsbelastung besteht nicht mehr
+1494,Evakuierung
+1495,"Evakuierung, reger Verkehr"
+1496,Verkehrsbehinderung beseitigt
+1497,Manöver
+1498,Polizeieinsatz
+1499,Notarztteam im Einsatz
+1500,Kindesentführung
+1501,Veranstaltung
+1502,Sportveranstaltung
+1503,Aufführung
+1504,Festspiele
+1505,Ausstellung
+1506,Volksfest
+1507,Markt
+1508,feierliche Veranstaltung
+1509,Staatsbesuch
+1510,Parade
+1511,Menschenansammlung
+1512,Umzug
+1513,Demonstration
+1514,Störung der öffentlichen Sicherheit
+1515,Sicherheitsmaßnahmen
+1516,Bombenentschärfung
+1517,"Veranstaltung, (L) Stau"
+1518,"Veranstaltung, Staugefahr"
+1519,"Veranstaltung, (L) stockender Verkehr"
+1520,"Veranstaltung, Gefahr von stockendem Verkehr"
+1521,"Veranstaltung, (L) dichter Verkehr"
+1522,"Veranstaltung, dichter Verkehr zu erwarten"
+1523,"Veranstaltung, (L) reger Verkehr"
+1524,"Veranstaltung, reger Verkehr zu erwarten"
+1525,"Veranstaltung, störungsfreier Verkehr"
+1526,"Veranstaltung, (L) dichter Verkehr mit zunehmender Tendenz"
+1527,wegen Veranstaltung gesperrt
+1528,"Veranstaltung, Zeitverlust"
+1529,"Veranstaltung, es ist mit Zeitverlust zu rechnen"
+1530,"Veranstaltung, großer Zeitverlust"
+1531,"Sportveranstaltung, (L) Stau"
+1532,"Sportveranstaltung, Staugefahr"
+1533,"Sportveranstaltung, (L) stockender Verkehr"
+1534,"Sportveranstaltung, Gefahr von stockendem Verkehr"
+1535,"Sportveranstaltung, (L) dichter Verkehr"
+1536,"Sportveranstaltung, dichter Verkehr zu erwarten"
+1537,"Sportveranstaltung, (L) reger Verkehr"
+1538,"Sportveranstaltung, reger Verkehr zu erwarten"
+1539,"Sportveranstaltung, störungsfreier Verkehr"
+1540,"Sportveranstaltung, (L) dichter Verkehr mit zunehmender Tendenz"
+1541,wegen Sportveranstaltung gesperrt
+1542,"Sportveranstaltung, Zeitverlust"
+1543,"Sportveranstaltung, es ist mit Zeitverlust zu rechnen"
+1544,"Sportveranstaltung, großer Zeitverlust"
+1545,"Volksfest, (L) Stau"
+1546,"Volksfest, Staugefahr"
+1547,"Volksfest, (L) stockender Verkehr"
+1548,"Volksfest, Gefahr von stockendem Verkehr"
+1549,"Volksfest, (L) dichter Verkehr"
+1550,"Volksfest, dichter Verkehr zu erwarten"
+1551,"Voksfest, (L) reger Verkehr"
+1552,"Volksfest, reger Verkehr zu erwarten"
+1553,"Volksfest, störungsfreier Verkehr"
+1554,"Volksfest, (L) dichter Verkehr mit zunehmender Tendenz"
+1555,wegen Volksfest gesperrt
+1556,"Volksfest, Zeitverlust"
+1557,"Volksfest, es ist mit Zeitverlust zu rechnen"
+1558,"Volksfest, großer Zeitverlust"
+1559,wegen Parade gesperrt
+1560,"Parade, Zeitverlust"
+1561,"Parade, es ist mit Zeitverlust zu rechnen"
+1562,"Parade, großer Zeitverlust"
+1563,wegen Streiks gesperrt
+1564,"Streik, Zeitverlust"
+1565,"Streik, es ist mit Zeitverlust zu rechnen"
+1566,"Streik, großer Zeitverlust"
+1567,wegen Demonstration gesperrt
+1568,"Demonstration, Zeitverlust"
+1569,"Demonstration, es ist mit Zeitverlust zu rechnen"
+1570,"Demonstration, großer Zeitverlust"
+1571,"Beeinträchtigung durch Sicherungsmaßnahmen, (L) Stau"
+1572,"Beeinträchtigung durch Sicherungsmaßnahmen, Staugefahr"
+1573,"Beeinträchtigung durch Sicherungsmaßnahmen, (L) stockender Verkehr"
+1574,"Beeinträchtigung durch Sicherungsmaßnahmen, Gefahr von stockendem Verkehr"
+1575,"Beeinträchtigung durch Sicherungsmaßnahmen, (L) dichter Verkehr"
+1576,"Beeinträchtigung durch Sicherungsmaßnahmen, dichter Verkehr zu erwarten"
+1577,"Beeinträchtigung durch Sicherungsmaßnahmen, (L) reger Verkehr"
+1578,"Beeinträchtigung durch Sicherungsmaßnahmen, reger Verkehr zu erwarten"
+1579,"Beeinträchtigung durch Sicherungsmaßnahmen, (L) dichter Verkehr mit zunehmender Tendenz"
+1580,"Beeinträchtigung durch Sicherungsmaßnahmen, Straße gesperrt"
+1581,"Beeinträchtigung durch Sicherungsmaßnahmen, Zeitverlust"
+1582,"Beeinträchtigung durch Sicherungsmaßnahmen, es ist mit Zeitverlust zu rechnen"
+1583,"Beeinträchtigung durch Sicherungsmaßnahmen, großer Zeitverlust"
+1584,Verkehr hat sich normalisiert
+1585,Meldung aufgehoben
+1586,"Beeinträchtigung durch Sicherungsmaßnahmen, störungsfreier Verkehr"
+1587,Luftalarm aufgehoben
+1588,Katastrophenalarm aufgehoben
+1589,Meldung aufgehoben
+1590,mehrere Veranstaltungen
+1591,Information über Veranstaltung aufgehoben
+1592,Motorsportveranstaltung
+1593,Baseballspiel
+1594,Basketballspiel
+1595,Bootsrennen
+1596,Konzertveranstaltung
+1597,Hockeyspiel
+1601,Zeitverlust
+1602,Zeitverlust bis zu 15 min
+1603,Zeitverlust bis zu 30 min
+1604,Zeitverlust bis zu 1 Stunde
+1605,Zeitverlust bis zu 2 Stunden
+1606,Zeitverlust mehrere Stunden
+1607,es ist mit Zeitverlust zu rechnen
+1608,großer Zeitverlust
+1609,Zeitverlust für Schwerverkehr
+1610,Zeitverlust bis zu 15 min für LKW
+1611,Zeitverlust bis zu 30 min für LKW
+1612,Zeitverlust bis zu 1 Stunde für LKW
+1613,Zeitverlust bis zu 2 Stunden für LKW
+1614,Zeitverlust mehrere Stunden für LKW
+1615,Abfahrten gestoppt
+1616,Abfahrt eingestellt
+1617,Abfahrt ausgebucht
+1618,Abfahrt ausgebucht für Schwerverkehr
+1619,die gemeldete Störung besteht nicht mehr
+1620,Meldung aufgehoben
+1621,Zeitverlust bis zu 5 min
+1622,Zeitverlust bis zu 10 min
+1623,Zeitverlust bis zu 20 min
+1624,Zeitverlust bis zu 25 min
+1625,Zeitverlust bis zu 40 min
+1626,Zeitverlust bis zu 50 min
+1627,Zeitverlust bis zu 90 min
+1628,Zeitverlust bis zu 3 Stunden
+1629,Zeitverlust bis zu 4 Stunden
+1630,Zeitverlust bis zu 5 Stunden
+1631,sehr großer Zeitverlust
+1632,Zeitverlust unbestimmter Dauer
+1633,Verkehr bis auf weiteres eingestellt
+1634,Ausfälle
+1635,P+R nicht in Betrieb
+1636,Sonderlinie ist eingerichtet
+1637,ÖPNV ist eingestellt
+1638,Schienenverkehr nicht in Betrieb
+1639,Busverkehr nicht in Betrieb
+1640,Pendelverkehr ist eingerichtet
+1641,kostenloser Pendelverkehr
+1642,Zeitverlust für LKW
+1643,Zeitverlust für Busse
+1644,Abfahrt ausgebucht für LKW
+1645,Abfahrt ausgebucht für Busse
+1646,nächste Abfahrt für LKW
+1647,nächste Abfahrt für Busse
+1648,kein Zeitverlust mehr
+1649,S-Bahn nicht in Betrieb
+1650,es kann zu Verzögerungen kommen
+1651,U-Bahn nicht in Betrieb
+1652,es ist mit Ausfällen zu rechnen
+1653,es ist mit großem Zeitverlust zu rechnen
+1654,es ist mit sehr großem Zeitverlust zu rechnen
+1655,alle Abfahrten ausgebucht
+1656,nächste Ankunft
+1657,"Störungen im Schienenverkehr, Zeitverlust"
+1658,"Störungen im Busverkehr, Zeitverlust"
+1659,Störungen im U-Bahn-Betrieb
+1660,ÖPNV wieder in Betrieb
+1661,Fähre außer Betrieb
+1662,Fahrtdauer
+1663,kein Zeitverlust mehr zu erwarten
+1664,Fahrzeugkorso
+1695,aktuelle Fahrtdauer
+1696,erwartete Fahrtdauer
+1700,Verkehrsbehinderung durch langsam fahrendes Wartungsfahrzeug
+1701,"Achtung, Ihnen kommt ein Falschfahrer entgegen! Nicht überholen! Vorsicht auf beiden Richtungsfahrbahnen. Wir melden, wenn die Gefahr vorüber ist."
+1702,die Gefahr durch ein entgegenkommendes Fahrzeug besteht nicht mehr
+1703,Meldung aufgehoben
+1704,Gefahr durch rücksichtslose Fahrer
+1705,Gefahr durch ein langsam fahrendes Fahrzeug
+1706,Rettungsfahrzeuge im Einsatz
+1707,"Achtung, schnell fahrende Rettungsfahrzeuge im Einsatz"
+1708,"Achtung, Gefahr durch Verfolgungsjagd "
+1709,Verschmutzung durch ein fahrendes Fahrzeug
+1710,"Fahrzeug verliert Ladung, Gefahr"
+1711,die Gefahr durch Rettungsfahrzeuge besteht nicht mehr
+1712,Straße geräumt
+1720,Störungen im Schienenverkehr
+1721,ÖPNV außer Betrieb
+1731,Gefahr durch Schwertransport
+1732,Gefahr durch Transport mit Überbreite
+1733,Gefahr durch Transporte mit Überlänge
+1734,Gefahr durch langsames Fahrzeug
+1735,Gefahr durch Kettenfahrzeug
+1736,Gefährdung durch Gefahrgutfahrzeug
+1737,Gefahr durch Kolonnenverkehr
+1738,Gefahr durch Militärkolonnen
+1739,Gefahr durch Transport mit Überhöhe
+1740,"dichter Verkehr durch Schwertransport, Zeitverlust"
+1741,"dichter Verkehr durch Fahrzeugkolonne, Zeitverlust"
+1751,Schwertransport
+1752,Transport mit Überbreite
+1753,Transport mit Überlänge
+1754,langsames Fahrzeug
+1755,Kolonnenverkehr
+1756,"Schwertransport, Zeitverlust"
+1757,"Schwertransport, es ist mit Zeitverlust zu rechnen"
+1758,"Schwertransport, großer Zeitverlust"
+1759,"Kolonnenverkehr, Zeitverlust"
+1760,"Kolonnenverkehr, es ist mit Zeitverlust zu rechnen"
+1761,"Kolonnenverkehr, großer Zeitverlust"
+1762,Verkehrsstörung beseitigt
+1763,Meldung aufgehoben
+1764,Kettenfahrzeug
+1765,Gefahrguttransport
+1766,Militärkolonnen
+1767,"Schwertransport, Überholen nicht möglich"
+1768,Gefahrguttransporte nächste geeignete Parkmöglichkeit anfahren
+1769,Gefährdung durch Gefahrgutfahrzeug besteht nicht mehr
+1770,Kolonnenverkehr aufgelöst
+1771,Gefahr besteht nicht mehr
+1801,Spurwechselanlagen außer Betrieb
+1802,Notrufsäulen ausgefallen
+1803,Notruf ausgefallen
+1804,Ampelanlage außer Betrieb
+1805,Ampelanlage arbeitet fehlerhaft
+1806,Störung am Bahnübergang
+1807,"Ampelanlagen außer Betrieb, (L) Stau"
+1808,"Ampelanlagen außer Betrieb, Staugefahr"
+1809,"Ampelanlagen außer Betrieb, (L) stockender Verkehr"
+1810,"Ampelanlagen außer Betrieb, Gefahr von stockendem Verkehr"
+1811,"Ampelanlagen außer Betrieb, (L) dichter Verkehr"
+1812,"Ampelanlagen außer Betrieb, dichter Verkehr zu erwarten"
+1813,"Ampelanlagen außer Betrieb, (L) reger Verkehr"
+1814,"Ampelanlagen außer Betrieb, reger Verkehr zu erwarten"
+1815,"Ampelanlagen außer Betrieb, störungsfreier Verkehr"
+1816,"Ampelanlagen außer Betrieb, (L) dichter Verkehr mit zunehmender Tendenz"
+1817,"Ampelanlagen außer Betrieb, Zeitverlust"
+1818,"Ampelanlagen außer Betrieb, es ist mit Zeitverlust zu rechnen"
+1819,"Ampelanlagen außer Betrieb, großer Zeitverlust"
+1820,"Störung am Bahnübergang, (L) Stau"
+1821,"Störung am Bahnübergang, Staugefahr"
+1822,"Störung am Bahnübergang, (L) stockender Verkehr"
+1823,"Störung am Bahnübergang, Gefahr von stockendem Verkehr"
+1824,"Störung am Bahnübergang, (L) dichter Verkehr"
+1825,"Störung am Bahnübergang, dichter Verkehr zu erwarten"
+1826,"Störung am Bahnübergang, (L) reger Verkehr"
+1827,"Störung am Bahnübergang, reger Verkehr zu erwarten"
+1828,"Störung am Bahnübergang, störungsfreier Verkehr"
+1829,"Störung am Bahnübergang, (L) dichter Verkehr mit zunehmender Tendenz"
+1830,"Störung am Bahnübergang, Zeitverlust"
+1831,"Störung am Bahnübergang, es ist mit Zeitverlust zu rechnen"
+1832,"Störung am Bahnübergang, großer Zeitverlust"
+1833,Verkehrssteuerung wieder in Betrieb
+1834,Notrufsäule wieder in Betrieb
+1835,Ampelanlagen wieder in Betrieb
+1836,Störung am Bahnübergang beseitigt
+1837,Meldung aufgehoben
+1838,Spurwechselanlagen defekt
+1839,Spurwechselanlagen in Betrieb
+1840,Wechselverkehrszeichen außer Betrieb
+1841,Wechselverkehrszeichen arbeiten fehlerhaft
+1842,Wechselverkehrszeichen wieder in Betrieb
+1843,Zufahrtsregelung außer Betrieb
+1844,Zufahrtsregelung arbeitet fehlerhaft
+1845,provisorische Ampelanlage defekt
+1846,provisorische Ampelanlage arbeitet fehlerhaft
+1847,Störung des Verkehrsablaufes wegen Ausfall des Verkehrsrechners
+1848,Steuerung der Ampelanlage geändert
+1849,Tunnelbelüftung ausgefallen
+1850,"Spurwechselanlagen außer Betrieb, Gefahr"
+1851,vorübergehende Begrenzung der Breite
+1852,vorübergehende Begrenzung der Breite besteht nicht mehr
+1854,geänderte Verkehrsregelung
+1855,weniger als 50 Stellplätze frei
+1856,keine Parkinformationen verfügbar
+1857,Meldung aufgehoben
+1858,"Schneeräumung, Zeitverlust"
+1861,vorübergehende Beschränkung der Höhe
+1862,vorübergehende Beschränkung der Höhe besteht nicht mehr
+1863,"automatische Maut
+spuren außer Betrieb"
+1864,"Spurwechselanlagen arbeiten fehlerhaft, Gefahr"
+1865,"Notrufsäulen ausgefallen, Polizei fährt verstärkt Streife"
+1866,"Notrufsäulen ausgefallen, warten Sie im Notfall auf die Polizei"
+1867,"Ampelanlage außer Betrieb, Gefahr"
+1868,"Ampelanlagen gestört, Zeitverlust"
+1869,"Ampelanlagen gestört, es ist mit Zeitverlust zu rechnen"
+1870,"Ampelanlagen gestört, großer Zeitverlust"
+1871,vorübergehende Beschränkung der Achslast
+1872,vorübergehende Beschränkung des zulässigen Gesamtgewichts
+1873,vorübergehende Beschränkung des zulässigen Gesamtgewichts besteht nicht mehr
+1874,vorübergehende Beschränkung der Achslast besteht nicht mehr
+1875,Gefahr durch fehlerhaft arbeitende Ampelanlage
+1876,"provisorische Ampelanlage defekt, Zeitverlust"
+1877,"provisorische Ampelanlage defekt, es ist mit Zeitverlust zu rechnen"
+1878,"provisorische Ampelanlage defekt, großer Zeitverlust"
+1879,Gefahr durch defekte provisorische Ampelanlage 
+1880,"wegen Ausfall des Verkehrsrechners ist der Verkehrsablauf gestört, Zeitverlust"
+1881,vorübergehende Beschränkung der Länge
+1882,vorübergehende Beschränkung der Länge besteht nicht mehr
+1883,Meldung aufgehoben
+1884,"wegen Ausfall des Verkehrsrechners ist der Verkehrsablauf gestört, es ist mit Zeitverlust zu rechnen"
+1885,"wegen Ausfall des Verkehrsrechners ist der Verkehrsablauf gestört, großer Zeitverlust"
+1886,normale Parkregelung aufgehoben
+1887,besondere  Parkregelung in Kraft
+1888,zu 10%  besetzt
+1889,zu 20%  besetzt
+1890,zu 30%  besetzt
+1891,zu 40%  besetzt
+1892,zu 50%  besetzt
+1893,zu 60%  besetzt
+1894,zu 70%  besetzt
+1895,zu 80%  besetzt
+1896,zu 90%  besetzt
+1897,weniger als 10 Stellplätze frei
+1898,weniger als 20 Stellplätze frei
+1899,weniger als 30 Stellplätze frei
+1900,weniger als 40 Stellplätze frei
+1901,nächste Abfahrt
+1902,nächste Abfahrt für Schwerverkehr
+1903,Parkplatz besetzt
+1904,alle Parkplätze besetzt
+1905,sehr wenige Stellplätze frei
+1906,P+R in Betrieb
+1907,Null-Meldung
+1908,bitte Radioprogramm einschalten
+1909,Alarmmeldung auf dieser Frequenz
+1910,neue Alarmmeldung innerhalb der festgesetzten Zeiten
+1911,Meldung aufgehoben
+1913,bitte Radioprogramm einschalten
+1914,keine Information
+1915,Testmeldung
+1916,wegen technischer Probleme keine Information
+1917,"automatisches Mautsystem außer Betrieb, bitte manuell zahlen"
+1918,besetzt
+1920,nur wenige Stellplätze frei
+1921,Stellplätze frei
+1922,Parkplatz weitgehend besetzt
+1923,alle Stellplätze weitgehend besetzt
+1924,alle Parkhäuser besetzt
+1925,störungsfreier P+R-Betrieb
+1926,keine Stellplätze mehr frei
+1927,Parkverbot
+1928,besondere Parkregelung aufgehoben
+1929,wichtige Informationen werden im gesprochenen Programm verlesen
+1930,kein TMC-Service
+1931,genaue Informationen werden im gesprochenen Programm verlesen
+1932,Detailinformationen bei einem anderem TMC-Service verfügbar
+1934,keine Informationen über P+R verfügbar
+1938,Informationen über P+R wieder verfügbar
+1939,Telefonservice mit Reiseinformationen verfügbar
+1940,zusätzliche regionale Informationen bei einem anderen TMC-Service verfügbar
+1941,zusätzliche lokale Informationen bei einem anderen TMC-Service verfügbar
+1942,zusätzliche Informationen über ÖPNV bei einem anderen TMC-Service verfügbar
+1943,nationale Informationen bei einem anderen TMC-Service verfügbar
+1944,dieser Service bietet nur überregionale Informationen
+1945,dieser Service bietet nur regionale Informationen
+1946,dieser Service bietet nur lokale Informationen
+1947,dieser Service bietet keine detaillierte regionale Informationen
+1948,dieser Service bietet keine detaillierte lokalen Informationen
+1949,dieser Service bietet keine grenzüberschreitenden Informationen
+1950,Informationen nur für dieses Gebiet
+1951,keine neuen Verkehrsinformationen verfügbar
+1952,keine ÖPNV-Informationen verfügbar
+1953,TMC-Aussendung auf dieser Frequenz wird beendet
+1954,aktueller TMC-Dienst wird wieder aufgenommen
+1955,Hinweis auf das Hörfunkprogramm nicht mehr gültig
+1956,Hinweise auf andere TMC-Dienste nicht mehr gültig
+1957,frühere Aussagen über diesen oder andere TMC-Dienste sind nicht mehr gültig
+1961,Rettungs- und Einsatzfahrzeuge auf Fahrgemeinschaftsspur überholen lassen
+1962,Fahrgemeinschaftsspur offen für alle Fahrzeuge
+1963,Polizei führt den Verkehr über Fahrgemeinschaftsspur
+1964,Bahnauskunft nicht verfügbar
+1965,Bahnauskunft wieder verfügbar
+1966,Nahverkehrsinformationen nicht verfügbar
+1967,Nahverkehrsinformationen wieder verfügbar
+1971,Polizei regelt den Verkehr
+1972,Busspur offen für alle Fahrzeuge
+1973,Polizei führt den Verkehr über Busspur
+1974,Gasse für Rettungs- und Einsatzfahrzeuge bilden
+1975,Überholverbot für Schwerverkehr
+1976,Überholverbot
+1977,Rettungs- und Einsatzfahrzeuge auf Schwerverkehrsspur überholen lassen
+1978,Schwerverkehrsspur offen für alle Fahrzeuge
+1979,Polizei führt den Verkehr über Schwerverkehrsspur 
+1980,"Überholverbot für 
+Schwerlastverkehr "
+1981,"LKW  wird empfohlen, die nächste geeignete Haltemöglichkeit anzufahren"
+1982,Busspur gesperrt
+1983,Stromausfall
+1985,Überholverbot aufgehoben
+1986,"Umweltzonen
+regelung in 
+Kraft"
+1990,Parkplatz geschlossen 
+1991,Gefahr durch auf der Fahrbahn abgestellte Fahrzeuge
+1993,"Anzahl der freien Park
+plätze abnehmend"
+1994,"Anzahl der freien Park
+plätze konstant"
+1995,Anzahl der freien Parkplätze zunehmend
+1998,gefährliche Situation in der Ausfahrt
+1999,gefährliche Situation in der Einfahrt
+2000,wegen Smog-Alarms gesperrt
+2006,gesperrt für Fahrzeuge mit weniger als 3 Insassen
+2007,gesperrt für Fahrzeuge mit nur einem Insassen
+2013,Tank- und Rastanlage ausgelastet
+2021,"Service nicht in Betrieb, Ersatzverkehr"
+2022,Ausfall wegen Streik
+2028,Meldung aufgehoben
+2029,Meldung aufgehoben
+2030,Meldung aufgehoben
+2033,Meldung aufgehoben
+2034,Meldung aufgehoben
+2035,Meldung aufgehoben
+2038,Meldung aufgehoben
+2039,Meldung aufgehoben
+2040,Meldung aufgehoben
+2041,es liegen keine Meldungen vor
+2042,"Eisbildung an Kabel-
+und Seilstrukturen"
+2043,Straße gestreut
+2044,Gefahr durch Schneereste
+2045,Schneereste
+2046,aufgrund schlechten Wetters Fahren im Kolonnenverband vorgeschrieben
+2047,Null-Meldung

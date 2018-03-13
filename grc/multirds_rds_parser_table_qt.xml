@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<block>
+  <name>RDS Parser Table (qt)</name>
+  <key>multirds_rds_parser_table_qt</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <import>from multirds.rds_parser_table_qt import rds_parser_table_qt, rds_parser_table_qt_Widget,rds_parser_table_qt_Signals</import>
+<!--
+  <var_make>self.$(id) = $(id) = $value</var_make>
+-->
+  <make>#set $win = 'self._%s_win'%$id
+		#set $signals = 'self._%s_signals'%$id
+#if not $label()
+	#set $label = '"%s"'%$id
+#end if
+$(signals) = rds_parser_table_qt_Signals()
+self.$(id) = multirds.rds_parser_table_qt($(signals),$nPorts,self.set_$(freq_tune),$freq_tune,$log, $debug,$workdir,$writeDB)
+$(win) = rds_parser_table_qt_Widget($signals, $label,self.$(id))
+$(gui_hint()($win))</make>
+  <callback>set_freq_tune($freq_tune);</callback>
+  <param>
+    <name>tuned frequency</name>
+    <key>freq_tune</key>
+    <value></value>
+    <type>float</type>
+  </param>
+  <param>
+    <name>Label</name>
+    <key>label</key>
+    <value></value>
+    <type>string</type>
+    <hide>#if $label() then 'none' else 'part'#</hide>
+  </param>
+  <param>
+    <name>work directory</name>
+    <key>workdir</key>
+    <value></value>
+    <type>string</type>
+    <hide>part</hide>
+  </param>
+  <param>
+    <name>GUI Hint</name>
+    <key>gui_hint</key>
+    <value></value>
+    <type>gui_hint</type>
+    <hide>part</hide>
+  </param>
+  <param>
+    <name>Number of Ports</name>
+    <key>nPorts</key>
+    <value>2</value>
+    <type>int</type>
+    <hide>part</hide>
+  </param>
+	<param>
+		<name>Log</name>
+		<key>log</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+	<param>
+		<name>Debug</name>
+		<key>debug</key>
+		<value>False</value>
+		<type>bool</type>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+	<param>
+		<name>write Database</name>
+		<key>writeDB</key>
+		<value>False</value>
+		<type>bool</type>
+		<!--<hide>part</hide>-->
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+  
+ <!--
+check if pty list file exists
+ check directory  doesnt work:
+  <check>os.path.isdir($workdir)</check>
+-->
+  <check>open($workdir+"pty-list.csv").close() or True</check>
+<!--
+  check if workdir is writable
+-->
+  <check>open($workdir+"directory_writable","w").close() or True</check>
+  <check>$nPorts &gt; 0</check>
+  <sink>
+    <name>in</name>
+    <type>message</type>
+    <nports>$nPorts</nports>
+<!--     <optional>1</optional> -->
+  </sink>
+  <sink>
+    <name>freq</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+  <source>
+    <name>ctrl</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+ <source>
+    <name>tmc_raw</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+  <doc>show RDS data from multiple stations in QT table \
+  input: raw group data (array of ints) \
+  4x2 raw block data, 4x1 offset chars, 1x1 number of valid blocks (of last 50) \
+  [block1_upper,block1_lower,block2_upper,block2_lower,...,offset1,offset2,offset3,offset4,numerrors]\\
+  
+  The GUI hint can be used to position the widget within the application. \
+  The hint is of the form "tab_id@tab_index: row, col, row_span, col_span" \
+  Both the tab specification and the grid position are optional.
+  </doc>
+
+</block>

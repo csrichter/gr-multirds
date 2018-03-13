@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<block>
+  <name>max_freq</name>
+  <key>multirds_max_freq</key>
+  <category>[multirds]</category>
+  <import>import multirds</import>
+  <make>multirds.max_freq($fft_len, $num_decoders, $center_freq, $samp_rate,$round_to,$debug)</make>
+  <!-- Make one 'param' node for every Parameter you want settable from the GUI.
+       Sub-nodes:
+       * name
+       * key (makes the value accessible as $keyname, e.g. in the make node)
+       * type -->
+  <callback>set_center_freq($center_freq);</callback>
+  <param>
+    <name>fft lenngth</name>
+    <key>fft_len</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>round to (in hz)</name>
+    <key>round_to</key>
+    <type>int</type>
+  </param>
+  <param>
+    <name>number of decoders</name>
+    <key>num_decoders</key>
+    <type>int</type>
+    <hide>part</hide>
+  </param>
+  <param>
+    <name>center frequency</name>
+    <key>center_freq</key>
+    <type>float</type>
+  </param>
+  <param>
+    <name>sample rate</name>
+    <key>samp_rate</key>
+    <type>int</type>
+  </param>
+	<param>
+		<name>Debug</name>
+		<key>debug</key>
+		<value>False</value>
+		<type>bool</type>
+		<hide>part</hide>
+		<option>
+			<name>Enable</name>
+			<key>True</key>
+		</option>
+		<option>
+			<name>Disable</name>
+			<key>False</key>
+		</option>
+	</param>
+
+
+  <!-- Make one 'sink' node per input. Sub-nodes:
+       * name (an identifier for the GUI)
+       * type
+       * vlen
+       * optional (set to 1 for optional inputs) -->
+  <sink>
+    <name>in</name>
+    <type>float</type>
+    <vlen>$fft_len</vlen>
+  </sink>
+  <sink>
+    <name>ctrl</name>
+    <type>message</type>
+    <optional>1</optional>
+  </sink>
+  <source>
+    <name>out</name>
+    <type>message</type>
+    <optional>1</optional>
+  </source>
+
+</block>
